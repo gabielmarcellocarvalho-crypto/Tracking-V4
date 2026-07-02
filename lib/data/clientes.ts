@@ -35,8 +35,10 @@ export function useClientes() {
   }, [])
 
   const clientes = useMemo<Cliente[]>(() => {
-    const demo = clientesDemo.map((c) => ({ ...c, demo: true }) as Cliente)
-    return reais.length > 0 ? [...reais, ...demo] : demo
+    // Assim que existir pelo menos um cliente real, os cards de demonstração
+    // somem da lista — só voltam a aparecer se a base ficar vazia de novo.
+    if (reais.length > 0) return reais
+    return clientesDemo.map((c) => ({ ...c, demo: true }) as Cliente)
   }, [reais])
 
   return { clientes, reais, loading }
