@@ -3,13 +3,24 @@
 // em users/{email}) e atualização de status das conversões CAPI. Nunca importar
 // este arquivo em código que roda no client — a service account tem acesso
 // irrestrito ao Firestore, ignorando firestore.rules.
+//
+// Inicialização é preguiçosa (lazy) de propósito: o Next.js importa as rotas
+// de API em build-time pra coletar metadados, então lançar erro no topo do
+// módulo (sem FIREBASE_SERVICE_ACCOUNT_KEY configurada) quebraria `next build`
+// mesmo antes de qualquer requisição real acontecer.
 
 import { cert, getApps, initializeApp, type App } from 'firebase-admin/app'
-import { getFirestore } from 'firebase-admin/firestore'
-import { getAuth } from 'firebase-admin/auth'
+import { getFirestore, type Firestore } from 'firebase-admin/firestore'
+import { getAuth, type Auth } from 'firebase-admin/auth'
 
-function criarApp(): App {
-  if (getApps().length > 0) return getApps()[0]
+let app: App | undefined
+
+function getApp(): App {
+  if (app) return app
+  if (getApps().length > 0) {
+    app = getApps()[0]
+    return app
+  }
 
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
   if (!raw) {
@@ -21,10 +32,14 @@ function criarApp(): App {
   }
 
   const serviceAccount = JSON.parse(raw)
-  return initializeApp({ credential: cert(serviceAccount) })
+  app = initializeApp({ credential: cert(serviceAccount) })
+  return app
 }
 
-const app = criarApp()
+export function getDbAdmin(): Firestore {
+  return getFirestore(getApp())
+}
 
-export const dbAdmin = getFirestore(app)
-export const authAdmin = getAuth(app)
+export function getAuthAdmin(): Auth {
+  return getAuth(getApp())
+}

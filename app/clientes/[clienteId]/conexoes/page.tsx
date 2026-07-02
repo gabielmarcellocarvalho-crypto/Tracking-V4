@@ -4,6 +4,8 @@ import { use, useEffect, useState } from 'react'
 import DashboardHeader from '@/components/tracking/DashboardHeader'
 import { useCliente } from '@/lib/data/clientes'
 import { useConexoes, salvarConexao } from '@/lib/data/colecoes'
+import { useMetaIntegration } from '@/lib/data/meta-integration'
+import { iniciarLoginMeta } from '@/lib/integrations/meta-oauth-client'
 import type { ConexaoPlataforma } from '@/lib/types'
 
 interface CampoDef {
@@ -26,16 +28,15 @@ const PLATAFORMAS: {
     id: 'meta',
     nome: 'Meta CAPI',
     cor: '#1877F2',
-    desc: 'Envio server-side de conversões (Purchase, Lead, InitiateCheckout) com match quality alto — email/telefone hasheados + fbp/fbc.',
+    desc: 'Envio server-side de conversões (Purchase, Lead, InitiateCheckout) com match quality alto — email/telefone hasheados + fbp/fbc. O token de acesso vem da sua conexão com o Facebook (veja abaixo), não precisa mais colar manualmente.',
     campos: [
       { id: 'pixelId', label: 'Pixel ID', placeholder: 'Ex: 123456789012345' },
-      { id: 'accessToken', label: 'Access Token (CAPI)', placeholder: 'EAAG…', secreto: true },
       { id: 'testEventCode', label: 'Test Event Code (opcional)', placeholder: 'TEST12345' },
     ],
     passos: [
-      'Gerenciador de Eventos → seu Pixel → Configurações',
-      'Seção "API de Conversões" → Gerar token de acesso',
-      'Cole o Pixel ID e o token aqui — o envio da fila ativa automaticamente',
+      'Conecte sua conta Meta com o botão acima (uma vez só — vale pra todos os seus clientes)',
+      'Gerenciador de Eventos → seu Pixel → copie o Pixel ID',
+      'Cole o Pixel ID aqui — o envio da fila ativa automaticamente',
     ],
   },
   {
@@ -71,6 +72,54 @@ const PLATAFORMAS: {
     ],
   },
 ]
+
+function MetaConnectionStatus() {
+  const { meta, conectado, loading } = useMetaIntegration()
+
+  if (loading) return null
+
+  if (conectado) {
+    const expiraEm = meta?.tokenExpiry ? new Date(meta.tokenExpiry) : undefined
+    const diasRestantes = expiraEm ? Math.max(0, Math.round((expiraEm.getTime() - Date.now()) / 86400000)) : undefined
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+        padding: '10px 12px', borderRadius: 8, marginBottom: 12,
+        background: 'rgba(16,185,129,.1)', border: '1px solid rgba(16,185,129,.25)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10B981' }} />
+          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)' }}>Conta Meta conectada</span>
+          {diasRestantes !== undefined && (
+            <span style={{ fontSize: 11, color: 'var(--t3)' }}>· expira em {diasRestantes}d</span>
+          )}
+        </div>
+        <button
+          onClick={iniciarLoginMeta}
+          style={{ fontSize: 11, fontWeight: 600, color: 'var(--t3)', background: 'transparent', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+        >
+          Reconectar
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <button
+      onClick={iniciarLoginMeta}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 8, width: '100%', marginBottom: 12,
+        padding: '10px 12px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, color: '#fff',
+        background: '#1877F2', border: 'none', cursor: 'pointer',
+      }}
+    >
+      <svg viewBox="0 0 24 24" fill="currentColor" width={15} height={15}>
+        <path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.78-3.89 1.1 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12" />
+      </svg>
+      Conectar com Facebook
+    </button>
+  )
+}
 
 function CardConexao({ plataforma, clienteId, camposSalvos, statusSalvo, isDemo }: {
   plataforma: typeof PLATAFORMAS[number]
@@ -148,7 +197,8 @@ function CardConexao({ plataforma, clienteId, camposSalvos, statusSalvo, isDemo 
       {/* Corpo expandido */}
       {aberto && (
         <div style={{ padding: '0 18px 18px', borderTop: '1px solid var(--br-s)' }}>
-          <div style={{ display: 'flex', gap: 20, marginTop: 14, flexWrap: 'wrap' }}>
+          {plataforma.id === 'meta' && <div style={{ marginTop: 14 }}><MetaConnectionStatus /></div>}
+          <div style={{ display: 'flex', gap: 20, marginTop: plataforma.id === 'meta' ? 0 : 14, flexWrap: 'wrap' }}>
             {/* Campos */}
             <div style={{ flex: 1, minWidth: 260, display: 'flex', flexDirection: 'column', gap: 10 }}>
               {plataforma.campos.map((c) => (
