@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tracking V4 — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #0B0B0B;
+  --bg-s:    #101010;
+  --bg-c:    #181818;
+  --bg-ch:   #212121;
+  --br:      #282828;
+  --br-s:    #1E1E1E;
+  --t1: #F0F0F0;
+  --t2: #909090;
+  --t3: #484848;
+  --red:   #C8102E;
+  --red-h: #E01235;
+  --red-gl: rgba(200,16,46,.14);
+  --green:  #10B981;
+  --blue:   #3B82F6;
+  --purple: #8B5CF6;
+  --amber:  #F59E0B;
+  --meta:   #1877F2;
+  --gads:   #4285F4;
+  --ga4:    #E37400;
+  --shop:   #96BF48;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--t1);min-height:100vh;overflow-x:hidden}
+button,input,select{font:inherit}
+a{color:inherit;text-decoration:none}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--br);border-radius:4px}
+
+/* ── SIDEBAR ── */
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:240px;background:var(--bg-s);border-right:1px solid var(--br);display:flex;flex-direction:column;z-index:50}
+.s-logo{padding:16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--br);flex-shrink:0}
+.v4-box{width:36px;height:36px;border-radius:9px;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;letter-spacing:-.5px;flex-shrink:0;box-shadow:0 4px 16px rgba(200,16,46,.45)}
+.s-name{font-size:14px;font-weight:700;color:var(--t1);line-height:1.2}
+.s-sub{font-size:10.5px;color:var(--t3);margin-top:1px}
+.s-nav{flex:1;overflow-y:auto;padding:8px 0}
+.s-sec{padding:12px 16px 4px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--t3)}
+.s-item{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:13px;color:var(--t2);cursor:pointer;border-left:2px solid transparent;border-radius:0 6px 6px 0;margin-right:8px;transition:all .18s cubic-bezier(.4,0,.2,1)}
+.s-item svg{opacity:.6;flex-shrink:0}
+.s-item:hover{background:var(--bg-c);color:var(--t1);padding-left:16px}
+.s-item:hover svg{opacity:.9}
+.s-item.on{background:rgba(200,16,46,.1);color:var(--red);border-left-color:var(--red);padding-left:15px}
+.s-item.on svg{opacity:1}
+.s-badge{margin-left:auto;background:rgba(200,16,46,.15);color:var(--red);font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px}
+.s-foot{padding:12px 14px;border-top:1px solid var(--br);display:flex;align-items:center;gap:10px;flex-shrink:0}
+.s-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--red),var(--purple));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.s-fn{font-size:12.5px;font-weight:600;color:var(--t1)}
+.s-fr{font-size:10.5px;color:var(--t3);margin-top:1px}
+
+/* ── MAIN ── */
+.main{margin-left:240px;display:flex;flex-direction:column;min-height:100vh}
+
+/* ── HEADER ── */
+.hdr{position:sticky;top:0;height:60px;background:var(--bg-s);border-bottom:1px solid var(--br);display:flex;align-items:center;padding:0 24px;gap:14px;z-index:40}
+.hdr-l{flex:1}
+.hdr-bread{font-size:11px;color:var(--t3)}
+.hdr-title{font-size:15px;font-weight:600;color:var(--t1);margin-top:1px}
+.client-sel{display:flex;align-items:center;gap:8px;padding:6px 14px;background:var(--bg-c);border:1px solid var(--br);border-radius:8px;cursor:pointer;transition:all .18s}
+.client-sel:hover{border-color:var(--red);box-shadow:0 0 0 3px var(--red-gl)}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(16,185,129,.5)}50%{opacity:.8;box-shadow:0 0 0 5px rgba(16,185,129,0)}}
+.client-name{font-size:13px;font-weight:500;color:var(--t1)}
+.chev{color:var(--t3);font-size:11px}
+.icon-btn{width:36px;height:36px;border-radius:8px;background:var(--bg-c);border:1px solid var(--br);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t2);transition:all .18s}
+.icon-btn:hover{border-color:var(--red);color:var(--red);box-shadow:0 0 0 3px var(--red-gl),0 4px 12px rgba(200,16,46,.2);transform:translateY(-1px)}
+.usr-av{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--red),var(--purple));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;cursor:pointer}
+
+/* ── CONTENT ── */
+.content{flex:1;padding:20px 24px 40px;overflow-y:auto}
+
+/* ── CHIPS ── */
+.chips-row{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:5px 13px;border-radius:20px;font-size:12px;font-weight:500;border:1px solid var(--br);background:var(--bg-c);color:var(--t3);cursor:pointer;transition:all .18s;user-select:none}
+.chip:hover{border-color:var(--t2);color:var(--t2)}
+.cdot{width:6px;height:6px;border-radius:50%}
+.chip.on-meta{border-color:var(--meta);color:var(--meta);background:rgba(24,119,242,.07)}
+.chip.on-gads{border-color:var(--gads);color:var(--gads);background:rgba(66,133,244,.07)}
+.chip.on-ga4{border-color:var(--ga4);color:var(--ga4);background:rgba(227,116,0,.07)}
+.chip.on-shop{border-color:var(--shop);color:var(--shop);background:rgba(150,191,72,.07)}
+
+/* ── SECTION HEADER ── */
+.sec-hdr{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:16px}
+.sec-title{font-size:16px;font-weight:600;color:var(--t1)}
+.sec-sub{font-size:11.5px;color:var(--t3);margin-top:2px}
+.period-grp{display:flex;gap:2px;padding:3px;background:var(--bg-c);border:1px solid var(--br);border-radius:8px}
+.period-btn{padding:5px 14px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;color:var(--t3);background:transparent;border:none;transition:all .18s}
+.period-btn.on{background:var(--red);color:#fff}
+.period-btn:not(.on):hover{color:var(--t1);background:var(--bg-ch)}
+
+/* ── KPI GRID ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.kpi{background:var(--bg-c);border:1px solid var(--br);border-radius:12px;padding:16px 18px;position:relative;overflow:hidden;transition:all .22s cubic-bezier(.4,0,.2,1);cursor:default}
+.kpi:hover{transform:translateY(-3px)}
+.kpi-bar{position:absolute;top:0;left:0;right:0;height:2px}
+.kpi-ico{width:32px;height:32px;border-radius:8px;margin-bottom:10px;background:rgba(255,255,255,.04);display:flex;align-items:center;justify-content:center}
+.kpi-lbl{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:4px}
+.kpi-val{font-size:26px;font-weight:700;color:var(--t1);letter-spacing:-.5px;line-height:1}
+.kpi-trend{font-size:11.5px;margin-top:6px;display:flex;align-items:center;gap:3px}
+.up{color:var(--green)}.dn{color:var(--red)}
+
+/* ── TABS ── */
+.tab-bar{display:flex;border-bottom:1px solid var(--br);position:relative;margin-bottom:20px}
+.tab{padding:10px 20px;font-size:13px;font-weight:500;color:var(--t3);cursor:pointer;transition:color .18s;user-select:none}
+.tab:hover{color:var(--t2)}
+.tab.on{color:var(--red)}
+.tab-line{position:absolute;bottom:-1px;height:2px;background:var(--red);border-radius:2px;transition:left .22s cubic-bezier(.4,0,.2,1),width .22s cubic-bezier(.4,0,.2,1)}
+
+/* ── PANELS ── */
+.panel{display:none}
+.panel.on{display:block;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+/* ── CHARTS ROW ── */
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.card{background:var(--bg-c);border:1px solid var(--br);border-radius:12px;padding:18px}
+.card-title{font-size:14px;font-weight:600;color:var(--t1);margin-bottom:3px}
+.card-sub{font-size:11.5px;color:var(--t3);margin-bottom:16px}
+
+/* BAR CHART */
+.bar-chart{display:flex;align-items:flex-end;gap:8px;height:120px}
+.bc{flex:1;display:flex;flex-direction:column;align-items:center}
+.bc-pair{display:flex;align-items:flex-end;gap:3px;width:100%;height:108px}
+.b{flex:1;border-radius:4px 4px 0 0;cursor:pointer;transition:filter .18s,transform .18s;transform-origin:bottom;width:0;animation:growUp .7s ease-out forwards}
+@keyframes growUp{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+.b:hover{filter:brightness(1.3);transform:scaleY(1.06)}
+.b-rev{background:linear-gradient(to top,#10B981,#34D399)}
+.b-inv{background:var(--red);opacity:.7}
+.bc-lbl{font-size:9.5px;color:var(--t3);margin-top:5px}
+
+/* FUNNEL */
+.fn-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.fn-lbl{font-size:11.5px;color:var(--t2);width:76px;flex-shrink:0}
+.fn-track{flex:1;height:8px;border-radius:4px;background:var(--bg);overflow:hidden}
+.fn-fill{height:100%;border-radius:4px;width:0;transition:width .9s ease-out}
+.fn-cnt{font-size:12px;font-weight:600;color:var(--t1);width:54px;text-align:right;flex-shrink:0}
+.fn-pct{font-size:10.5px;color:var(--t3);width:36px;text-align:right;flex-shrink:0}
+
+/* ── TABLE WRAP ── */
+.tbl-wrap{background:var(--bg-c);border:1px solid var(--br);border-radius:12px;overflow:hidden}
+.tbl-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--br)}
+.tbl-ttl{font-size:14px;font-weight:600;color:var(--t1)}
+.tbl-stt{font-size:11.5px;color:var(--t3);margin-top:2px}
+.tbl-acts{display:flex;gap:8px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;transition:all .18s;border:1px solid var(--br);background:transparent;color:var(--t2);font-family:inherit}
+.btn:hover{border-color:var(--red);color:var(--red);transform:translateY(-1px)}
+.btn-red{background:var(--red);border-color:var(--red);color:#fff;font-weight:600}
+.btn-red:hover{background:var(--red-h);transform:translateY(-1px);box-shadow:0 4px 14px rgba(200,16,46,.3)}
+table{width:100%;border-collapse:collapse}
+th{padding:9px 18px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t3);text-align:left;background:rgba(0,0,0,.15);border-bottom:1px solid var(--br)}
+td{padding:11px 18px;font-size:12.5px;color:var(--t2);border-bottom:1px solid var(--br-s);transition:all .15s;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:rgba(255,255,255,.02);color:var(--t1)}
+
+/* BADGE */
+.bdg{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500}
+.bdg-meta{background:rgba(24,119,242,.1);color:var(--meta)}
+.bdg-gads{background:rgba(66,133,244,.1);color:var(--gads)}
+.bdg-ga4{background:rgba(227,116,0,.1);color:var(--ga4)}
+.bdg-ok{background:rgba(16,185,129,.1);color:var(--green)}
+.bdg-err{background:rgba(200,16,46,.1);color:var(--red)}
+.bdg-pend{background:rgba(245,158,11,.1);color:var(--amber)}
+.jrny-btn{padding:5px 12px;border-radius:6px;font-size:12px;font-weight:500;border:1px solid var(--br);color:var(--t2);cursor:pointer;background:transparent;transition:all .18s;font-family:inherit}
+.jrny-btn:hover{border-color:var(--red);background:rgba(200,16,46,.08);color:var(--red);transform:translateY(-1px)}
+
+/* ── UTM PANEL ── */
+.filter-bar{display:flex;gap:10px;margin-bottom:16px;align-items:center}
+.search-in{flex:1;padding:8px 14px;border-radius:8px;background:var(--bg-c);border:1px solid var(--br);color:var(--t1);font-size:13px;outline:none;transition:border-color .18s}
+.search-in::placeholder{color:var(--t3)}
+.search-in:focus{border-color:var(--red)}
+.sel-in{padding:8px 12px;border-radius:8px;background:var(--bg-c);border:1px solid var(--br);color:var(--t2);font-size:13px;outline:none;cursor:pointer}
+.utm-mono{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--t3);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.copy-btn{padding:3px 8px;border-radius:5px;font-size:11px;font-weight:500;border:1px solid var(--br);color:var(--t3);cursor:pointer;background:transparent;transition:all .15s;font-family:inherit;white-space:nowrap}
+.copy-btn:hover{border-color:var(--red);color:var(--red)}
+.copied{background:rgba(16,185,129,.1)!important;border-color:var(--green)!important;color:var(--green)!important}
+
+/* ── JORNADA ── */
+.jornada-grid{display:grid;grid-template-columns:280px 1fr;gap:14px}
+.user-list-card{background:var(--bg-c);border:1px solid var(--br);border-radius:12px;overflow:hidden}
+.ul-hdr{padding:14px 16px;border-bottom:1px solid var(--br);font-size:13px;font-weight:600;color:var(--t1)}
+.u-item{padding:12px 14px;border-bottom:1px solid var(--br-s);cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:10px}
+.u-item:last-child{border-bottom:none}
+.u-item:hover{background:var(--bg-ch)}
+.u-item.sel{background:rgba(200,16,46,.08);border-left:2px solid var(--red)}
+.u-av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.u-name{font-size:12.5px;font-weight:500;color:var(--t1)}
+.u-email{font-size:11px;color:var(--t3);margin-top:1px}
+.u-src{font-size:10.5px;margin-top:3px}
+
+.jrn-detail{background:var(--bg-c);border:1px solid var(--br);border-radius:12px;overflow:hidden}
+.jrn-dhdr{padding:16px 20px;border-bottom:1px solid var(--br);display:flex;align-items:center;justify-content:space-between}
+.jrn-dname{font-size:15px;font-weight:600;color:var(--t1)}
+.jrn-dsub{font-size:11.5px;color:var(--t3);margin-top:2px}
+.jrn-body{padding:20px}
+
+.timeline{position:relative;padding-left:30px}
+.timeline::before{content:'';position:absolute;left:11px;top:6px;bottom:0;width:1px;background:var(--br)}
+.t-ev{position:relative;margin-bottom:22px}
+.t-ev:last-child{margin-bottom:0}
+.t-dot{position:absolute;left:-30px;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg-c);flex-shrink:0}
+.td-view{background:#1877F2}.td-lead{background:var(--amber)}.td-chk{background:var(--purple)}.td-buy{background:var(--green)}
+.t-time{font-size:10.5px;color:var(--t3);margin-bottom:4px;font-family:'JetBrains Mono',monospace}
+.t-type{font-size:13px;font-weight:600;color:var(--t1)}
+.t-info{font-size:12px;color:var(--t2);margin-top:4px;line-height:1.55}
+.t-cookies{margin-top:8px;padding:8px 12px;background:var(--bg);border:1px solid var(--br-s);border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--t3);line-height:1.8}
+.t-cookies span{color:var(--t2)}
+.t-utm{margin-top:6px;padding:8px 12px;background:var(--bg);border:1px solid var(--br-s);border-radius:6px;font-size:11px;color:var(--t2);line-height:1.8}
+
+/* ── CONVERSÕES ── */
+.conv-pfs{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.conv-pf{background:var(--bg-c);border:1px solid var(--br);border-radius:12px;padding:18px}
+.conv-pf-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.conv-pf-info{display:flex;align-items:center;gap:12px}
+.conv-pf-ico{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+.conv-pf-name{font-size:14px;font-weight:600;color:var(--t1)}
+.conv-pf-sub{font-size:11px;color:var(--t3);margin-top:2px}
+.status-ok{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:500;color:var(--green)}
+.status-err{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:500;color:var(--red)}
+.sdot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.sdot-ok{background:var(--green);box-shadow:0 0 6px rgba(16,185,129,.5);animation:pulse 2s infinite}
+.sdot-err{background:var(--red)}
+.conv-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.cv-m{text-align:center;padding:12px 8px;background:var(--bg);border-radius:8px}
+.cv-m-val{font-size:20px;font-weight:700;color:var(--t1)}
+.cv-m-lbl{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+
+.ml-auto{margin-left:auto}
+.flex{display:flex}
+.gap-2{gap:8px}
+.items-center{align-items:center}
+</style>
+</head>
+<body>
+
+<!-- ══ SIDEBAR ══════════════════════════════════════════ -->
+<aside class="sidebar">
+  <div class="s-logo">
+    <div class="v4-box">V4</div>
+    <div>
+      <div class="s-name">Tracking V4</div>
+      <div class="s-sub">Carvalho &amp; Co</div>
+    </div>
+  </div>
+
+  <nav class="s-nav">
+    <div class="s-sec">Principal</div>
+    <div class="s-item on">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </div>
+    <div class="s-item">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Clientes
+      <span class="s-badge">23</span>
+    </div>
+
+    <div class="s-sec">Tracking</div>
+    <div class="s-item">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Eventos
+    </div>
+    <div class="s-item">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Jornada do Usuário
+    </div>
+    <div class="s-item">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      UTMs
+    </div>
+    <div class="s-item">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Conversões
+    </div>
+
+    <div class="s-sec">Plataformas</div>
+    <div class="s-item">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+      Meta Ads
+    </div>
+    <div class="s-item">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      Google Ads
+    </div>
+    <div class="s-item">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      GA4
+    </div>
+  </nav>
+
+  <div class="s-foot">
+    <div class="s-av">G</div>
+    <div>
+      <div class="s-fn">Gabriel</div>
+      <div class="s-fr">Gestor de Tráfego</div>
+    </div>
+  </div>
+</aside>
+
+<!-- ══ MAIN ═══════════════════════════════════════════ -->
+<div class="main">
+
+  <!-- HEADER -->
+  <header class="hdr">
+    <div class="hdr-l">
+      <div class="hdr-bread">Clientes / Official Time</div>
+      <div class="hdr-title">Dashboard — Official Time</div>
+    </div>
+    <div class="client-sel">
+      <div class="pulse"></div>
+      <span class="client-name">Official Time</span>
+      <span class="chev">▾</span>
+    </div>
+    <div class="icon-btn" title="Notificações">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    </div>
+    <div class="icon-btn" title="Configurações">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 0-14.14 0"/><path d="M4.93 19.07a10 10 0 0 0 14.14 0"/></svg>
+    </div>
+    <div class="usr-av">G</div>
+  </header>
+
+  <!-- CONTENT -->
+  <main class="content">
+
+    <!-- SOURCE CHIPS -->
+    <div class="chips-row">
+      <div class="chip on-meta" onclick="toggleChip(this,'meta')">
+        <div class="cdot" style="background:#1877F2"></div>Meta Ads
+      </div>
+      <div class="chip on-gads" onclick="toggleChip(this,'gads')">
+        <div class="cdot" style="background:#4285F4"></div>Google Ads
+      </div>
+      <div class="chip on-ga4" onclick="toggleChip(this,'ga4')">
+        <div class="cdot" style="background:#E37400"></div>GA4
+      </div>
+      <div class="chip" onclick="toggleChip(this,'shop')">
+        <div class="cdot" style="background:var(--t3)"></div>Shopify
+      </div>
+    </div>
+
+    <!-- SECTION HEADER + DATE FILTER -->
+    <div class="sec-hdr">
+      <div>
+        <div class="sec-title">Visão Geral</div>
+        <div class="sec-sub" id="period-label">Dados consolidados — últimos 30 dias</div>
+      </div>
+      <div class="period-grp">
+        <button class="period-btn" onclick="setPeriod(this,'7d')">7d</button>
+        <button class="period-btn on" onclick="setPeriod(this,'30d')">30d</button>
+        <button class="period-btn" onclick="setPeriod(this,'90d')">90d</button>
+      </div>
+    </div>
+
+    <!-- KPI GRID -->
+    <div class="kpi-grid">
+      <div class="kpi" id="kpi-0" onmouseenter="kpiHover(this,0,true)" onmouseleave="kpiHover(this,0,false)">
+        <div class="kpi-bar" style="background:var(--red)"></div>
+        <div class="kpi-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+        <div class="kpi-lbl">Investimento</div>
+        <div class="kpi-val" id="v0">R$0</div>
+        <div class="kpi-trend up">↑ +12,4% vs mês anterior</div>
+      </div>
+      <div class="kpi" id="kpi-1" onmouseenter="kpiHover(this,1,true)" onmouseleave="kpiHover(this,1,false)">
+        <div class="kpi-bar" style="background:var(--green)"></div>
+        <div class="kpi-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+        <div class="kpi-lbl">Receita</div>
+        <div class="kpi-val" id="v1">R$0</div>
+        <div class="kpi-trend up">↑ +28,1% vs mês anterior</div>
+      </div>
+      <div class="kpi" id="kpi-2" onmouseenter="kpiHover(this,2,true)" onmouseleave="kpiHover(this,2,false)">
+        <div class="kpi-bar" style="background:var(--blue)"></div>
+        <div class="kpi-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+        <div class="kpi-lbl">ROAS</div>
+        <div class="kpi-val" id="v2">0x</div>
+        <div class="kpi-trend up">↑ +0,7x vs mês anterior</div>
+      </div>
+      <div class="kpi" id="kpi-3" onmouseenter="kpiHover(this,3,true)" onmouseleave="kpiHover(this,3,false)">
+        <div class="kpi-bar" style="background:var(--purple)"></div>
+        <div class="kpi-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <div class="kpi-lbl">Leads</div>
+        <div class="kpi-val" id="v3">0</div>
+        <div class="kpi-trend dn">↓ -3,2% vs mês anterior</div>
+      </div>
+    </div>
+
+    <!-- TAB BAR -->
+    <div class="tab-bar" id="tabBar">
+      <div class="tab on" onclick="switchTab(0)">Tracking</div>
+      <div class="tab" onclick="switchTab(1)">UTMs</div>
+      <div class="tab" onclick="switchTab(2)">Jornada</div>
+      <div class="tab" onclick="switchTab(3)">Conversões</div>
+      <div class="tab-line" id="tabLine"></div>
+    </div>
+
+    <!-- ══ PANEL 0 — TRACKING ══ -->
+    <div class="panel on" id="panel-0">
+      <div class="charts-row">
+        <!-- BAR CHART -->
+        <div class="card">
+          <div class="card-title">Performance por Dia</div>
+          <div class="card-sub">Investimento vs. Receita — últimos 7 dias</div>
+          <div class="bar-chart" id="barChart">
+            <!-- generated by JS -->
+          </div>
+          <div style="display:flex;gap:14px;margin-top:10px">
+            <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--t3)"><span style="width:10px;height:10px;border-radius:2px;background:linear-gradient(to top,#10B981,#34D399);display:inline-block"></span>Receita</span>
+            <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--t3)"><span style="width:10px;height:10px;border-radius:2px;background:var(--red);opacity:.7;display:inline-block"></span>Investimento</span>
+          </div>
+        </div>
+        <!-- FUNNEL -->
+        <div class="card">
+          <div class="card-title">Funil de Conversão</div>
+          <div class="card-sub">Jornada consolidada — Meta + Google + GA4</div>
+          <div id="funnel"></div>
+        </div>
+      </div>
+
+      <!-- LEADS TABLE -->
+      <div class="tbl-wrap">
+        <div class="tbl-hdr">
+          <div>
+            <div class="tbl-ttl">Leads Recentes</div>
+            <div class="tbl-stt">847 leads no período · ordenado por data</div>
+          </div>
+          <div class="tbl-acts">
+            <button class="btn">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Exportar
+            </button>
+            <button class="btn">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+              Filtrar
+            </button>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Usuário</th>
+              <th>Fonte</th>
+              <th>Campanha</th>
+              <th>Evento</th>
+              <th>Data</th>
+              <th>Valor</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><div style="font-size:13px;color:var(--t1);font-weight:500">Maria Silva</div><div style="font-size:11px;color:var(--t3);margin-top:2px">maria@email.com</div></td>
+              <td><span class="bdg bdg-meta">Meta Ads</span></td>
+              <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t3)">v4-ate_sp_perf_ved_oft_link_1401</span></td>
+              <td><span class="bdg bdg-ok">Compra</span></td>
+              <td style="font-size:12px;color:var(--t3)">13/06 14:22</td>
+              <td style="color:var(--green);font-weight:600">R$289,90</td>
+              <td><button class="jrny-btn">Ver Jornada</button></td>
+            </tr>
+            <tr>
+              <td><div style="font-size:13px;color:var(--t1);font-weight:500">João Costa</div><div style="font-size:11px;color:var(--t3);margin-top:2px">joao@gmail.com</div></td>
+              <td><span class="bdg bdg-gads">Google Ads</span></td>
+              <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t3)">v4-ate_br_perf_ved_oft_search_br</span></td>
+              <td><span class="bdg bdg-pend">Checkout</span></td>
+              <td style="font-size:12px;color:var(--t3)">13/06 13:45</td>
+              <td style="color:var(--t3)">—</td>
+              <td><button class="jrny-btn">Ver Jornada</button></td>
+            </tr>
+            <tr>
+              <td><div style="font-size:13px;color:var(--t1);font-weight:500">Ana Pereira</div><div style="font-size:11px;color:var(--t3);margin-top:2px">ana.p@hotmail.com</div></td>
+              <td><span class="bdg bdg-meta">Meta Ads</span></td>
+              <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t3)">v4-ate_br_perf_ved_oft_link_catalogo-br</span></td>
+              <td><span class="bdg bdg-ok">Compra</span></td>
+              <td style="font-size:12px;color:var(--t3)">13/06 11:08</td>
+              <td style="color:var(--green);font-weight:600">R$459,00</td>
+              <td><button class="jrny-btn">Ver Jornada</button></td>
+            </tr>
+            <tr>
+              <td><div style="font-size:13px;color:var(--t1);font-weight:500">Carlos Mendes</div><div style="font-size:11px;color:var(--t3);margin-top:2px">cmendes@yahoo.com</div></td>
+              <td><span class="bdg bdg-ga4">GA4</span></td>
+              <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t3)">orgânico</span></td>
+              <td><span style="background:rgba(59,130,246,.1);color:var(--blue)" class="bdg">Lead</span></td>
+              <td style="font-size:12px;color:var(--t3)">13/06 09:33</td>
+              <td style="color:var(--t3)">—</td>
+              <td><button class="jrny-btn">Ver Jornada</button></td>
+            </tr>
+            <tr>
+              <td><div style="font-size:13px;color:var(--t1);font-weight:500">Fernanda Lima</div><div style="font-size:11px;color:var(--t3);margin-top:2px">fe.lima@gmail.com</div></td>
+              <td><span class="bdg bdg-meta">Meta Ads</span></td>
+              <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t3)">v4-ate_br_perf_ved_oft_post_diadosnamorados</span></td>
+              <td><span class="bdg bdg-ok">Compra</span></td>
+              <td style="font-size:12px;color:var(--t3)">12/06 22:17</td>
+              <td style="color:var(--green);font-weight:600">R$198,50</td>
+              <td><button class="jrny-btn">Ver Jornada</button></td>
+            </tr>
+            <tr>
+              <td><div style="font-size:13px;color:var(--t1);font-weight:500">Pedro Alves</div><div style="font-size:11px;color:var(--t3);margin-top:2px">pedro@empresa.com.br</div></td>
+              <td><span class="bdg bdg-gads">Google Ads</span></td>
+              <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t3)">v4-ate_br_perf_ved_oft_google-Shop_br</span></td>
+              <td><span class="bdg bdg-pend">Checkout</span></td>
+              <td style="font-size:12px;color:var(--t3)">12/06 19:44</td>
+              <td style="color:var(--t3)">—</td>
+              <td><button class="jrny-btn">Ver Jornada</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ PANEL 1 — UTMs ══ -->
+    <div class="panel" id="panel-1">
+      <div class="filter-bar">
+        <input class="search-in" placeholder="Buscar campanha, conjunto ou anúncio..." id="utmSearch" oninput="filterUTM()">
+        <select class="sel-in" onchange="filterUTM()">
+          <option>Todas as fontes</option>
+          <option>Meta Ads</option>
+          <option>Google Ads</option>
+          <option>LinkedIn</option>
+        </select>
+        <select class="sel-in" onchange="filterUTM()">
+          <option>Todos os clientes</option>
+          <option>Official Time</option>
+          <option>Lis Magazine</option>
+          <option>Leitão Pork Chopp</option>
+        </select>
+        <button class="btn btn-red">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Gerar UTM
+        </button>
+      </div>
+      <div class="tbl-wrap">
+        <div class="tbl-hdr">
+          <div>
+            <div class="tbl-ttl">Planilha de UTMs — Padrão V4</div>
+            <div class="tbl-stt">26 UTMs cadastradas · padrão Falcon/Atena</div>
+          </div>
+          <div class="tbl-acts">
+            <button class="btn">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Exportar CSV
+            </button>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+        <table id="utmTable">
+          <thead>
+            <tr>
+              <th>Fonte</th>
+              <th>Medium</th>
+              <th>Campanha (utm_campaign)</th>
+              <th>Conjunto (utm_term)</th>
+              <th>Anúncio (utm_content)</th>
+              <th>URL Tagueada</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="bdg bdg-meta">meta</span></td>
+              <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t2)">paid</span></td>
+              <td><span class="utm-mono">v4-ate_sp_perf_ved_oft_link_1401</span></td>
+              <td><span class="utm-mono">v4-ate_sp_perf_ved_oft_link_1401_all_abrt_ios18</span></td>
+              <td><span class="utm-mono">...linkad_rel_seiko_5_auto_masc_snxs79b1</span></td>
+              <td><span class="utm-mono">lojaofficialtime.com.br/relogio-seiko-5...</span></td>
+              <td><button class="copy-btn" onclick="copyUTM(this,'https://www.lojaofficialtime.com.br/relogio-seiko-5-automatico-masculino-snxs79b1?utm_medium=paid&utm_source=meta&utm_campaign=v4-ate_sp_perf_ved_oft_link_1401&utm_term=v4-ate_sp_perf_ved_oft_link_1401_all_abrt_ios18&utm_content=v4-ate_sp_perf_ved_oft_link_1401_all_abrt_ios18_linkad_rel_seiko_5_auto_masc_snxs79b1')">Copiar</button></td>
+            </tr>
+            <tr>
+              <td><span class="bdg bdg-meta">meta</span></td>
+              <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t2)">paid</span></td>
+              <td><span class="utm-mono">v4-ate_sp_perf_ved_oft_link_1401</span></td>
+              <td><span class="utm-mono">v4-ate_sp_perf_ved_oft_link_1401_all_abrt_ios18</span></td>
+              <td><span class="utm-mono">...linkad_rel_diesel_cron_masc_dz4692b1</span></td>
+              <td><span class="utm-mono">lojaofficialtime.com.br/relogio-diesel...</span></td>
+              <td><button class="copy-btn" onclick="copyUTM(this,'https://www.lojaofficialtime.com.br/relogio-diesel-cronografo-masculino-dz4692b1?utm_medium=paid&utm_source=meta&utm_campaign=v4-ate_sp_perf_ved_oft_link_1401&utm_term=v4-ate_sp_perf_ved_oft_link_1401_all_abrt_ios18&utm_content=v4-ate_sp_perf_ved_oft_link_1401_all_abrt_ios18_linkad_rel_diesel_cron_masc_dz4692b1')">Copiar</button></td>
+            </tr>
+            <tr>
+              <td><span class="bdg bdg-gads">google</span></td>
+              <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t2)">paid</span></td>
+              <td><span class="utm-mono">v4-ate_sp_perf_ved_oft_max_</span></td>
+              <td><span class="utm-mono">v4-ate_sp_perf_ved_oft_max__all_abrt_</span></td>
+              <td><span class="utm-mono">...pmax-ad_</span></td>
+              <td><span class="utm-mono">lojaofficialtime.com.br/</span></td>
+              <td><button class="copy-btn" onclick="copyUTM(this,'https://www.lojaofficialtime.com.br/?utm_medium=paid&utm_source=google&utm_campaign=v4-ate_sp_perf_ved_oft_max_')">Copiar</button></td>
+            </tr>
+            <tr>
+              <td><span class="bdg bdg-meta">meta</span></td>
+              <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t2)">paid</span></td>
+              <td><span class="utm-mono">v4-ate_br_perf_ved_oft_link_catalogo-br</span></td>
+              <td><span class="utm-mono">...catalogo-br_all_all_pub-quente</span></td>
+              <td><span class="utm-mono">...collection_ad001-catalogo</span></td>
+              <td><span class="utm-mono">lojaofficialtime.com.br/relogios</span></td>
+              <td><button class="copy-btn" onclick="copyUTM(this,'https://www.lojaofficialtime.com.br/relogios?utm_medium=paid&utm_source=meta&utm_campaign=v4-ate_br_perf_ved_oft_link_catalogo-br&utm_term=v4-ate_br_perf_ved_oft_link_catalogo-br_all_all_pub-quente&utm_content=v4-ate_br_perf_ved_oft_link_catalogo-br_all_all_pub-quente_collection_ad001-catalogo')">Copiar</button></td>
+            </tr>
+            <tr>
+              <td><span class="bdg bdg-gads">google</span></td>
+              <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t2)">paid</span></td>
+              <td><span class="utm-mono">v4-ate_br_perf_ved_oft_search_protecao_marca</span></td>
+              <td><span class="utm-mono">...search_protecao_marca_all_abrt_branding</span></td>
+              <td><span class="utm-mono">...srch-ad_pesquisa</span></td>
+              <td><span class="utm-mono">lojaofficialtime.com.br/</span></td>
+              <td><button class="copy-btn" onclick="copyUTM(this,'https://www.lojaofficialtime.com.br/?utm_medium=paid&utm_source=google&utm_campaign=v4-ate_br_perf_ved_oft_search_protecao_marca')">Copiar</button></td>
+            </tr>
+            <tr>
+              <td><span class="bdg bdg-gads">google</span></td>
+              <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t2)">paid</span></td>
+              <td><span class="utm-mono">v4-ate_br_perf_ved_oft_google-Shop_br</span></td>
+              <td><span class="utm-mono">...google-Shop_br_all_abrt_catalogo</span></td>
+              <td><span class="utm-mono">...stlk_cat</span></td>
+              <td><span class="utm-mono">lojaofficialtime.com.br/</span></td>
+              <td><button class="copy-btn" onclick="copyUTM(this,'https://www.lojaofficialtime.com.br/?utm_medium=paid&utm_source=google&utm_campaign=v4-ate_br_perf_ved_oft_google-Shop_br')">Copiar</button></td>
+            </tr>
+            <tr>
+              <td><span class="bdg bdg-meta">meta</span></td>
+              <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t2)">paid</span></td>
+              <td><span class="utm-mono">v4-ate_br_perf_ved_oft_post_diadosnamorados</span></td>
+              <td><span class="utm-mono">...post_diadosnamorados_all_abrt_</span></td>
+              <td><span class="utm-mono">...post-organico_</span></td>
+              <td><span class="utm-mono">lojaofficialtime.com.br/</span></td>
+              <td><button class="copy-btn" onclick="copyUTM(this,'https://www.lojaofficialtime.com.br/?utm_medium=paid&utm_source=meta&utm_campaign=v4-ate_br_perf_ved_oft_post_diadosnamorados')">Copiar</button></td>
+            </tr>
+            <tr>
+              <td><span class="bdg bdg-gads">google</span></td>
+              <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t2)">paid</span></td>
+              <td><span class="utm-mono">v4-ate_sp_perf_ved_lis-magazine_search_...</span></td>
+              <td><span class="utm-mono">...search_..._all_kw_tenis-fem</span></td>
+              <td><span class="utm-mono">...srch-ad_ad01</span></td>
+              <td><span class="utm-mono">lismagazine.com.br/feminino/tenis/</span></td>
+              <td><button class="copy-btn" onclick="copyUTM(this,'https://www.lismagazine.com.br/feminino/tenis/?utm_medium=paid&utm_source=google&utm_campaign=v4-ate_sp_perf_ved_lis-magazine_search_mogidascruzes-poa')">Copiar</button></td>
+            </tr>
+            <tr>
+              <td><span class="bdg bdg-meta">meta</span></td>
+              <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t2)">paid</span></td>
+              <td><span class="utm-mono">v4-ate_sp_perf_ved_lis-magazine_link_add-to-cart-ecom-12-01</span></td>
+              <td><span class="utm-mono">...all_int_marcas-cid-prox</span></td>
+              <td><span class="utm-mono">...linkad_ad001-oly-fem-lar</span></td>
+              <td><span class="utm-mono">lismagazine.com.br/produtos/tenis-masculino...</span></td>
+              <td><button class="copy-btn" onclick="copyUTM(this,'https://www.lismagazine.com.br/produtos/tenis-masculino-olympikus-running-veloz-3-43502346/?utm_medium=paid&utm_source=meta&utm_campaign=v4-ate_sp_perf_ved_lis-magazine_link_add-to-cart-ecom-12-01')">Copiar</button></td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PANEL 2 — JORNADA ══ -->
+    <div class="panel" id="panel-2">
+      <div class="jornada-grid">
+        <!-- USER LIST -->
+        <div class="user-list-card">
+          <div class="ul-hdr">Usuários (847)</div>
+          <div class="u-item sel" onclick="selectUser(this,0)">
+            <div class="u-av" style="background:linear-gradient(135deg,#C8102E,#6B21A8)">M</div>
+            <div>
+              <div class="u-name">Maria Silva</div>
+              <div class="u-email">maria@email.com</div>
+              <div class="u-src"><span class="bdg bdg-meta" style="font-size:10px;padding:2px 7px">Meta Ads</span> <span class="bdg bdg-ok" style="font-size:10px;padding:2px 7px">Compra</span></div>
+            </div>
+          </div>
+          <div class="u-item" onclick="selectUser(this,1)">
+            <div class="u-av" style="background:linear-gradient(135deg,#3B82F6,#1D4ED8)">J</div>
+            <div>
+              <div class="u-name">João Costa</div>
+              <div class="u-email">joao@gmail.com</div>
+              <div class="u-src"><span class="bdg bdg-gads" style="font-size:10px;padding:2px 7px">Google Ads</span> <span class="bdg bdg-pend" style="font-size:10px;padding:2px 7px">Checkout</span></div>
+            </div>
+          </div>
+          <div class="u-item" onclick="selectUser(this,2)">
+            <div class="u-av" style="background:linear-gradient(135deg,#F59E0B,#92400E)">A</div>
+            <div>
+              <div class="u-name">Ana Pereira</div>
+              <div class="u-email">ana.p@hotmail.com</div>
+              <div class="u-src"><span class="bdg bdg-meta" style="font-size:10px;padding:2px 7px">Meta Ads</span> <span class="bdg bdg-ok" style="font-size:10px;padding:2px 7px">Compra</span></div>
+            </div>
+          </div>
+          <div class="u-item" onclick="selectUser(this,3)">
+            <div class="u-av" style="background:linear-gradient(135deg,#10B981,#065F46)">C</div>
+            <div>
+              <div class="u-name">Carlos Mendes</div>
+              <div class="u-email">cmendes@yahoo.com</div>
+              <div class="u-src"><span class="bdg bdg-ga4" style="font-size:10px;padding:2px 7px">GA4</span> <span style="background:rgba(59,130,246,.1);color:var(--blue)" class="bdg" style="font-size:10px;padding:2px 7px">Lead</span></div>
+            </div>
+          </div>
+          <div class="u-item" onclick="selectUser(this,4)">
+            <div class="u-av" style="background:linear-gradient(135deg,#8B5CF6,#4C1D95)">F</div>
+            <div>
+              <div class="u-name">Fernanda Lima</div>
+              <div class="u-email">fe.lima@gmail.com</div>
+              <div class="u-src"><span class="bdg bdg-meta" style="font-size:10px;padding:2px 7px">Meta Ads</span> <span class="bdg bdg-ok" style="font-size:10px;padding:2px 7px">Compra</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- JOURNEY DETAIL -->
+        <div class="jrn-detail">
+          <div class="jrn-dhdr">
+            <div>
+              <div class="jrn-dname" id="jrn-name">Maria Silva</div>
+              <div class="jrn-dsub" id="jrn-email">maria@email.com · 3 touchpoints · 2 dias</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn">Exportar</button>
+              <button class="btn btn-red">Ver Conversão</button>
+            </div>
+          </div>
+          <div class="jrn-body">
+            <div class="timeline" id="jrn-timeline">
+              <!-- USER 0 — Maria Silva -->
+              <div class="t-ev">
+                <div class="t-dot td-view">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </div>
+                <div class="t-time">11 Jun 2026 · 08:42:17</div>
+                <div class="t-type">Page View</div>
+                <div class="t-info">Visitou <strong style="color:var(--t1)">lojaofficialtime.com.br/relogio-seiko-5-automatico-masculino-snxs79b1</strong></div>
+                <div class="t-utm">
+                  <span style="color:var(--t3)">utm_source</span>=<strong style="color:var(--blue)">meta</strong> &nbsp;
+                  <span style="color:var(--t3)">utm_medium</span>=<strong style="color:var(--t1)">paid</strong> &nbsp;
+                  <span style="color:var(--t3)">utm_campaign</span>=<strong style="color:var(--t1)">v4-ate_sp_perf_ved_oft_link_1401</strong>
+                </div>
+                <div class="t-cookies">
+                  fbp=<span>fb.1.1686486137.823456789</span><br>
+                  fbc=<span>fb.1.1686486137.IwAR3xyz...</span><br>
+                  ip=<span>177.92.34.18</span> · cidade=<span>São Paulo, SP</span>
+                </div>
+              </div>
+              <div class="t-ev">
+                <div class="t-dot td-lead">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </div>
+                <div class="t-time">11 Jun 2026 · 08:49:03</div>
+                <div class="t-type">Lead Capturado</div>
+                <div class="t-info">Preencheu formulário de interesse · <strong style="color:var(--t1)">Seiko 5 Automático SNXS79B1</strong></div>
+                <div class="t-cookies">
+                  email=<span>maria@email.com</span> · telefone=<span>(11) 98765-4321</span>
+                </div>
+              </div>
+              <div class="t-ev">
+                <div class="t-dot td-chk">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                </div>
+                <div class="t-time">13 Jun 2026 · 14:18:45</div>
+                <div class="t-type">Checkout Iniciado</div>
+                <div class="t-info">Produto: <strong style="color:var(--t1)">Seiko 5 Automático SNXS79B1</strong> · Valor: <strong style="color:var(--amber)">R$289,90</strong></div>
+              </div>
+              <div class="t-ev">
+                <div class="t-dot td-buy">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <div class="t-time">13 Jun 2026 · 14:22:11</div>
+                <div class="t-type" style="color:var(--green)">Compra Realizada</div>
+                <div class="t-info">Pedido #8847 · <strong style="color:var(--green)">R$289,90</strong> · Pix · Atribuição Meta Ads (7 dias)</div>
+                <div class="t-cookies">
+                  event_id=<span>purchase_8847_1686752531</span><br>
+                  fbp=<span>fb.1.1686486137.823456789</span> · fbc=<span>fb.1.1686486137.IwAR3xyz...</span><br>
+                  <strong style="color:var(--green)">→ Enviado ao Meta CAPI ✓</strong> · <strong style="color:var(--blue)">→ Google EC ✓</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PANEL 3 — CONVERSÕES ══ -->
+    <div class="panel" id="panel-3">
+      <div class="conv-pfs">
+        <!-- META CAPI -->
+        <div class="conv-pf">
+          <div class="conv-pf-head">
+            <div class="conv-pf-info">
+              <div class="conv-pf-ico" style="background:rgba(24,119,242,.1)">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="#1877F2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+              </div>
+              <div>
+                <div class="conv-pf-name">Meta CAPI</div>
+                <div class="conv-pf-sub">Conversions API · Pixel ID: 1234567890</div>
+              </div>
+            </div>
+            <div class="status-ok"><span class="sdot sdot-ok"></span>Ativo</div>
+          </div>
+          <div class="conv-metrics">
+            <div class="cv-m">
+              <div class="cv-m-val" id="cv0">0</div>
+              <div class="cv-m-lbl">Enviados</div>
+            </div>
+            <div class="cv-m">
+              <div class="cv-m-val" style="color:var(--green)" id="cv1">0%</div>
+              <div class="cv-m-lbl">Taxa de Match</div>
+            </div>
+            <div class="cv-m">
+              <div class="cv-m-val" style="color:var(--red)" id="cv2">0</div>
+              <div class="cv-m-lbl">Erros</div>
+            </div>
+          </div>
+        </div>
+        <!-- GOOGLE EC -->
+        <div class="conv-pf">
+          <div class="conv-pf-head">
+            <div class="conv-pf-info">
+              <div class="conv-pf-ico" style="background:rgba(66,133,244,.1)">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4285F4" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              </div>
+              <div>
+                <div class="conv-pf-name">Google Enhanced Conversions</div>
+                <div class="conv-pf-sub">Google Ads · Tag ID: AW-987654321</div>
+              </div>
+            </div>
+            <div class="status-ok"><span class="sdot sdot-ok"></span>Ativo</div>
+          </div>
+          <div class="conv-metrics">
+            <div class="cv-m">
+              <div class="cv-m-val" id="cv3">0</div>
+              <div class="cv-m-lbl">Enviados</div>
+            </div>
+            <div class="cv-m">
+              <div class="cv-m-val" style="color:var(--green)" id="cv4">0%</div>
+              <div class="cv-m-lbl">Atribuídos</div>
+            </div>
+            <div class="cv-m">
+              <div class="cv-m-val" style="color:var(--amber)" id="cv5">0</div>
+              <div class="cv-m-lbl">Pendentes</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EVENTS TABLE -->
+      <div class="tbl-wrap">
+        <div class="tbl-hdr">
+          <div>
+            <div class="tbl-ttl">Log de Conversões Enviadas</div>
+            <div class="tbl-stt">Últimas 24 horas · tempo real</div>
+          </div>
+          <div class="tbl-acts">
+            <button class="btn">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+              Reenviar Falhas
+            </button>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Evento</th>
+              <th>Usuário</th>
+              <th>Plataforma</th>
+              <th>Valor</th>
+              <th>Status</th>
+              <th>Horário</th>
+              <th>Event ID</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong style="color:var(--green)">Purchase</strong></td>
+              <td><div style="font-size:12.5px;color:var(--t1)">Maria Silva</div><div style="font-size:11px;color:var(--t3)">maria@email.com</div></td>
+              <td><span class="bdg bdg-meta">Meta CAPI</span></td>
+              <td style="color:var(--green);font-weight:600">R$289,90</td>
+              <td><span class="bdg bdg-ok">Enviado</span></td>
+              <td style="font-size:11.5px;color:var(--t3);font-family:'JetBrains Mono',monospace">13/06 14:22:15</td>
+              <td><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--t3)">purchase_8847_1686752531</span></td>
+            </tr>
+            <tr>
+              <td><strong style="color:var(--green)">Purchase</strong></td>
+              <td><div style="font-size:12.5px;color:var(--t1)">Maria Silva</div><div style="font-size:11px;color:var(--t3)">maria@email.com</div></td>
+              <td><span class="bdg bdg-gads">Google EC</span></td>
+              <td style="color:var(--green);font-weight:600">R$289,90</td>
+              <td><span class="bdg bdg-ok">Enviado</span></td>
+              <td style="font-size:11.5px;color:var(--t3);font-family:'JetBrains Mono',monospace">13/06 14:22:18</td>
+              <td><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--t3)">purchase_8847_1686752534</span></td>
+            </tr>
+            <tr>
+              <td><strong style="color:var(--green)">Purchase</strong></td>
+              <td><div style="font-size:12.5px;color:var(--t1)">Ana Pereira</div><div style="font-size:11px;color:var(--t3)">ana.p@hotmail.com</div></td>
+              <td><span class="bdg bdg-meta">Meta CAPI</span></td>
+              <td style="color:var(--green);font-weight:600">R$459,00</td>
+              <td><span class="bdg bdg-ok">Enviado</span></td>
+              <td style="font-size:11.5px;color:var(--t3);font-family:'JetBrains Mono',monospace">13/06 11:08:32</td>
+              <td><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--t3)">purchase_8844_1686736112</span></td>
+            </tr>
+            <tr>
+              <td><strong style="color:var(--amber)">Lead</strong></td>
+              <td><div style="font-size:12.5px;color:var(--t1)">Carlos Mendes</div><div style="font-size:11px;color:var(--t3)">cmendes@yahoo.com</div></td>
+              <td><span class="bdg bdg-meta">Meta CAPI</span></td>
+              <td style="color:var(--t3)">—</td>
+              <td><span class="bdg bdg-pend">Pendente</span></td>
+              <td style="font-size:11.5px;color:var(--t3);font-family:'JetBrains Mono',monospace">13/06 09:33:51</td>
+              <td><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--t3)">lead_9121_1686725631</span></td>
+            </tr>
+            <tr>
+              <td><strong style="color:var(--green)">Purchase</strong></td>
+              <td><div style="font-size:12.5px;color:var(--t1)">Fernanda Lima</div><div style="font-size:11px;color:var(--t3)">fe.lima@gmail.com</div></td>
+              <td><span class="bdg bdg-meta">Meta CAPI</span></td>
+              <td style="color:var(--green);font-weight:600">R$198,50</td>
+              <td><span class="bdg bdg-ok">Enviado</span></td>
+              <td style="font-size:11.5px;color:var(--t3);font-family:'JetBrains Mono',monospace">12/06 22:17:09</td>
+              <td><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--t3)">purchase_8839_1686687429</span></td>
+            </tr>
+            <tr>
+              <td><strong style="color:var(--blue)">ViewContent</strong></td>
+              <td><div style="font-size:12.5px;color:var(--t1)">Pedro Alves</div><div style="font-size:11px;color:var(--t3)">pedro@empresa.com.br</div></td>
+              <td><span class="bdg bdg-gads">Google EC</span></td>
+              <td style="color:var(--t3)">—</td>
+              <td><span class="bdg bdg-err">Erro</span></td>
+              <td style="font-size:11.5px;color:var(--t3);font-family:'JetBrains Mono',monospace">12/06 19:44:22</td>
+              <td><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--t3)">view_9304_1686674662</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+/* ── TAB SYSTEM ── */
+const tabs = document.querySelectorAll('.tab');
+const panels = document.querySelectorAll('.panel');
+const line = document.getElementById('tabLine');
+
+function switchTab(i) {
+  tabs.forEach((t,j) => t.classList.toggle('on', j===i));
+  panels.forEach((p,j) => p.classList.toggle('on', j===i));
+  posLine(i);
+  if (i===0) { animateFunnel(); animateBars(); }
+  if (i===2) { /* already rendered */ }
+  if (i===3) { animateConvMetrics(); }
+}
+
+function posLine(i) {
+  const t = tabs[i];
+  line.style.left = t.offsetLeft + 'px';
+  line.style.width = t.offsetWidth + 'px';
+}
+
+window.addEventListener('load', () => {
+  posLine(0);
+  countUpKPIs();
+  animateBars();
+  animateFunnel();
+});
+window.addEventListener('resize', () => posLine([...tabs].findIndex(t => t.classList.contains('on'))));
+
+/* ── PERIOD ── */
+const periods = {
+  '7d': ['R$4.230','R$22.800','5.39x','214'],
+  '30d': ['R$18.420','R$94.200','5.11x','847'],
+  '90d': ['R$52.100','R$278.400','5.34x','2.431'],
+};
+let currentPeriod = '30d';
+
+function setPeriod(btn, p) {
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  currentPeriod = p;
+  document.getElementById('period-label').textContent = `Dados consolidados — últimos ${p}`;
+  countUpKPIs();
+  animateBars();
+}
+
+/* ── COUNT UP ── */
+const kpiColors = ['var(--red)','var(--green)','var(--blue)','var(--purple)'];
+
+function countUp(el, endStr, dur) {
+  const isR = endStr.startsWith('R$');
+  const isX = endStr.endsWith('x');
+  const num = parseFloat(endStr.replace(/[R$x.,\s]/g,'').replace(',','.'));
+  const dec = endStr.includes(',') ? 1 : 0;
+  const start = performance.now();
+  function step(now) {
+    const p = Math.min((now-start)/dur, 1);
+    const ease = 1 - Math.pow(1-p, 3);
+    const val = num * ease;
+    let s;
+    if (isR) s = 'R$' + val.toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:0});
+    else if (isX) s = val.toFixed(2) + 'x';
+    else s = Math.round(val).toLocaleString('pt-BR');
+    el.textContent = s;
+    if (p < 1) requestAnimationFrame(step);
+    else el.textContent = endStr;
+  }
+  requestAnimationFrame(step);
+}
+
+function countUpKPIs() {
+  const d = periods[currentPeriod];
+  countUp(document.getElementById('v0'), d[0], 900);
+  countUp(document.getElementById('v1'), d[1], 900);
+  countUp(document.getElementById('v2'), d[2], 700);
+  countUp(document.getElementById('v3'), d[3], 800);
+}
+
+/* ── KPI HOVER ── */
+function kpiHover(el, i, on) {
+  const c = ['rgba(200,16,46,.2)','rgba(16,185,129,.2)','rgba(59,130,246,.2)','rgba(139,92,246,.2)'][i];
+  const bc = ['#C8102E','#10B981','#3B82F6','#8B5CF6'][i];
+  el.style.boxShadow = on ? `0 8px 24px ${c}` : 'none';
+  el.style.borderColor = on ? bc : 'var(--br)';
+}
+
+/* ── BAR CHART ── */
+const barData = [
+  {lbl:'Seg', rev:65, inv:40},
+  {lbl:'Ter', rev:80, inv:55},
+  {lbl:'Qua', rev:55, inv:35},
+  {lbl:'Qui', rev:90, inv:60},
+  {lbl:'Sex', rev:100, inv:70},
+  {lbl:'Sáb', rev:75, inv:50},
+  {lbl:'Dom', rev:60, inv:38},
+];
+
+function animateBars() {
+  const c = document.getElementById('barChart');
+  c.innerHTML = '';
+  barData.forEach(d => {
+    const col = document.createElement('div');
+    col.className = 'bc';
+    col.innerHTML = `
+      <div class="bc-pair">
+        <div class="b b-rev" style="height:${d.rev}%;animation-delay:${Math.random()*0.15}s"></div>
+        <div class="b b-inv" style="height:${d.inv}%;animation-delay:${Math.random()*0.15+0.05}s"></div>
+      </div>
+      <div class="bc-lbl">${d.lbl}</div>`;
+    c.appendChild(col);
+  });
+}
+
+/* ── FUNNEL ── */
+const funnelData = [
+  {lbl:'Visitas',   cnt:'12.840', pct:'100%', fill:100, color:'#3B82F6'},
+  {lbl:'Leads',     cnt:'847',    pct:'6,6%', fill:6.6, color:'#F59E0B'},
+  {lbl:'Checkout',  cnt:'284',    pct:'2,2%', fill:2.2, color:'#8B5CF6'},
+  {lbl:'Compras',   cnt:'94',     pct:'0,7%', fill:0.7, color:'#10B981'},
+];
+
+function animateFunnel() {
+  const c = document.getElementById('funnel');
+  c.innerHTML = '';
+  funnelData.forEach(f => {
+    const row = document.createElement('div');
+    row.className = 'fn-row';
+    row.innerHTML = `
+      <div class="fn-lbl">${f.lbl}</div>
+      <div class="fn-track"><div class="fn-fill" style="background:${f.color}" data-w="${f.fill}"></div></div>
+      <div class="fn-cnt">${f.cnt}</div>
+      <div class="fn-pct">${f.pct}</div>`;
+    c.appendChild(row);
+  });
+  setTimeout(() => {
+    document.querySelectorAll('.fn-fill').forEach(el => {
+      el.style.width = el.dataset.w + '%';
+    });
+  }, 60);
+}
+
+/* ── CONV METRICS ── */
+function animateConvMetrics() {
+  countUp(document.getElementById('cv0'), '1.284', 800);
+  setTimeout(() => { document.getElementById('cv1').textContent = '87%'; }, 400);
+  countUp(document.getElementById('cv2'), '12', 600);
+  countUp(document.getElementById('cv3'), '947', 800);
+  setTimeout(() => { document.getElementById('cv4').textContent = '91%'; }, 400);
+  countUp(document.getElementById('cv5'), '37', 600);
+}
+
+/* ── CHIP TOGGLE ── */
+function toggleChip(el, src) {
+  const cls = 'on-'+src;
+  const dot = el.querySelector('.cdot');
+  const colors = {meta:'#1877F2', gads:'#4285F4', ga4:'#E37400', shop:'#96BF48'};
+  if (el.classList.contains(cls)) {
+    el.classList.remove(cls);
+    dot.style.background = 'var(--t3)';
+  } else {
+    el.classList.add(cls);
+    dot.style.background = colors[src];
+  }
+}
+
+/* ── COPY UTM ── */
+function copyUTM(btn, url) {
+  navigator.clipboard.writeText(url).then(() => {
+    btn.textContent = '✓ Copiado';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+/* ── UTM FILTER ── */
+function filterUTM() {
+  const q = document.getElementById('utmSearch').value.toLowerCase();
+  document.querySelectorAll('#utmTable tbody tr').forEach(tr => {
+    tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+/* ── JORNADA USER SELECT ── */
+const journeyData = [
+  {
+    name: 'Maria Silva', email: 'maria@email.com · 3 touchpoints · 2 dias',
+    html: `
+      <div class="t-ev">
+        <div class="t-dot td-view"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
+        <div class="t-time">11 Jun 2026 · 08:42:17</div>
+        <div class="t-type">Page View</div>
+        <div class="t-info">Visitou <strong style="color:var(--t1)">lojaofficialtime.com.br/relogio-seiko-5...</strong></div>
+        <div class="t-utm">utm_source=<strong style="color:var(--blue)">meta</strong> · utm_campaign=<strong style="color:var(--t1)">v4-ate_sp_perf_ved_oft_link_1401</strong></div>
+        <div class="t-cookies">fbp=<span>fb.1.1686486137.823456789</span><br>fbc=<span>fb.1.1686486137.IwAR3xyz...</span><br>ip=<span>177.92.34.18</span> · cidade=<span>São Paulo, SP</span></div>
+      </div>
+      <div class="t-ev">
+        <div class="t-dot td-lead"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <div class="t-time">11 Jun 2026 · 08:49:03</div>
+        <div class="t-type">Lead Capturado</div>
+        <div class="t-info">Formulário de interesse · <strong style="color:var(--t1)">Seiko 5 Automático SNXS79B1</strong></div>
+        <div class="t-cookies">email=<span>maria@email.com</span> · telefone=<span>(11) 98765-4321</span></div>
+      </div>
+      <div class="t-ev">
+        <div class="t-dot td-chk"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div>
+        <div class="t-time">13 Jun 2026 · 14:18:45</div>
+        <div class="t-type">Checkout Iniciado</div>
+        <div class="t-info">Seiko 5 Automático · <strong style="color:var(--amber)">R$289,90</strong></div>
+      </div>
+      <div class="t-ev">
+        <div class="t-dot td-buy"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="t-time">13 Jun 2026 · 14:22:11</div>
+        <div class="t-type" style="color:var(--green)">Compra Realizada</div>
+        <div class="t-info">Pedido #8847 · <strong style="color:var(--green)">R$289,90</strong> · Atribuição Meta Ads (7 dias)</div>
+        <div class="t-cookies">fbp=<span>fb.1.1686486137.823456789</span><br><strong style="color:var(--green)">→ Enviado ao Meta CAPI ✓</strong> · <strong style="color:var(--blue)">→ Google EC ✓</strong></div>
+      </div>`
+  },
+  {
+    name: 'João Costa', email: 'joao@gmail.com · 2 touchpoints · 1 dia',
+    html: `
+      <div class="t-ev">
+        <div class="t-dot td-view"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
+        <div class="t-time">13 Jun 2026 · 13:30:22</div>
+        <div class="t-type">Page View</div>
+        <div class="t-info">Pesquisou <strong style="color:var(--t1)">"relogio seiko automatico"</strong> no Google e clicou no anúncio</div>
+        <div class="t-utm">utm_source=<strong style="color:var(--gads)">google</strong> · utm_campaign=<strong style="color:var(--t1)">v4-ate_br_perf_ved_oft_search_br</strong></div>
+        <div class="t-cookies">gclid=<span>CjwKCAiA...</span><br>ip=<span>189.27.45.112</span> · cidade=<span>Campinas, SP</span></div>
+      </div>
+      <div class="t-ev">
+        <div class="t-dot td-chk"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div>
+        <div class="t-time">13 Jun 2026 · 13:45:08</div>
+        <div class="t-type" style="color:var(--amber)">Checkout Iniciado — Abandonado</div>
+        <div class="t-info">Adicionou ao carrinho mas não finalizou a compra</div>
+        <div class="t-cookies">Janela de atribuição Google Ads: <span>90 dias</span></div>
+      </div>`
+  },
+  {
+    name: 'Ana Pereira', email: 'ana.p@hotmail.com · 2 touchpoints · 3 dias',
+    html: `
+      <div class="t-ev">
+        <div class="t-dot td-view"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
+        <div class="t-time">10 Jun 2026 · 20:14:51</div>
+        <div class="t-type">Page View</div>
+        <div class="t-info">Viu anúncio de catálogo no Instagram · <strong style="color:var(--t1)">Collection Ad</strong></div>
+        <div class="t-utm">utm_source=<strong style="color:var(--blue)">meta</strong> · utm_campaign=<strong style="color:var(--t1)">v4-ate_br_perf_ved_oft_link_catalogo-br</strong></div>
+        <div class="t-cookies">fbp=<span>fb.1.1686345291.912345678</span><br>fbc=<span>fb.1.1686345291.IwBR5abc...</span></div>
+      </div>
+      <div class="t-ev">
+        <div class="t-dot td-buy"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="t-time">13 Jun 2026 · 11:08:32</div>
+        <div class="t-type" style="color:var(--green)">Compra Realizada</div>
+        <div class="t-info">Pedido #8844 · <strong style="color:var(--green)">R$459,00</strong> · Cartão de Crédito · Atribuição Meta Ads (7 dias)</div>
+        <div class="t-cookies">fbp=<span>fb.1.1686345291.912345678</span><br><strong style="color:var(--green)">→ Enviado ao Meta CAPI ✓</strong></div>
+      </div>`
+  },
+  {
+    name: 'Carlos Mendes', email: 'cmendes@yahoo.com · 1 touchpoint',
+    html: `
+      <div class="t-ev">
+        <div class="t-dot td-view"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
+        <div class="t-time">13 Jun 2026 · 09:28:14</div>
+        <div class="t-type">Page View</div>
+        <div class="t-info">Entrada orgânica — pesquisa Google sem clique pago</div>
+        <div class="t-utm"><span style="color:var(--t3)">(sem UTM — tráfego orgânico)</span></div>
+        <div class="t-cookies">ip=<span>200.142.18.78</span> · cidade=<span>Rio de Janeiro, RJ</span></div>
+      </div>
+      <div class="t-ev">
+        <div class="t-dot td-lead"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <div class="t-time">13 Jun 2026 · 09:33:51</div>
+        <div class="t-type">Lead Capturado</div>
+        <div class="t-info">Cadastrou email para receber novidades</div>
+        <div class="t-cookies">email=<span>cmendes@yahoo.com</span><br><span style="color:var(--amber)">→ Envio ao Meta CAPI pendente</span></div>
+      </div>`
+  },
+  {
+    name: 'Fernanda Lima', email: 'fe.lima@gmail.com · 2 touchpoints · 1 dia',
+    html: `
+      <div class="t-ev">
+        <div class="t-dot td-view"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
+        <div class="t-time">12 Jun 2026 · 21:44:32</div>
+        <div class="t-type">Page View</div>
+        <div class="t-info">Post impulsionado · Dia dos Namorados</div>
+        <div class="t-utm">utm_source=<strong style="color:var(--blue)">meta</strong> · utm_campaign=<strong style="color:var(--t1)">v4-ate_br_perf_ved_oft_post_diadosnamorados</strong></div>
+        <div class="t-cookies">fbp=<span>fb.1.1686609872.567891234</span></div>
+      </div>
+      <div class="t-ev">
+        <div class="t-dot td-buy"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="t-time">12 Jun 2026 · 22:17:09</div>
+        <div class="t-type" style="color:var(--green)">Compra Realizada</div>
+        <div class="t-info">Pedido #8839 · <strong style="color:var(--green)">R$198,50</strong> · Pix</div>
+        <div class="t-cookies">fbp=<span>fb.1.1686609872.567891234</span><br><strong style="color:var(--green)">→ Enviado ao Meta CAPI ✓</strong></div>
+      </div>`
+  }
+];
+
+function selectUser(el, i) {
+  document.querySelectorAll('.u-item').forEach(u => u.classList.remove('sel'));
+  el.classList.add('sel');
+  document.getElementById('jrn-name').textContent = journeyData[i].name;
+  document.getElementById('jrn-email').textContent = journeyData[i].email;
+  document.getElementById('jrn-timeline').innerHTML = journeyData[i].html;
+}
+</script>
+</body>
+</html>

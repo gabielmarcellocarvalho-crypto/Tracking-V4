@@ -1,0 +1,1677 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tracking V4 — Design Spec</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ─── RESET ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ─── SPEC TOKENS ────────────────────────────────────────── */
+:root {
+  /* Surfaces */
+  --bg-base:    #0D1117;
+  --bg-side:    #111827;
+  --bg-card:    #161D2E;
+  --bg-card-h:  #1C2640;
+  /* Borders */
+  --border:     #1F2D45;
+  --border-sub: #192036;
+  /* Text */
+  --t1: #E2E8F0;
+  --t2: #8FA3BF;
+  --t3: #4A5E78;
+  /* Brand */
+  --accent:     #F97316;
+  --accent-h:   #FB923C;
+  /* Status */
+  --green:      #10B981;
+  --green-2:    #34D399;
+  --blue:       #3B82F6;
+  --purple:     #8B5CF6;
+  --red:        #EF4444;
+  --orange-ga4: #E37400;
+  --blue-meta:  #1877F2;
+  --blue-gads:  #4285F4;
+  --green-shop: #96BF48;
+
+  /* Spec UI */
+  --spec-bg:    #080C10;
+  --spec-side:  #0D1117;
+  --spec-text:  #94A3B8;
+  --spec-head:  #E2E8F0;
+  --spec-anno:  #F59E0B;
+  --spec-border:#1E293B;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--spec-bg);
+  color: var(--spec-text);
+  min-height: 100vh;
+}
+
+/* ─── SPEC LAYOUT ────────────────────────────────────────── */
+.spec-nav {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 52px; z-index: 100;
+  background: rgba(8,12,16,.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--spec-border);
+  display: flex; align-items: center; padding: 0 24px; gap: 32px;
+}
+.spec-nav-logo {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px; font-weight: 700; color: var(--spec-head);
+}
+.spec-nav-logo-box {
+  width: 26px; height: 26px; border-radius: 6px;
+  background: var(--accent); display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800; color: #fff;
+  box-shadow: 0 2px 8px rgba(249,115,22,.4);
+}
+.spec-nav-divider { width: 1px; height: 20px; background: var(--spec-border); }
+.spec-nav-links { display: flex; gap: 4px; }
+.spec-nav-link {
+  padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 500;
+  color: var(--spec-text); cursor: pointer; text-decoration: none;
+  transition: all .15s;
+}
+.spec-nav-link:hover, .spec-nav-link.active {
+  background: rgba(255,255,255,.06); color: var(--spec-head);
+}
+.spec-badge {
+  padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700;
+  background: rgba(249,115,22,.15); color: var(--accent); letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.spec-main {
+  margin-top: 52px;
+  display: flex;
+}
+
+/* ─── TOC SIDEBAR ─────────────────────────────────────────── */
+.spec-toc {
+  position: fixed; top: 52px; left: 0; width: 220px;
+  height: calc(100vh - 52px); overflow-y: auto;
+  background: var(--spec-side); border-right: 1px solid var(--spec-border);
+  padding: 20px 0;
+}
+.toc-section { padding: 8px 16px 4px; font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .08em; color: var(--t3); }
+.toc-item {
+  display: flex; align-items: center; padding: 6px 16px; font-size: 12px;
+  color: var(--spec-text); text-decoration: none; gap: 8px;
+  border-left: 2px solid transparent; transition: all .15s;
+}
+.toc-item:hover { color: var(--spec-head); background: rgba(255,255,255,.03); }
+.toc-item.active { color: var(--accent); border-left-color: var(--accent);
+  background: rgba(249,115,22,.06); }
+.toc-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: .5; }
+
+/* ─── CONTENT ─────────────────────────────────────────────── */
+.spec-content {
+  margin-left: 220px; flex: 1;
+  padding: 40px 48px 80px;
+  max-width: 1200px;
+}
+
+/* ─── SECTION HEADERS ──────────────────────────────────────── */
+.page-header {
+  margin-bottom: 40px; padding-bottom: 20px;
+  border-bottom: 1px solid var(--spec-border);
+}
+.page-tag { font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .1em; color: var(--accent); margin-bottom: 6px; }
+.page-title { font-size: 24px; font-weight: 700; color: var(--spec-head); margin-bottom: 8px; }
+.page-desc { font-size: 13px; color: var(--spec-text); line-height: 1.6; }
+
+.sec-header {
+  display: flex; align-items: center; gap: 12px; margin: 48px 0 24px;
+}
+.sec-num {
+  width: 28px; height: 28px; border-radius: 8px; background: rgba(249,115,22,.1);
+  border: 1px solid rgba(249,115,22,.2); display: flex; align-items: center;
+  justify-content: center; font-size: 12px; font-weight: 700; color: var(--accent);
+  flex-shrink: 0;
+}
+.sec-title { font-size: 16px; font-weight: 700; color: var(--spec-head); }
+.sec-sub { font-size: 12px; color: var(--t3); margin-top: 2px; }
+
+/* ─── ANNOTATION SYSTEM ────────────────────────────────────── */
+.anno-wrap { position: relative; display: inline-block; }
+.anno {
+  position: absolute; background: var(--spec-anno); color: #000;
+  font-size: 9.5px; font-weight: 700; padding: 2px 7px; border-radius: 10px;
+  white-space: nowrap; pointer-events: none; z-index: 10;
+  font-family: 'JetBrains Mono', monospace;
+}
+.anno-line { position: absolute; background: var(--spec-anno); pointer-events: none; z-index: 9; }
+
+.spec-note {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;
+  background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.2);
+  border-radius: 6px; font-size: 11px; color: #F59E0B; margin: 4px 0;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ─── TOKEN SWATCHES ────────────────────────────────────────── */
+.token-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); gap: 12px; }
+.token-swatch {
+  border-radius: 10px; overflow: hidden;
+  border: 1px solid var(--spec-border);
+}
+.token-color { height: 56px; }
+.token-info { padding: 8px 10px; background: var(--bg-card); }
+.token-name { font-size: 10.5px; font-weight: 600; color: var(--spec-head); font-family: 'JetBrains Mono', monospace; }
+.token-hex { font-size: 10px; color: var(--t3); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+.token-use { font-size: 9.5px; color: var(--t3); margin-top: 3px; font-style: italic; }
+
+.type-row {
+  display: flex; align-items: baseline; gap: 16px; padding: 14px 0;
+  border-bottom: 1px solid var(--spec-border);
+}
+.type-sample { color: var(--t1); }
+.type-meta { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--t3); min-width: 240px; }
+
+.space-row { display: flex; align-items: center; gap: 16px; padding: 8px 0; }
+.space-bar { background: rgba(249,115,22,.25); border: 1px dashed rgba(249,115,22,.5); border-radius: 2px; height: 20px; }
+.space-label { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--spec-anno); min-width: 40px; }
+.space-name { font-size: 11px; color: var(--t2); }
+
+/* ─── COMPONENT CANVAS ──────────────────────────────────────── */
+.comp-canvas {
+  background: var(--bg-base); border-radius: 12px;
+  border: 1px solid var(--spec-border); overflow: hidden;
+}
+.comp-canvas-label {
+  padding: 8px 14px; background: rgba(0,0,0,.3);
+  border-bottom: 1px solid var(--spec-border);
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--t3);
+  font-family: 'JetBrains Mono', monospace;
+}
+.comp-canvas-body { padding: 28px 24px; }
+
+/* ─── STATES ROW ────────────────────────────────────────────── */
+.states-row { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+.state-box { }
+.state-label {
+  font-size: 9.5px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--t3); margin-bottom: 8px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ─── SPEC TABLE ────────────────────────────────────────────── */
+.spec-table {
+  width: 100%; border-collapse: collapse; font-size: 12px;
+  margin-top: 16px;
+}
+.spec-table th {
+  text-align: left; padding: 8px 12px; font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .08em; color: var(--t3);
+  background: rgba(0,0,0,.2); border-bottom: 1px solid var(--spec-border);
+  font-family: 'JetBrains Mono', monospace;
+}
+.spec-table td {
+  padding: 9px 12px; border-bottom: 1px solid var(--spec-border);
+  color: var(--t2); vertical-align: top;
+}
+.spec-table td:first-child { color: var(--spec-head); font-weight: 500; }
+.mono { font-family: 'JetBrains Mono', monospace; color: var(--spec-anno); font-size: 11px; }
+.px { font-family: 'JetBrains Mono', monospace; color: var(--blue); font-size: 11px; }
+.ms { font-family: 'JetBrains Mono', monospace; color: var(--green); font-size: 11px; }
+
+/* ─── ACTUAL COMPONENTS (dark theme) ─────────────────────────── */
+@keyframes pulse-green {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16,185,129,.6); }
+  50%       { opacity: .7; box-shadow: 0 0 0 4px rgba(16,185,129,0); }
+}
+@keyframes underline-slide { from { opacity: 0; } to { opacity: 1; } }
+
+/* Sidebar */
+.ui-sidebar {
+  width: 256px; background: var(--bg-side);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; border-radius: 12px;
+  overflow: hidden;
+}
+.ui-sidebar-head {
+  padding: 14px 16px; display: flex; align-items: center;
+  gap: 10px; border-bottom: 1px solid var(--border);
+}
+.ui-logo-box {
+  width: 34px; height: 34px; border-radius: 9px;
+  background: var(--accent); display: flex; align-items: center;
+  justify-content: center; font-size: 13px; font-weight: 800; color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(249,115,22,.35);
+}
+.ui-logo-text { font-size: 14px; font-weight: 700; color: var(--t1); }
+.ui-logo-sub { font-size: 10px; color: var(--t3); margin-top: 1px; }
+.ui-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
+.ui-nav-section {
+  padding: 12px 16px 4px; font-size: 9.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .09em; color: var(--t3);
+}
+.ui-nav-item {
+  display: flex; align-items: center; padding: 8px 12px; gap: 8px;
+  font-size: 13.5px; color: var(--t2); cursor: pointer;
+  border-left: 2px solid transparent; transition: all .18s cubic-bezier(.4,0,.2,1);
+  text-decoration: none; position: relative; border-radius: 0 6px 6px 0; margin-right: 8px;
+}
+.ui-nav-item:hover {
+  background: var(--bg-card); color: var(--t1); padding-left: 16px;
+}
+.ui-nav-item.active {
+  background: rgba(249,115,22,.12); color: var(--accent);
+  border-left-color: var(--accent); padding-left: 15px;
+}
+.ui-nav-icon { width: 16px; height: 16px; opacity: .7; flex-shrink: 0; }
+.ui-nav-badge {
+  margin-left: auto; background: rgba(249,115,22,.15);
+  color: var(--accent); font-size: 10px; font-weight: 700;
+  padding: 1px 7px; border-radius: 10px;
+}
+.ui-footer {
+  padding: 12px 16px; border-top: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+.ui-avatar-grad {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: #fff;
+}
+.ui-footer-name { font-size: 12px; font-weight: 600; color: var(--t1); }
+.ui-footer-role { font-size: 10.5px; color: var(--t3); margin-top: 1px; }
+
+/* Header */
+.ui-header {
+  height: 60px; background: var(--bg-side);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 20px; gap: 16px;
+  border-radius: 12px;
+}
+.ui-breadcrumb { font-size: 11px; color: var(--t3); }
+.ui-page-title { font-size: 15px; font-weight: 600; color: var(--t1); }
+.ui-client-sel {
+  display: flex; align-items: center; gap: 8px; padding: 6px 12px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 8px; cursor: pointer; gap: 8px;
+}
+.ui-pulse-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--green);
+  animation: pulse-green 2s ease-in-out infinite;
+}
+.ui-client-name { font-size: 13px; font-weight: 500; color: var(--t1); }
+.ui-chevron { color: var(--t3); font-size: 10px; }
+.ui-icon-btn {
+  width: 34px; height: 34px; border-radius: 8px; background: var(--bg-card);
+  border: 1px solid var(--border); display: flex; align-items: center;
+  justify-content: center; cursor: pointer; color: var(--t2);
+  transition: all .18s cubic-bezier(.4,0,.2,1);
+}
+.ui-icon-btn:hover {
+  border-color: var(--accent); color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(249,115,22,.12), 0 3px 10px rgba(249,115,22,.2);
+  transform: translateY(-2px);
+}
+.ui-avatar-btn {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: #fff;
+}
+.spacer { flex: 1; }
+
+/* Source chips */
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px;
+  border-radius: 20px; font-size: 12px; font-weight: 500; cursor: pointer;
+  border: 1px solid var(--border); background: var(--bg-card); color: var(--t3);
+  transition: all .18s cubic-bezier(.4,0,.2,1);
+}
+.chip-dot { width: 6px; height: 6px; border-radius: 50%; }
+.chip.on-meta   { border-color: var(--blue-meta); color: var(--blue-meta); background: rgba(24,119,242,.07); }
+.chip.on-gads   { border-color: var(--blue-gads); color: var(--blue-gads); background: rgba(66,133,244,.07); }
+.chip.on-ga4    { border-color: var(--orange-ga4); color: var(--orange-ga4); background: rgba(227,116,0,.07); }
+.chip.on-shop   { border-color: var(--green-shop); color: var(--green-shop); background: rgba(150,191,72,.07); }
+
+/* KPI cards */
+.kpi-card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 16px 18px; position: relative; overflow: hidden;
+  transition: all .22s cubic-bezier(.4,0,.2,1); cursor: default;
+}
+.kpi-card:hover { transform: translateY(-3px); }
+.kpi-top-bar {
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+}
+.kpi-icon {
+  width: 30px; height: 30px; border-radius: 7px; margin-bottom: 10px;
+  background: rgba(255,255,255,.04); display: flex; align-items: center;
+  justify-content: center; font-size: 15px;
+}
+.kpi-label { font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--t3); margin-bottom: 4px; }
+.kpi-value { font-size: 26px; font-weight: 700; color: var(--t1);
+  letter-spacing: -0.5px; line-height: 1; }
+.kpi-trend { font-size: 11.5px; margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+.kpi-trend.up { color: var(--green); }
+.kpi-trend.down { color: var(--red); }
+
+/* Tab bar */
+.tab-bar {
+  display: flex; border-bottom: 1px solid var(--border); position: relative; gap: 0;
+}
+.tab-item {
+  padding: 10px 18px; font-size: 13px; font-weight: 500; color: var(--t3);
+  cursor: pointer; position: relative; transition: color .18s;
+}
+.tab-item.active { color: var(--accent); }
+.tab-underline {
+  position: absolute; bottom: -1px; height: 2px; background: var(--accent);
+  border-radius: 2px; transition: left .22s cubic-bezier(.4,0,.2,1), width .22s cubic-bezier(.4,0,.2,1);
+}
+
+/* Funnel */
+.funnel-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.funnel-label { font-size: 11.5px; color: var(--t2); width: 72px; flex-shrink: 0; }
+.funnel-track { flex: 1; height: 7px; border-radius: 4px; background: var(--bg-base); overflow: hidden; }
+.funnel-fill { height: 100%; border-radius: 4px; transition: width .8s ease-out; }
+.funnel-count { font-size: 12px; font-weight: 600; color: var(--t1); width: 52px; text-align: right; flex-shrink: 0; }
+.funnel-pct { font-size: 10.5px; color: var(--t3); width: 34px; text-align: right; flex-shrink: 0; }
+
+/* Bar chart */
+.bar-chart { display: flex; align-items: flex-end; gap: 6px; height: 110px; }
+.bar-day { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0; }
+.bar-pair { display: flex; align-items: flex-end; gap: 3px; width: 100%; height: 100px; }
+.bar { flex: 1; border-radius: 4px 4px 0 0; transition: all .18s; cursor: pointer; }
+.bar:hover { filter: brightness(1.25); transform: scaleY(1.04); transform-origin: bottom; }
+.bar-rev { background: linear-gradient(to top, #10B981, #34D399); }
+.bar-inv { background: #F97316; opacity: .6; }
+.bar-lbl { font-size: 9.5px; color: var(--t3); margin-top: 5px; }
+
+/* Leads table */
+.leads-tbl-wrap {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden;
+}
+.leads-tbl-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+}
+.leads-tbl-title { font-size: 14px; font-weight: 600; color: var(--t1); }
+.leads-tbl-sub { font-size: 11.5px; color: var(--t3); margin-top: 2px; }
+.tbl-btn {
+  display: flex; align-items: center; gap: 5px; padding: 5px 11px;
+  border-radius: 6px; font-size: 11.5px; color: var(--t2); cursor: pointer;
+  background: var(--bg-base); border: 1px solid var(--border);
+  transition: all .18s cubic-bezier(.4,0,.2,1);
+}
+.tbl-btn:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
+table.leads { width: 100%; border-collapse: collapse; }
+table.leads th {
+  padding: 9px 18px; font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .07em; color: var(--t3); text-align: left;
+  background: rgba(0,0,0,.15); border-bottom: 1px solid var(--border);
+}
+table.leads td {
+  padding: 12px 18px; font-size: 13px; color: var(--t2);
+  border-bottom: 1px solid var(--border-sub); transition: all .15s;
+}
+table.leads tr:last-child td { border-bottom: none; }
+table.leads tr:hover td { background: rgba(255,255,255,.02); color: var(--t1); }
+.badge {
+  display: inline-flex; align-items: center; padding: 3px 9px;
+  border-radius: 20px; font-size: 11px; font-weight: 500;
+}
+.journey-btn {
+  padding: 5px 11px; border-radius: 6px; font-size: 11.5px; font-weight: 500;
+  border: 1px solid var(--border); color: var(--t2); cursor: pointer;
+  background: transparent; transition: all .18s cubic-bezier(.4,0,.2,1);
+  font-family: inherit;
+}
+.journey-btn:hover {
+  border-color: var(--accent); background: rgba(249,115,22,.08); color: var(--accent);
+  transform: translateY(-1px); box-shadow: 0 3px 10px rgba(249,115,22,.15);
+}
+
+/* ─── ANIM INDICATOR ─────────────────────────────────────────── */
+.anim-badge {
+  display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px;
+  background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.25);
+  border-radius: 6px; font-size: 10px; color: var(--green); font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+}
+.anim-badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--green); }
+.trans-badge {
+  display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px;
+  background: rgba(59,130,246,.1); border: 1px solid rgba(59,130,246,.25);
+  border-radius: 6px; font-size: 10px; color: var(--blue); font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ─── LAYOUT PREVIEW ──────────────────────────────────────────── */
+.layout-preview {
+  background: var(--bg-base); border-radius: 14px;
+  border: 1px solid var(--spec-border); overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,.5);
+}
+.layout-inner {
+  display: flex; height: 580px; overflow: hidden;
+}
+.layout-sidebar {
+  width: 200px; background: var(--bg-side);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; flex-shrink: 0;
+}
+.layout-sidebar-head {
+  padding: 12px; display: flex; align-items: center; gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.layout-logo { width: 26px; height: 26px; border-radius: 6px; background: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 800; color: #fff;
+  box-shadow: 0 2px 8px rgba(249,115,22,.35); flex-shrink: 0;
+}
+.layout-logo-t { font-size: 12px; font-weight: 700; color: var(--t1); }
+.layout-nav { flex: 1; padding: 8px 0; overflow: hidden; }
+.layout-ns { padding: 10px 10px 2px; font-size: 8px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .09em; color: var(--t3); }
+.layout-ni {
+  display: flex; align-items: center; gap: 6px; padding: 6px 10px;
+  font-size: 11px; color: var(--t2); border-left: 2px solid transparent;
+  cursor: pointer; margin-right: 6px; border-radius: 0 5px 5px 0;
+}
+.layout-ni.a { background: rgba(249,115,22,.12); color: var(--accent); border-left-color: var(--accent); }
+.layout-ni .icon { font-size: 11px; opacity: .7; }
+.layout-foot { padding: 8px 10px; border-top: 1px solid var(--border);
+  display: flex; align-items: center; gap: 6px; }
+.layout-av-s {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700; color: #fff;
+}
+.layout-right { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.layout-header {
+  height: 48px; background: var(--bg-side); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 14px; gap: 10px;
+  flex-shrink: 0;
+}
+.layout-content { flex: 1; overflow-y: auto; padding: 14px; background: var(--bg-base); }
+.layout-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
+.layout-kpi { background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px; position: relative; overflow: hidden; }
+.layout-kpi::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+.layout-kpi.c1::before { background: var(--accent); }
+.layout-kpi.c2::before { background: var(--green); }
+.layout-kpi.c3::before { background: var(--blue); }
+.layout-kpi.c4::before { background: var(--purple); }
+.layout-kpi-icon { font-size: 11px; margin-bottom: 4px; }
+.layout-kpi-lbl { font-size: 7px; text-transform: uppercase; letter-spacing: .07em; color: var(--t3); }
+.layout-kpi-val { font-size: 14px; font-weight: 700; color: var(--t1); margin-top: 2px; }
+.layout-kpi-tr { font-size: 8px; color: var(--green); margin-top: 2px; }
+.layout-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.layout-card { background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px; }
+.layout-card-t { font-size: 10px; font-weight: 600; color: var(--t1); margin-bottom: 2px; }
+.layout-card-s { font-size: 8px; color: var(--t3); margin-bottom: 8px; }
+.layout-bars { display: flex; align-items: flex-end; gap: 4px; height: 60px; }
+.layout-bar-day { flex: 1; display: flex; align-items: flex-end; gap: 1px; }
+.layout-funnel-r { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+.layout-funnel-l { font-size: 8px; color: var(--t2); width: 46px; }
+.layout-funnel-t { flex: 1; height: 5px; border-radius: 2px; background: var(--bg-base); overflow: hidden; }
+.layout-funnel-f { height: 100%; border-radius: 2px; }
+
+/* ─── GRID HELPERS ───────────────────────────────────────────── */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.flex-row { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+.gap-8 { gap: 8px; }
+
+.divider { height: 1px; background: var(--spec-border); margin: 32px 0; }
+
+/* ─── REDLINE MEASURE ────────────────────────────────────────── */
+.measure-wrap { position: relative; display: inline-flex; flex-direction: column; align-items: center; }
+.measure-line {
+  position: absolute; background: rgba(239,68,68,.5); pointer-events: none;
+}
+.measure-label-box {
+  position: absolute; background: rgba(239,68,68,.9); color: #fff;
+  font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px;
+  font-family: 'JetBrains Mono', monospace; pointer-events: none; white-space: nowrap;
+}
+
+/* ─── INTERACTIVE DEMO ────────────────────────────────────────── */
+.demo-label {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--t3); margin-bottom: 10px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.interaction-note {
+  font-size: 11px; color: var(--t3); margin-top: 8px; font-style: italic;
+}
+
+/* ─── SCROLLBAR ──────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--spec-border); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<!-- ═══ TOP NAV ═══════════════════════════════════════════════ -->
+<nav class="spec-nav">
+  <div class="spec-nav-logo">
+    <div class="spec-nav-logo-box">V4</div>
+    Tracking V4 — Design Spec
+  </div>
+  <div class="spec-nav-divider"></div>
+  <div class="spec-nav-links">
+    <a href="#tokens" class="spec-nav-link">Tokens</a>
+    <a href="#components" class="spec-nav-link">Componentes</a>
+    <a href="#layout" class="spec-nav-link">Layout</a>
+    <a href="#interactions" class="spec-nav-link">Interações</a>
+    <a href="#handoff" class="spec-nav-link">Handoff</a>
+  </div>
+  <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+    <span class="spec-badge">v1.0</span>
+    <span style="font-size:11px;color:var(--t3);">Carvalho &amp; Co · 2026</span>
+  </div>
+</nav>
+
+<!-- ═══ LEFT TOC ══════════════════════════════════════════════ -->
+<nav class="spec-toc">
+  <div class="toc-section">Páginas</div>
+  <a href="#tokens" class="toc-item active"><span class="toc-dot"></span>01 · Design Tokens</a>
+  <a href="#components" class="toc-item"><span class="toc-dot"></span>02 · Componentes</a>
+  <a href="#layout" class="toc-item"><span class="toc-dot"></span>03 · Layout</a>
+  <a href="#interactions" class="toc-item"><span class="toc-dot"></span>04 · Interações</a>
+  <a href="#handoff" class="toc-item"><span class="toc-dot"></span>05 · Handoff</a>
+
+  <div class="toc-section" style="margin-top:12px;">Componentes</div>
+  <a href="#c-sidebar" class="toc-item"><span class="toc-dot"></span>Sidebar</a>
+  <a href="#c-header" class="toc-item"><span class="toc-dot"></span>Header</a>
+  <a href="#c-chips" class="toc-item"><span class="toc-dot"></span>Source Chips</a>
+  <a href="#c-kpi" class="toc-item"><span class="toc-dot"></span>KPI Cards</a>
+  <a href="#c-tabs" class="toc-item"><span class="toc-dot"></span>Tab Bar</a>
+  <a href="#c-barchart" class="toc-item"><span class="toc-dot"></span>Bar Chart</a>
+  <a href="#c-funnel" class="toc-item"><span class="toc-dot"></span>Funnel Chart</a>
+  <a href="#c-table" class="toc-item"><span class="toc-dot"></span>Leads Table</a>
+</nav>
+
+<!-- ═══ MAIN CONTENT ══════════════════════════════════════════ -->
+<div class="spec-main">
+<div class="spec-content">
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<!-- PAGE 1 — DESIGN TOKENS                                      -->
+<!-- ─────────────────────────────────────────────────────────── -->
+<section id="tokens">
+  <div class="page-header">
+    <div class="page-tag">Página 01</div>
+    <div class="page-title">Design Tokens</div>
+    <div class="page-desc">Todas as variáveis de design que definem a identidade visual da plataforma.<br>
+    Aplicar via CSS custom properties em <code style="color:var(--spec-anno); font-size:12px;">:root</code> e via Tailwind config.</div>
+  </div>
+
+  <!-- CORES -->
+  <div class="sec-header" id="t-colors">
+    <div class="sec-num">01</div>
+    <div><div class="sec-title">Paleta de Cores</div><div class="sec-sub">11 tokens · dark theme</div></div>
+  </div>
+
+  <div style="margin-bottom:8px; font-size:11px; color:var(--t3); font-style:italic;">Surfaces &amp; Backgrounds</div>
+  <div class="token-grid" style="margin-bottom:20px;">
+    <div class="token-swatch">
+      <div class="token-color" style="background:#0D1117;"></div>
+      <div class="token-info">
+        <div class="token-name">--bg-base</div>
+        <div class="token-hex">#0D1117</div>
+        <div class="token-use">Fundo geral, área de conteúdo</div>
+      </div>
+    </div>
+    <div class="token-swatch">
+      <div class="token-color" style="background:#111827;"></div>
+      <div class="token-info">
+        <div class="token-name">--bg-side</div>
+        <div class="token-hex">#111827</div>
+        <div class="token-use">Sidebar, Header</div>
+      </div>
+    </div>
+    <div class="token-swatch">
+      <div class="token-color" style="background:#161D2E;"></div>
+      <div class="token-info">
+        <div class="token-name">--bg-card</div>
+        <div class="token-hex">#161D2E</div>
+        <div class="token-use">Cards, botões secundários</div>
+      </div>
+    </div>
+    <div class="token-swatch">
+      <div class="token-color" style="background:#1C2640;"></div>
+      <div class="token-info">
+        <div class="token-name">--bg-card-h</div>
+        <div class="token-hex">#1C2640</div>
+        <div class="token-use">Card hover state</div>
+      </div>
+    </div>
+    <div class="token-swatch">
+      <div class="token-color" style="background:#1F2D45; border:1px solid #2a3a54;"></div>
+      <div class="token-info">
+        <div class="token-name">--border</div>
+        <div class="token-hex">#1F2D45</div>
+        <div class="token-use">Borders primárias</div>
+      </div>
+    </div>
+    <div class="token-swatch">
+      <div class="token-color" style="background:#192036; border:1px solid #2a3a54;"></div>
+      <div class="token-info">
+        <div class="token-name">--border-sub</div>
+        <div class="token-hex">#192036</div>
+        <div class="token-use">Divisores de tabela</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:8px; font-size:11px; color:var(--t3); font-style:italic;">Text</div>
+  <div class="token-grid" style="margin-bottom:20px;">
+    <div class="token-swatch">
+      <div class="token-color" style="background:#E2E8F0;"></div>
+      <div class="token-info">
+        <div class="token-name">--t1</div>
+        <div class="token-hex">#E2E8F0</div>
+        <div class="token-use">Texto primário, títulos</div>
+      </div>
+    </div>
+    <div class="token-swatch">
+      <div class="token-color" style="background:#8FA3BF;"></div>
+      <div class="token-info">
+        <div class="token-name">--t2</div>
+        <div class="token-hex">#8FA3BF</div>
+        <div class="token-use">Texto secundário, body</div>
+      </div>
+    </div>
+    <div class="token-swatch">
+      <div class="token-color" style="background:#4A5E78;"></div>
+      <div class="token-info">
+        <div class="token-name">--t3</div>
+        <div class="token-hex">#4A5E78</div>
+        <div class="token-use">Labels, placeholders, muted</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:8px; font-size:11px; color:var(--t3); font-style:italic;">Brand &amp; Status</div>
+  <div class="token-grid" style="margin-bottom:20px;">
+    <div class="token-swatch">
+      <div class="token-color" style="background:#F97316;"></div>
+      <div class="token-info">
+        <div class="token-name">--accent</div>
+        <div class="token-hex">#F97316</div>
+        <div class="token-use">V4 orange · cor primária</div>
+      </div>
+    </div>
+    <div class="token-swatch">
+      <div class="token-color" style="background:#FB923C;"></div>
+      <div class="token-info">
+        <div class="token-name">--accent-h</div>
+        <div class="token-hex">#FB923C</div>
+        <div class="token-use">Accent hover</div>
+      </div>
+    </div>
+    <div class="token-swatch">
+      <div class="token-color" style="background:#10B981;"></div>
+      <div class="token-info">
+        <div class="token-name">--green</div>
+        <div class="token-hex">#10B981</div>
+        <div class="token-use">Sucesso, receita, trend up</div>
+      </div>
+    </div>
+    <div class="token-swatch">
+      <div class="token-color" style="background:#3B82F6;"></div>
+      <div class="token-info">
+        <div class="token-name">--blue</div>
+        <div class="token-hex">#3B82F6</div>
+        <div class="token-use">Info, Meta Ads, badge</div>
+      </div>
+    </div>
+    <div class="token-swatch">
+      <div class="token-color" style="background:#8B5CF6;"></div>
+      <div class="token-info">
+        <div class="token-name">--purple</div>
+        <div class="token-hex">#8B5CF6</div>
+        <div class="token-use">Orgânico, checkout, avatar</div>
+      </div>
+    </div>
+    <div class="token-swatch">
+      <div class="token-color" style="background:#EF4444;"></div>
+      <div class="token-info">
+        <div class="token-name">--red</div>
+        <div class="token-hex">#EF4444</div>
+        <div class="token-use">Erros, trend down</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:8px; font-size:11px; color:var(--t3); font-style:italic;">Plataformas</div>
+  <div class="token-grid" style="margin-bottom:32px;">
+    <div class="token-swatch">
+      <div class="token-color" style="background:#1877F2;"></div>
+      <div class="token-info">
+        <div class="token-name">Meta Ads</div>
+        <div class="token-hex">#1877F2</div>
+        <div class="token-use">Chip Meta, badge Meta</div>
+      </div>
+    </div>
+    <div class="token-swatch">
+      <div class="token-color" style="background:#4285F4;"></div>
+      <div class="token-info">
+        <div class="token-name">Google Ads</div>
+        <div class="token-hex">#4285F4</div>
+        <div class="token-use">Chip Google, badge Google</div>
+      </div>
+    </div>
+    <div class="token-swatch">
+      <div class="token-color" style="background:#E37400;"></div>
+      <div class="token-info">
+        <div class="token-name">GA4</div>
+        <div class="token-hex">#E37400</div>
+        <div class="token-use">Chip GA4, badge GA4</div>
+      </div>
+    </div>
+    <div class="token-swatch">
+      <div class="token-color" style="background:#96BF48;"></div>
+      <div class="token-info">
+        <div class="token-name">Shopify</div>
+        <div class="token-hex">#96BF48</div>
+        <div class="token-use">Chip Shopify (off padrão)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TIPOGRAFIA -->
+  <div class="sec-header" id="t-type">
+    <div class="sec-num">02</div>
+    <div><div class="sec-title">Tipografia</div><div class="sec-sub">Família: Inter · Google Fonts</div></div>
+  </div>
+
+  <div class="comp-canvas">
+    <div class="comp-canvas-label">type scale — Inter</div>
+    <div class="comp-canvas-body">
+      <div class="type-row">
+        <div class="type-sample" style="font-size:26px;font-weight:700;letter-spacing:-0.5px;color:#E2E8F0;">R$94.200</div>
+        <div class="type-meta">Inter 700 · 26px · -0.5px tracking — KPI values</div>
+      </div>
+      <div class="type-row">
+        <div class="type-sample" style="font-size:16px;font-weight:600;color:#E2E8F0;">Visão Geral</div>
+        <div class="type-meta">Inter 600 · 16px · Section titles</div>
+      </div>
+      <div class="type-row">
+        <div class="type-sample" style="font-size:15px;font-weight:600;color:#E2E8F0;">Dashboard — Klubi</div>
+        <div class="type-meta">Inter 600 · 15px · Page title (header)</div>
+      </div>
+      <div class="type-row">
+        <div class="type-sample" style="font-size:14px;font-weight:600;color:#E2E8F0;">Leads Recentes</div>
+        <div class="type-meta">Inter 600 · 14px · Card titles</div>
+      </div>
+      <div class="type-row">
+        <div class="type-sample" style="font-size:13.5px;font-weight:450;color:#8FA3BF;">Dashboard</div>
+        <div class="type-meta">Inter 450 · 13.5px · Nav items</div>
+      </div>
+      <div class="type-row">
+        <div class="type-sample" style="font-size:13px;font-weight:400;color:#8FA3BF;">maria@email.com</div>
+        <div class="type-meta">Inter 400 · 13px · Tabela body</div>
+      </div>
+      <div class="type-row">
+        <div class="type-sample" style="font-size:11.5px;font-weight:500;color:#E2E8F0;">+28,1% vs mês anterior</div>
+        <div class="type-meta">Inter 500 · 11.5px · Trend labels</div>
+      </div>
+      <div class="type-row">
+        <div class="type-sample" style="font-size:11px;font-weight:500;color:#3B82F6;background:rgba(59,130,246,.1);padding:3px 9px;border-radius:20px;display:inline-block;">Meta Ads</div>
+        <div class="type-meta">Inter 500 · 11px · Badges</div>
+      </div>
+      <div class="type-row">
+        <div class="type-sample" style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#4A5E78;">Lead</div>
+        <div class="type-meta">Inter 700 · 10.5px · 0.07em · Table headers</div>
+      </div>
+      <div class="type-row">
+        <div class="type-sample" style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:#4A5E78;">Tracking</div>
+        <div class="type-meta">Inter 700 · 9.5px · 0.09em · Nav section labels</div>
+      </div>
+      <div class="type-row" style="border:none;">
+        <div class="type-sample" style="font-size:9.5px;font-weight:400;color:#4A5E78;">Seg</div>
+        <div class="type-meta">Inter 400 · 9.5px · Chart axis labels</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ESPAÇAMENTOS -->
+  <div class="sec-header" id="t-space">
+    <div class="sec-num">03</div>
+    <div><div class="sec-title">Espaçamentos &amp; Border-Radius</div><div class="sec-sub">Escala base 4px</div></div>
+  </div>
+
+  <div class="grid-2">
+    <div>
+      <div style="font-size:11px;color:var(--t3);margin-bottom:12px;">Espaçamentos chave</div>
+      <div class="space-row"><div class="space-label">4px</div><div class="space-bar" style="width:4px;"></div><div class="space-name">Gap interno mínimo</div></div>
+      <div class="space-row"><div class="space-label">6px</div><div class="space-bar" style="width:6px;"></div><div class="space-name">Gap entre ícone e texto</div></div>
+      <div class="space-row"><div class="space-label">8px</div><div class="space-bar" style="width:8px;"></div><div class="space-name">Nav item padding v</div></div>
+      <div class="space-row"><div class="space-label">12px</div><div class="space-bar" style="width:12px;"></div><div class="space-name">Nav item padding h</div></div>
+      <div class="space-row"><div class="space-label">14px</div><div class="space-bar" style="width:14px;"></div><div class="space-name">Card gap / KPI grid gap</div></div>
+      <div class="space-row"><div class="space-label">16px</div><div class="space-bar" style="width:16px;"></div><div class="space-name">Nav sidebar sections</div></div>
+      <div class="space-row"><div class="space-label">18px</div><div class="space-bar" style="width:18px;"></div><div class="space-name">Card padding, table cell</div></div>
+      <div class="space-row"><div class="space-label">20px</div><div class="space-bar" style="width:20px;"></div><div class="space-name">Header padding h</div></div>
+      <div class="space-row"><div class="space-label">24px</div><div class="space-bar" style="width:24px;"></div><div class="space-name">Page padding</div></div>
+    </div>
+    <div>
+      <div style="font-size:11px;color:var(--t3);margin-bottom:12px;">Border radius</div>
+      <table class="spec-table">
+        <thead><tr><th>Token</th><th>Valor</th><th>Onde usar</th></tr></thead>
+        <tbody>
+          <tr><td>--r-card</td><td class="mono">12px</td><td>Cards, painéis, tabelas</td></tr>
+          <tr><td>--r-btn</td><td class="mono">8px</td><td>Botões, inputs, dropdowns</td></tr>
+          <tr><td>--r-pill</td><td class="mono">20px</td><td>Badges, chips, tags</td></tr>
+          <tr><td>--r-icon</td><td class="mono">7-9px</td><td>Ícones em caixas (logo: 9px)</td></tr>
+          <tr><td>--r-dot</td><td class="mono">50%</td><td>Dots, avatares, pulse</td></tr>
+        </tbody>
+      </table>
+
+      <div style="margin-top:20px; font-size:11px;color:var(--t3);margin-bottom:12px;">Layout fixo</div>
+      <table class="spec-table">
+        <thead><tr><th>Elemento</th><th>Valor</th></tr></thead>
+        <tbody>
+          <tr><td>Sidebar width</td><td class="px">256px</td></tr>
+          <tr><td>Header height</td><td class="px">60px</td></tr>
+          <tr><td>Logo box</td><td class="px">34×34px</td></tr>
+          <tr><td>Icon buttons</td><td class="px">34×34px</td></tr>
+          <tr><td>Avatar</td><td class="px">34px ⌀</td></tr>
+          <tr><td>KPI top bar</td><td class="px">2px height</td></tr>
+          <tr><td>Nav active bar</td><td class="px">3px left border</td></tr>
+          <tr><td>Tab underline</td><td class="px">2px height</td></tr>
+          <tr><td>Funnel track</td><td class="px">7px height</td></tr>
+          <tr><td>Pulse dot</td><td class="px">7×7px</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<!-- PAGE 2 — COMPONENTES                                        -->
+<!-- ─────────────────────────────────────────────────────────── -->
+<section id="components">
+  <div class="page-header">
+    <div class="page-tag">Página 02</div>
+    <div class="page-title">Componentes</div>
+    <div class="page-desc">Cada componente com todos os estados documentados. Hover nos elementos para ver interações ao vivo.</div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sec-header" id="c-sidebar">
+    <div class="sec-num">01</div>
+    <div><div class="sec-title">Sidebar</div><div class="sec-sub">256px · posição fixed · full height</div></div>
+  </div>
+  <div class="grid-2">
+    <div>
+      <div class="comp-canvas">
+        <div class="comp-canvas-label">sidebar — preview interativo</div>
+        <div class="comp-canvas-body" style="padding:0;">
+          <div class="ui-sidebar" style="width:100%;border-radius:0;height:420px;">
+            <div class="ui-sidebar-head">
+              <div class="ui-logo-box">V4</div>
+              <div>
+                <div class="ui-logo-text">Tracking V4</div>
+                <div class="ui-logo-sub">Carvalho &amp; Co</div>
+              </div>
+            </div>
+            <div class="ui-nav">
+              <div class="ui-nav-section">Principal</div>
+              <div class="ui-nav-item active">
+                <span class="ui-nav-icon">📊</span> Dashboard
+              </div>
+              <div class="ui-nav-item">
+                <span class="ui-nav-icon">👥</span> Clientes
+                <span class="ui-nav-badge">23</span>
+              </div>
+              <div class="ui-nav-section">Tracking</div>
+              <div class="ui-nav-item">
+                <span class="ui-nav-icon">⚡</span> Eventos
+              </div>
+              <div class="ui-nav-item">
+                <span class="ui-nav-icon">🗺️</span> Jornada do Usuário
+              </div>
+              <div class="ui-nav-item">
+                <span class="ui-nav-icon">🔗</span> UTMs
+              </div>
+              <div class="ui-nav-item">
+                <span class="ui-nav-icon">🎯</span> Conversões
+              </div>
+              <div class="ui-nav-section">Plataformas</div>
+              <div class="ui-nav-item">
+                <span class="ui-nav-icon">📘</span> Meta Ads
+              </div>
+              <div class="ui-nav-item">
+                <span class="ui-nav-icon">🔍</span> Google Ads
+              </div>
+              <div class="ui-nav-item">
+                <span class="ui-nav-icon">📈</span> GA4
+              </div>
+            </div>
+            <div class="ui-footer">
+              <div class="ui-avatar-grad">G</div>
+              <div>
+                <div class="ui-footer-name">Gabriel</div>
+                <div class="ui-footer-role">Gestor de Tráfego</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div style="margin-bottom:16px;">
+        <div class="demo-label">Estados do Nav Item</div>
+        <div class="states-row" style="flex-direction:column;gap:8px;">
+          <div>
+            <div class="state-label">Default</div>
+            <div class="ui-nav-item" style="width:200px;background:transparent;border-left-color:transparent;">
+              <span class="ui-nav-icon">⚡</span> Eventos
+            </div>
+          </div>
+          <div>
+            <div class="state-label">Hover</div>
+            <div class="ui-nav-item" style="width:200px;background:var(--bg-card);color:var(--t1);padding-left:16px;">
+              <span class="ui-nav-icon">⚡</span> Eventos
+            </div>
+          </div>
+          <div>
+            <div class="state-label">Active</div>
+            <div class="ui-nav-item active" style="width:200px;">
+              <span class="ui-nav-icon">⚡</span> Eventos
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <table class="spec-table">
+        <thead><tr><th>Propriedade</th><th>Default</th><th>Hover</th><th>Active</th></tr></thead>
+        <tbody>
+          <tr><td>background</td><td class="mono">transparent</td><td class="mono">--bg-card</td><td class="mono">accent/12%</td></tr>
+          <tr><td>color</td><td class="mono">--t2</td><td class="mono">--t1</td><td class="mono">#F97316</td></tr>
+          <tr><td>border-left</td><td class="mono">none</td><td class="mono">none</td><td class="mono">3px #F97316</td></tr>
+          <tr><td>padding-left</td><td class="mono">12px</td><td class="mono">16px</td><td class="mono">15px</td></tr>
+          <tr><td>transition</td><td colspan="3" class="ms">180ms cubic-bezier(.4,0,.2,1)</td></tr>
+        </tbody>
+      </table>
+
+      <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:6px;">
+        <span class="anim-badge">padding-left slide</span>
+        <span class="anim-badge">background fade</span>
+        <span class="trans-badge">180ms ease</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <div class="sec-header" id="c-header">
+    <div class="sec-num">02</div>
+    <div><div class="sec-title">Header</div><div class="sec-sub">60px altura · sem links de navegação</div></div>
+  </div>
+  <div class="comp-canvas">
+    <div class="comp-canvas-label">header — preview interativo (passe o mouse nos botões)</div>
+    <div class="comp-canvas-body" style="padding:0;">
+      <div class="ui-header" style="border-radius:0;">
+        <div>
+          <div class="ui-breadcrumb">Clientes / Klubi</div>
+          <div class="ui-page-title">Dashboard — Klubi</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="ui-client-sel">
+          <div class="ui-pulse-dot"></div>
+          <span class="ui-client-name">Klubi</span>
+          <span class="ui-chevron">▾</span>
+        </div>
+        <div class="ui-icon-btn" title="Notificações">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        </div>
+        <div class="ui-avatar-btn">G</div>
+      </div>
+    </div>
+  </div>
+
+  <table class="spec-table" style="margin-top:16px;">
+    <thead><tr><th>Elemento</th><th>Spec</th><th>Notas</th></tr></thead>
+    <tbody>
+      <tr><td>Breadcrumb</td><td class="mono">11px · #4A5E78</td><td>"Clientes / {clienteName}"</td></tr>
+      <tr><td>Page title</td><td class="mono">15px semibold · --t1</td><td>"Dashboard — {clienteName}"</td></tr>
+      <tr><td>Client selector</td><td class="mono">bg-card · border · r-8</td><td>Dot verde pulsante + nome + chevron</td></tr>
+      <tr><td>Pulse dot</td><td class="mono">7×7px · #10B981</td><td><span class="anim-badge">pulse-green 2s infinite</span></td></tr>
+      <tr><td>Icon button</td><td class="mono">34×34px · bg-card</td><td>Hover: border accent + glow + translateY(-2px)</td></tr>
+      <tr><td>Avatar</td><td class="mono">34px ⌀ · grad</td><td>linear-gradient(135° accent→purple)</td></tr>
+      <tr><td>⚠️ Regra</td><td colspan="2" style="color:var(--red);">NENHUM link de navegação no header — apenas client selector, notification, avatar</td></tr>
+    </tbody>
+  </table>
+
+  <!-- SOURCE CHIPS -->
+  <div class="sec-header" id="c-chips">
+    <div class="sec-num">03</div>
+    <div><div class="sec-title">Source Chips</div><div class="sec-sub">Toggle · border-radius 20px</div></div>
+  </div>
+  <div class="comp-canvas">
+    <div class="comp-canvas-label">chips — estados</div>
+    <div class="comp-canvas-body">
+      <div style="margin-bottom:16px;">
+        <div class="demo-label">ON state (ativo)</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <div class="chip on-meta"><div class="chip-dot" style="background:#1877F2;"></div>Meta Ads</div>
+          <div class="chip on-gads"><div class="chip-dot" style="background:#4285F4;"></div>Google Ads</div>
+          <div class="chip on-ga4"><div class="chip-dot" style="background:#E37400;"></div>GA4</div>
+          <div class="chip on-shop"><div class="chip-dot" style="background:#96BF48;"></div>Shopify</div>
+        </div>
+      </div>
+      <div>
+        <div class="demo-label">OFF state (inativo)</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <div class="chip"><div class="chip-dot" style="background:var(--t3);"></div>Meta Ads</div>
+          <div class="chip"><div class="chip-dot" style="background:var(--t3);"></div>Google Ads</div>
+          <div class="chip"><div class="chip-dot" style="background:var(--t3);"></div>GA4</div>
+          <div class="chip"><div class="chip-dot" style="background:var(--t3);"></div>Shopify</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI CARDS -->
+  <div class="sec-header" id="c-kpi">
+    <div class="sec-num">04</div>
+    <div><div class="sec-title">KPI Cards</div><div class="sec-sub">Grid 4 colunas · hover lift</div></div>
+  </div>
+  <div class="comp-canvas">
+    <div class="comp-canvas-label">kpi cards — hover nos cards para ver animação</div>
+    <div class="comp-canvas-body">
+      <div class="grid-4">
+        <div class="kpi-card" onmouseenter="this.style.boxShadow='0 8px 24px rgba(249,115,22,.2)';this.style.borderColor='#F97316'" onmouseleave="this.style.boxShadow='none';this.style.borderColor='var(--border)'">
+          <div class="kpi-top-bar" style="background:#F97316;"></div>
+          <div class="kpi-icon">💰</div>
+          <div class="kpi-label">Investimento</div>
+          <div class="kpi-value">R$18.420</div>
+          <div class="kpi-trend up">↑ +12,4%</div>
+        </div>
+        <div class="kpi-card" onmouseenter="this.style.boxShadow='0 8px 24px rgba(16,185,129,.2)';this.style.borderColor='#10B981'" onmouseleave="this.style.boxShadow='none';this.style.borderColor='var(--border)'">
+          <div class="kpi-top-bar" style="background:#10B981;"></div>
+          <div class="kpi-icon">📈</div>
+          <div class="kpi-label">Receita</div>
+          <div class="kpi-value">R$94.200</div>
+          <div class="kpi-trend up">↑ +28,1%</div>
+        </div>
+        <div class="kpi-card" onmouseenter="this.style.boxShadow='0 8px 24px rgba(59,130,246,.2)';this.style.borderColor='#3B82F6'" onmouseleave="this.style.boxShadow='none';this.style.borderColor='var(--border)'">
+          <div class="kpi-top-bar" style="background:#3B82F6;"></div>
+          <div class="kpi-icon">⚡</div>
+          <div class="kpi-label">ROAS</div>
+          <div class="kpi-value">5.11x</div>
+          <div class="kpi-trend up">↑ +0,7x</div>
+        </div>
+        <div class="kpi-card" onmouseenter="this.style.boxShadow='0 8px 24px rgba(139,92,246,.2)';this.style.borderColor='#8B5CF6'" onmouseleave="this.style.boxShadow='none';this.style.borderColor='var(--border)'">
+          <div class="kpi-top-bar" style="background:#8B5CF6;"></div>
+          <div class="kpi-icon">👥</div>
+          <div class="kpi-label">Leads</div>
+          <div class="kpi-value">1.847</div>
+          <div class="kpi-trend down">↓ -3,2%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <table class="spec-table" style="margin-top:16px;">
+    <thead><tr><th>Propriedade</th><th>Default</th><th>Hover</th></tr></thead>
+    <tbody>
+      <tr><td>transform</td><td class="mono">none</td><td class="mono">translateY(-3px)</td></tr>
+      <tr><td>box-shadow</td><td class="mono">none</td><td class="mono">0 8px 24px {accentColor}/20%</td></tr>
+      <tr><td>border-color</td><td class="mono">--border</td><td class="mono">{accentColor} do card</td></tr>
+      <tr><td>transition</td><td colspan="2" class="ms">220ms cubic-bezier(.4,0,.2,1)</td></tr>
+    </tbody>
+  </table>
+
+  <!-- TAB BAR -->
+  <div class="sec-header" id="c-tabs">
+    <div class="sec-num">05</div>
+    <div><div class="sec-title">Tab Bar</div><div class="sec-sub">Underline deslizante · 4 tabs</div></div>
+  </div>
+  <div class="comp-canvas">
+    <div class="comp-canvas-label">tab bar — clique para navegar</div>
+    <div class="comp-canvas-body" style="padding-bottom:0;">
+      <div class="tab-bar" id="tab-demo">
+        <div class="tab-item active" onclick="setTab(0,this)">Tracking</div>
+        <div class="tab-item" onclick="setTab(1,this)">UTMs</div>
+        <div class="tab-item" onclick="setTab(2,this)">Jornada</div>
+        <div class="tab-item" onclick="setTab(3,this)">Conversões</div>
+        <div class="tab-underline" id="tab-ul" style="left:18px;width:62px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BAR CHART -->
+  <div class="sec-header" id="c-barchart">
+    <div class="sec-num">06</div>
+    <div><div class="sec-title">Bar Chart</div><div class="sec-sub">7 dias · side-by-side bars</div></div>
+  </div>
+  <div class="comp-canvas">
+    <div class="comp-canvas-label">bar chart — hover nas barras</div>
+    <div class="comp-canvas-body">
+      <div class="bar-chart" id="bar-chart-demo"></div>
+      <div style="display:flex;gap:14px;margin-top:10px;">
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--t3);">
+          <span style="width:9px;height:9px;border-radius:2px;background:#10B981;display:inline-block;"></span>Receita
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--t3);">
+          <span style="width:9px;height:9px;border-radius:2px;background:#F97316;opacity:.7;display:inline-block;"></span>Investimento
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FUNNEL CHART -->
+  <div class="sec-header" id="c-funnel">
+    <div class="sec-num">07</div>
+    <div><div class="sec-title">Funnel Chart</div><div class="sec-sub">4 steps · progress bars coloridas</div></div>
+  </div>
+  <div class="comp-canvas">
+    <div class="comp-canvas-label">funnel de conversão</div>
+    <div class="comp-canvas-body">
+      <div id="funnel-demo"></div>
+    </div>
+  </div>
+
+  <!-- LEADS TABLE -->
+  <div class="sec-header" id="c-table">
+    <div class="sec-num">08</div>
+    <div><div class="sec-title">Leads Table</div><div class="sec-sub">Row hover · badges · action buttons</div></div>
+  </div>
+  <div class="comp-canvas">
+    <div class="comp-canvas-label">tabela de leads — hover nas linhas e botões</div>
+    <div class="comp-canvas-body" style="padding:0;">
+      <div class="leads-tbl-wrap" style="border-radius:0;border:none;">
+        <div class="leads-tbl-header">
+          <div>
+            <div class="leads-tbl-title">Leads Recentes</div>
+            <div class="leads-tbl-sub">Usuários com dados de tracking completos</div>
+          </div>
+          <div style="display:flex;gap:7px;">
+            <button class="tbl-btn">⚙ Filtrar</button>
+            <button class="tbl-btn">↓ Exportar</button>
+          </div>
+        </div>
+        <table class="leads">
+          <thead>
+            <tr>
+              <th>Lead</th><th>Origem</th><th>Campanha</th><th>Evento</th><th>Data</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="leads-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<!-- PAGE 3 — LAYOUT COMPLETO                                    -->
+<!-- ─────────────────────────────────────────────────────────── -->
+<section id="layout">
+  <div class="page-header">
+    <div class="page-tag">Página 03</div>
+    <div class="page-title">Layout — Dashboard Completo</div>
+    <div class="page-desc">Visão macro do dashboard montado. Todas as proporções em escala real.</div>
+  </div>
+
+  <div class="layout-preview">
+    <div style="padding:10px 14px; border-bottom:1px solid var(--border); background:rgba(0,0,0,.2); display:flex; align-items:center; gap:8px;">
+      <div style="width:10px;height:10px;border-radius:50%;background:#EF4444;"></div>
+      <div style="width:10px;height:10px;border-radius:50%;background:#F59E0B;"></div>
+      <div style="width:10px;height:10px;border-radius:50%;background:#10B981;"></div>
+      <span style="font-size:10px;color:var(--t3);margin-left:8px;font-family:monospace;">tracking-v4.vercel.app/klubi/dashboard</span>
+    </div>
+    <div class="layout-inner">
+      <!-- Sidebar -->
+      <div class="layout-sidebar">
+        <div class="layout-sidebar-head">
+          <div class="layout-logo">V4</div>
+          <div>
+            <div class="layout-logo-t">Tracking V4</div>
+            <div style="font-size:8px;color:var(--t3);">Carvalho &amp; Co</div>
+          </div>
+        </div>
+        <div class="layout-nav">
+          <div class="layout-ns">Principal</div>
+          <div class="layout-ni a"><span class="icon">📊</span> Dashboard</div>
+          <div class="layout-ni"><span class="icon">👥</span> Clientes</div>
+          <div class="layout-ns">Tracking</div>
+          <div class="layout-ni"><span class="icon">⚡</span> Eventos</div>
+          <div class="layout-ni"><span class="icon">🗺️</span> Jornada</div>
+          <div class="layout-ni"><span class="icon">🔗</span> UTMs</div>
+          <div class="layout-ni"><span class="icon">🎯</span> Conversões</div>
+          <div class="layout-ns">Plataformas</div>
+          <div class="layout-ni"><span class="icon">📘</span> Meta Ads</div>
+          <div class="layout-ni"><span class="icon">🔍</span> Google Ads</div>
+          <div class="layout-ni"><span class="icon">📈</span> GA4</div>
+        </div>
+        <div class="layout-foot">
+          <div class="layout-av-s">G</div>
+          <div style="font-size:9px;color:var(--t1);font-weight:600;">Gabriel</div>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div class="layout-right">
+        <!-- Header -->
+        <div class="layout-header">
+          <div>
+            <div style="font-size:8px;color:var(--t3);">Clientes / Klubi</div>
+            <div style="font-size:11px;font-weight:600;color:var(--t1);">Dashboard — Klubi</div>
+          </div>
+          <div style="flex:1;"></div>
+          <div style="display:flex;align-items:center;gap:6px;padding:4px 8px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;">
+            <div style="width:5px;height:5px;border-radius:50%;background:#10B981;"></div>
+            <span style="font-size:9px;color:var(--t1);">Klubi</span>
+          </div>
+          <div style="width:24px;height:24px;border-radius:5px;background:var(--bg-card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--t2);">🔔</div>
+          <div style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--purple));display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;">G</div>
+        </div>
+
+        <!-- Content area -->
+        <div class="layout-content">
+          <!-- Chips -->
+          <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+            <div style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:14px;font-size:8px;border:1px solid #1877F2;color:#1877F2;background:rgba(24,119,242,.07);">● Meta Ads</div>
+            <div style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:14px;font-size:8px;border:1px solid #4285F4;color:#4285F4;background:rgba(66,133,244,.07);">● Google Ads</div>
+            <div style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:14px;font-size:8px;border:1px solid #E37400;color:#E37400;background:rgba(227,116,0,.07);">● GA4</div>
+            <div style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:14px;font-size:8px;border:1px solid var(--border);color:var(--t3);">● Shopify</div>
+          </div>
+
+          <!-- KPIs -->
+          <div class="layout-kpis">
+            <div class="layout-kpi c1">
+              <div class="layout-kpi-icon">💰</div>
+              <div class="layout-kpi-lbl">Investimento</div>
+              <div class="layout-kpi-val">R$18.420</div>
+              <div class="layout-kpi-tr">↑ +12,4%</div>
+            </div>
+            <div class="layout-kpi c2">
+              <div class="layout-kpi-icon">📈</div>
+              <div class="layout-kpi-lbl">Receita</div>
+              <div class="layout-kpi-val">R$94.200</div>
+              <div class="layout-kpi-tr">↑ +28,1%</div>
+            </div>
+            <div class="layout-kpi c3">
+              <div class="layout-kpi-icon">⚡</div>
+              <div class="layout-kpi-lbl">ROAS</div>
+              <div class="layout-kpi-val">5.11x</div>
+              <div class="layout-kpi-tr">↑ +0,7x</div>
+            </div>
+            <div class="layout-kpi c4">
+              <div class="layout-kpi-icon">👥</div>
+              <div class="layout-kpi-lbl">Leads</div>
+              <div class="layout-kpi-val">1.847</div>
+              <div class="layout-kpi-tr" style="color:var(--red);">↓ -3,2%</div>
+            </div>
+          </div>
+
+          <!-- Tabs mini -->
+          <div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:10px;gap:0;">
+            <div style="padding:6px 12px;font-size:9px;color:var(--accent);border-bottom:2px solid var(--accent);">Tracking</div>
+            <div style="padding:6px 12px;font-size:9px;color:var(--t3);">UTMs</div>
+            <div style="padding:6px 12px;font-size:9px;color:var(--t3);">Jornada</div>
+            <div style="padding:6px 12px;font-size:9px;color:var(--t3);">Conversões</div>
+          </div>
+
+          <!-- Charts -->
+          <div class="layout-charts">
+            <div class="layout-card">
+              <div class="layout-card-t">Performance por Dia</div>
+              <div class="layout-card-s">Investimento vs. Receita — 7 dias</div>
+              <div class="layout-bars" id="layout-bars"></div>
+            </div>
+            <div class="layout-card">
+              <div class="layout-card-t">Funil de Conversão</div>
+              <div class="layout-card-s">Meta + Google + GA4</div>
+              <div id="layout-funnel"></div>
+            </div>
+          </div>
+
+          <!-- Table mini -->
+          <div class="layout-card">
+            <div class="layout-card-t" style="margin-bottom:6px;">Leads Recentes</div>
+            <div style="font-size:7px;color:var(--t3);margin-bottom:6px;">Lead · Origem · Evento · Data</div>
+            <div style="border-top:1px solid var(--border);">
+              <div style="display:grid;grid-template-columns:1fr 80px 70px 60px;gap:6px;padding:4px 0;border-bottom:1px solid var(--border-sub);font-size:8px;color:var(--t2);">
+                <span>Maria Silva</span>
+                <span style="color:#3B82F6;">Meta Ads</span>
+                <span style="color:#10B981;">Compra</span>
+                <span>01/06</span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 80px 70px 60px;gap:6px;padding:4px 0;border-bottom:1px solid var(--border-sub);font-size:8px;color:var(--t2);">
+                <span>João Costa</span>
+                <span style="color:#F97316;">Google</span>
+                <span style="color:#F97316;">Checkout</span>
+                <span>31/05</span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 80px 70px 60px;gap:6px;padding:4px 0;font-size:8px;color:var(--t2);">
+                <span>Ana Souza</span>
+                <span style="color:#8B5CF6;">Orgânico</span>
+                <span style="color:#3B82F6;">Lead</span>
+                <span>30/05</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<!-- PAGE 4 — INTERAÇÕES                                         -->
+<!-- ─────────────────────────────────────────────────────────── -->
+<section id="interactions">
+  <div class="page-header">
+    <div class="page-tag">Página 04</div>
+    <div class="page-title">Interações &amp; Animações</div>
+    <div class="page-desc">Especificação completa de todas as animações, transitions e micro-interações.</div>
+  </div>
+
+  <table class="spec-table">
+    <thead><tr><th>Componente</th><th>Trigger</th><th>Efeito</th><th>Duração</th><th>Easing</th></tr></thead>
+    <tbody>
+      <tr><td>Nav item</td><td>hover</td><td>padding-left 12→16px + bg fade + text color</td><td class="ms">180ms</td><td class="mono">cubic-bezier(.4,0,.2,1)</td></tr>
+      <tr><td>Nav item</td><td>click</td><td>border-left 3px accent + bg rgba(accent,.12)</td><td class="ms">180ms</td><td class="mono">cubic-bezier(.4,0,.2,1)</td></tr>
+      <tr><td>KPI card</td><td>hover</td><td>translateY(-3px) + box-shadow + border-color</td><td class="ms">220ms</td><td class="mono">cubic-bezier(.4,0,.2,1)</td></tr>
+      <tr><td>Icon button</td><td>hover</td><td>translateY(-2px) + border accent + glow shadow</td><td class="ms">180ms</td><td class="mono">cubic-bezier(.4,0,.2,1)</td></tr>
+      <tr><td>Button "Ver jornada"</td><td>hover</td><td>translateY(-1px) + border accent + bg accent/8% + glow</td><td class="ms">180ms</td><td class="mono">cubic-bezier(.4,0,.2,1)</td></tr>
+      <tr><td>Table row</td><td>hover</td><td>bg rgba(255,255,255,.02) + text color → --t1</td><td class="ms">150ms</td><td class="mono">ease</td></tr>
+      <tr><td>Tab bar underline</td><td>tab click</td><td>left + width (via JS offsetLeft/offsetWidth)</td><td class="ms">220ms</td><td class="mono">cubic-bezier(.4,0,.2,1)</td></tr>
+      <tr><td>Source chip</td><td>click</td><td>border + color + bg para cor da plataforma</td><td class="ms">180ms</td><td class="mono">cubic-bezier(.4,0,.2,1)</td></tr>
+      <tr><td>Pulse dot (header)</td><td>loop</td><td>opacity + box-shadow glow verde</td><td class="ms">2000ms</td><td class="mono">ease-in-out · infinite</td></tr>
+      <tr><td>Bar chart bar</td><td>hover</td><td>brightness(1.25) + scaleY(1.04) from bottom</td><td class="ms">180ms</td><td class="mono">ease</td></tr>
+      <tr><td>Funnel bar fill</td><td>mount</td><td>width 0→{pct}% CSS transition</td><td class="ms">800ms</td><td class="mono">ease-out</td></tr>
+      <tr><td>Date pills</td><td>click</td><td>bg transparent→accent + text white</td><td class="ms">180ms</td><td class="mono">cubic-bezier(.4,0,.2,1)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="sec-header" style="margin-top:32px;">
+    <div class="sec-num">★</div>
+    <div><div class="sec-title">Keyframe: pulse-green</div><div class="sec-sub">Status dot pulsante</div></div>
+  </div>
+  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:16px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--t2);line-height:1.8;">
+    <span style="color:#8B5CF6;">@keyframes</span> <span style="color:var(--accent);">pulse-green</span> {<br>
+    &nbsp;&nbsp;<span style="color:#3B82F6;">0%, 100%</span> { opacity: <span style="color:#10B981;">1</span>; box-shadow: <span style="color:#10B981;">0 0 0 0 rgba(16,185,129,.6)</span>; }<br>
+    &nbsp;&nbsp;<span style="color:#3B82F6;">50%</span>&nbsp;&nbsp;&nbsp;&nbsp;{ opacity: <span style="color:#10B981;">.7</span>; box-shadow: <span style="color:#10B981;">0 0 0 4px rgba(16,185,129,0)</span>; }<br>
+    }<br><br>
+    <span style="color:#4A5E78;">/* Aplicar: */</span><br>
+    .pulse-dot { animation: <span style="color:var(--accent);">pulse-green 2s ease-in-out infinite</span>; }
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<!-- PAGE 5 — DEVELOPER HANDOFF                                  -->
+<!-- ─────────────────────────────────────────────────────────── -->
+<section id="handoff">
+  <div class="page-header">
+    <div class="page-tag">Página 05</div>
+    <div class="page-title">Developer Handoff</div>
+    <div class="page-desc">Tudo que o desenvolvedor precisa para implementar o design sem precisar adivinhar.</div>
+  </div>
+
+  <div class="grid-2">
+    <div>
+      <div class="sec-header" style="margin-top:0;">
+        <div class="sec-num">CSS</div>
+        <div><div class="sec-title">CSS Custom Properties</div></div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t2);line-height:1.8;overflow-x:auto;">
+        <span style="color:#4A5E78;">/* globals.css — :root */</span><br>
+        :root {<br>
+        &nbsp;<span style="color:var(--t3);">/* Surfaces */</span><br>
+        &nbsp;--bg-base: <span style="color:var(--accent);">#0D1117</span>;<br>
+        &nbsp;--bg-side: <span style="color:var(--accent);">#111827</span>;<br>
+        &nbsp;--bg-card: <span style="color:var(--accent);">#161D2E</span>;<br>
+        &nbsp;--bg-card-h: <span style="color:var(--accent);">#1C2640</span>;<br>
+        &nbsp;<span style="color:var(--t3);">/* Borders */</span><br>
+        &nbsp;--border: <span style="color:var(--accent);">#1F2D45</span>;<br>
+        &nbsp;--border-sub: <span style="color:var(--accent);">#192036</span>;<br>
+        &nbsp;<span style="color:var(--t3);">/* Text */</span><br>
+        &nbsp;--t1: <span style="color:var(--accent);">#E2E8F0</span>;<br>
+        &nbsp;--t2: <span style="color:var(--accent);">#8FA3BF</span>;<br>
+        &nbsp;--t3: <span style="color:var(--accent);">#4A5E78</span>;<br>
+        &nbsp;<span style="color:var(--t3);">/* Brand */</span><br>
+        &nbsp;--accent: <span style="color:var(--accent);">#F97316</span>;<br>
+        &nbsp;--accent-h: <span style="color:var(--accent);">#FB923C</span>;<br>
+        &nbsp;<span style="color:var(--t3);">/* Status */</span><br>
+        &nbsp;--green: <span style="color:#10B981;">#10B981</span>;<br>
+        &nbsp;--blue: <span style="color:#3B82F6;">#3B82F6</span>;<br>
+        &nbsp;--purple: <span style="color:#8B5CF6;">#8B5CF6</span>;<br>
+        &nbsp;--red: <span style="color:#EF4444;">#EF4444</span>;<br>
+        }
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-header" style="margin-top:0;">
+        <div class="sec-num">TW</div>
+        <div><div class="sec-title">Tailwind Config (excerpt)</div></div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t2);line-height:1.8;overflow-x:auto;">
+        colors: {<br>
+        &nbsp;accent: <span style="color:var(--accent);">'#F97316'</span>,<br>
+        &nbsp;<span style="color:var(--t3);">// surfaces</span><br>
+        &nbsp;<span style="color:var(--accent);">'bg-base'</span>: <span style="color:var(--accent);">'#0D1117'</span>,<br>
+        &nbsp;<span style="color:var(--accent);">'bg-side'</span>: <span style="color:var(--accent);">'#111827'</span>,<br>
+        &nbsp;<span style="color:var(--accent);">'bg-card'</span>: <span style="color:var(--accent);">'#161D2E'</span>,<br>
+        &nbsp;border: <span style="color:var(--accent);">'#1F2D45'</span>,<br>
+        &nbsp;t1: <span style="color:var(--accent);">'#E2E8F0'</span>,<br>
+        &nbsp;t2: <span style="color:var(--accent);">'#8FA3BF'</span>,<br>
+        &nbsp;t3: <span style="color:var(--accent);">'#4A5E78'</span>,<br>
+        &nbsp;success: <span style="color:#10B981;">'#10B981'</span>,<br>
+        &nbsp;info: <span style="color:#3B82F6;">'#3B82F6'</span>,<br>
+        &nbsp;purple: <span style="color:#8B5CF6;">'#8B5CF6'</span>,<br>
+        &nbsp;danger: <span style="color:#EF4444;">'#EF4444'</span>,<br>
+        },<br>
+        borderRadius: {<br>
+        &nbsp;card: <span style="color:var(--accent);">'12px'</span>,<br>
+        &nbsp;btn: <span style="color:var(--accent);">'8px'</span>,<br>
+        &nbsp;pill: <span style="color:var(--accent);">'20px'</span>,<br>
+        },
+      </div>
+    </div>
+  </div>
+
+  <div class="sec-header">
+    <div class="sec-num">FS</div>
+    <div><div class="sec-title">Estrutura de Arquivos</div><div class="sec-sub">Onde cada componente vive</div></div>
+  </div>
+  <table class="spec-table">
+    <thead><tr><th>Arquivo</th><th>Componente</th><th>Tipo</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">app/globals.css</td><td>CSS variables + keyframes</td><td>CSS</td><td style="color:var(--green);">✓ Pronto</td></tr>
+      <tr><td class="mono">tailwind.config.ts</td><td>Design tokens</td><td>Config</td><td style="color:var(--green);">✓ Pronto</td></tr>
+      <tr><td class="mono">lib/mock-data.ts</td><td>Interfaces + dados mock</td><td>TS</td><td style="color:var(--green);">✓ Pronto</td></tr>
+      <tr><td class="mono">components/tracking/Sidebar.tsx</td><td>Sidebar completa</td><td>Client</td><td style="color:var(--green);">✓ Pronto</td></tr>
+      <tr><td class="mono">components/tracking/Header.tsx</td><td>Header sem nav links</td><td>Client</td><td style="color:var(--green);">✓ Pronto</td></tr>
+      <tr><td class="mono">components/tracking/KPICard.tsx</td><td>Cards de métricas</td><td>Client</td><td style="color:var(--green);">✓ Pronto</td></tr>
+      <tr><td class="mono">components/tracking/TabBar.tsx</td><td>Tabs com underline animado</td><td>Client</td><td style="color:var(--green);">✓ Pronto</td></tr>
+      <tr><td class="mono">components/tracking/SourceChip.tsx</td><td>Chips toggle por plataforma</td><td>Client</td><td style="color:var(--green);">✓ Pronto</td></tr>
+      <tr><td class="mono">components/tracking/FunnelChart.tsx</td><td>Funil de conversão</td><td>Server</td><td style="color:var(--green);">✓ Pronto</td></tr>
+      <tr><td class="mono">components/tracking/BarChart.tsx</td><td>Gráfico de barras</td><td>Client</td><td style="color:var(--green);">✓ Pronto</td></tr>
+      <tr><td class="mono">components/tracking/LeadsTable.tsx</td><td>Tabela de leads</td><td>Client</td><td style="color:var(--green);">✓ Pronto</td></tr>
+      <tr><td class="mono">app/dashboard/page.tsx</td><td>Página dashboard montada</td><td>Client</td><td style="color:var(--green);">✓ Pronto</td></tr>
+    </tbody>
+  </table>
+
+  <div class="sec-header">
+    <div class="sec-num">→</div>
+    <div><div class="sec-title">Próximos Passos</div><div class="sec-sub">Para iniciar o projeto Next.js</div></div>
+  </div>
+  <table class="spec-table">
+    <thead><tr><th>#</th><th>Passo</th><th>Comando</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Criar projeto Firebase</td><td class="mono">firebase console → criar projeto</td></tr>
+      <tr><td>2</td><td>Criar projeto Next.js</td><td class="mono">npx create-next-app@latest tracking-v4 --typescript --tailwind --app</td></tr>
+      <tr><td>3</td><td>Copiar design-system/</td><td class="mono">copiar components/, lib/, globals.css, tailwind.config.ts para o projeto</td></tr>
+      <tr><td>4</td><td>Instalar deps</td><td class="mono">npm install firebase framer-motion</td></tr>
+      <tr><td>5</td><td>Configurar .env.local</td><td class="mono">adicionar as 6 variáveis NEXT_PUBLIC_FIREBASE_*</td></tr>
+      <tr><td>6</td><td>Deploy Vercel</td><td class="mono">vercel --prod (ou git push → auto-deploy)</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</div><!-- end spec-content -->
+</div><!-- end spec-main -->
+
+<script>
+// ─── Tab demo ──────────────────────────────────────────────────
+const tabs = document.querySelectorAll('#tab-demo .tab-item')
+const ul = document.getElementById('tab-ul')
+
+function setTab(idx, el) {
+  tabs.forEach(t => t.classList.remove('active'))
+  el.classList.add('active')
+  ul.style.left = el.offsetLeft + 18 + 'px'
+  ul.style.width = el.offsetWidth - 36 + 'px'
+}
+
+// Set initial
+setTimeout(() => {
+  const first = tabs[0]
+  ul.style.left = first.offsetLeft + 18 + 'px'
+  ul.style.width = first.offsetWidth - 36 + 'px'
+}, 100)
+
+// ─── Bar chart ────────────────────────────────────────────────
+const chartData = [
+  { day: 'Seg', inv: 2100, rev: 10400 },
+  { day: 'Ter', inv: 2400, rev: 12100 },
+  { day: 'Qua', inv: 2200, rev: 11300 },
+  { day: 'Qui', inv: 2800, rev: 14600 },
+  { day: 'Sex', inv: 3100, rev: 16800 },
+  { day: 'Sáb', inv: 2600, rev: 13500 },
+  { day: 'Dom', inv: 2300, rev: 12200 },
+]
+const maxRev = Math.max(...chartData.map(d => d.rev))
+const bc = document.getElementById('bar-chart-demo')
+chartData.forEach(d => {
+  const rH = (d.rev / maxRev) * 100
+  const iH = (d.inv / maxRev) * 100
+  bc.innerHTML += `
+    <div class="bar-day">
+      <div class="bar-pair">
+        <div class="bar bar-rev" style="height:${rH}%" title="Receita R$${d.rev.toLocaleString('pt-BR')}"></div>
+        <div class="bar bar-inv" style="height:${iH}%" title="Invest. R$${d.inv.toLocaleString('pt-BR')}"></div>
+      </div>
+      <span class="bar-lbl">${d.day}</span>
+    </div>`
+})
+
+// Layout bars (mini)
+const lbc = document.getElementById('layout-bars')
+if (lbc) {
+  chartData.forEach(d => {
+    const rH = Math.round((d.rev / maxRev) * 52)
+    const iH = Math.round((d.inv / maxRev) * 52)
+    lbc.innerHTML += `<div class="layout-bar-day" style="flex:1;height:56px;align-items:flex-end;gap:1px;display:flex;">
+      <div style="flex:1;height:${rH}px;background:linear-gradient(to top,#10B981,#34D399);border-radius:2px 2px 0 0;"></div>
+      <div style="flex:1;height:${iH}px;background:#F97316;opacity:.6;border-radius:2px 2px 0 0;"></div>
+    </div>`
+  })
+}
+
+// ─── Funnel ──────────────────────────────────────────────────
+const funnelData = [
+  { label: 'Page View', count: 42830, pct: 100, color: '#3B82F6' },
+  { label: 'Lead',      count: 18416, pct: 43,  color: '#F97316' },
+  { label: 'Checkout',  count: 8996,  pct: 21,  color: '#8B5CF6' },
+  { label: 'Compra',    count: 3855,  pct: 9,   color: '#10B981' },
+]
+const fd = document.getElementById('funnel-demo')
+if (fd) {
+  funnelData.forEach(s => {
+    fd.innerHTML += `
+      <div class="funnel-row">
+        <span class="funnel-label">${s.label}</span>
+        <div class="funnel-track"><div class="funnel-fill" style="width:${s.pct}%;background:${s.color};"></div></div>
+        <span class="funnel-count">${s.count.toLocaleString('pt-BR')}</span>
+        <span class="funnel-pct">${s.pct}%</span>
+      </div>`
+  })
+}
+
+// Layout funnel (mini)
+const lf = document.getElementById('layout-funnel')
+if (lf) {
+  funnelData.forEach(s => {
+    lf.innerHTML += `
+      <div class="layout-funnel-r">
+        <span class="layout-funnel-l" style="font-size:8px;color:var(--t2);width:50px;">${s.label}</span>
+        <div class="layout-funnel-t"><div class="layout-funnel-f" style="width:${s.pct}%;background:${s.color};"></div></div>
+        <span style="font-size:8px;color:var(--t3);width:28px;text-align:right;">${s.pct}%</span>
+      </div>`
+  })
+}
+
+// ─── Leads table ──────────────────────────────────────────────
+const leads = [
+  { name: 'Maria Silva',  email: 'maria@email.com',   source: 'Meta Ads',   sbg:'rgba(59,130,246,.1)',  sc:'#3B82F6', event: 'Compra',   ebg:'rgba(16,185,129,.1)', ec:'#10B981', camp: 'v4_retargeting_j',  date:'01/06/2026' },
+  { name: 'João Costa',   email: 'joao@empresa.com',  source: 'Google Ads', sbg:'rgba(249,115,22,.1)', sc:'#F97316', event: 'Checkout', ebg:'rgba(249,115,22,.1)', ec:'#F97316', camp: 'kwds_marca_exact',   date:'31/05/2026' },
+  { name: 'Ana Rodrigues',email: 'ana@gmail.com',     source: 'Orgânico',   sbg:'rgba(139,92,246,.1)', sc:'#8B5CF6', event: 'Lead',     ebg:'rgba(59,130,246,.1)', ec:'#3B82F6', camp: '—',                date:'30/05/2026' },
+  { name: 'Pedro Alves',  email: 'pedro@hotmail.com', source: 'GA4',        sbg:'rgba(227,116,0,.1)',  sc:'#E37400', event: 'Page View', ebg:'rgba(139,92,246,.1)',ec:'#8B5CF6', camp: 'v4_google_display',  date:'29/05/2026' },
+  { name: 'Carla Mendes', email: 'carla@email.com',   source: 'Meta Ads',   sbg:'rgba(59,130,246,.1)', sc:'#3B82F6', event: 'Lead',     ebg:'rgba(59,130,246,.1)', ec:'#3B82F6', camp: 'v4_tof_interesse',  date:'28/05/2026' },
+]
+const tb = document.getElementById('leads-tbody')
+if (tb) {
+  leads.forEach(l => {
+    tb.innerHTML += `
+      <tr>
+        <td><p style="font-size:13px;font-weight:500;color:var(--t1);">${l.name}</p>
+            <p style="font-size:11px;color:var(--t3);margin-top:2px;">${l.email}</p></td>
+        <td><span class="badge" style="background:${l.sbg};color:${l.sc};">${l.source}</span></td>
+        <td style="font-family:monospace;font-size:11.5px;color:var(--t3);">${l.camp}</td>
+        <td><span class="badge" style="background:${l.ebg};color:${l.ec};">${l.event}</span></td>
+        <td style="font-size:12px;">${l.date}</td>
+        <td><button class="journey-btn">Ver jornada</button></td>
+      </tr>`
+  })
+}
+
+// ─── TOC active on scroll ─────────────────────────────────────
+const tocLinks = document.querySelectorAll('.toc-item')
+const sections = ['tokens','components','c-sidebar','c-header','c-chips','c-kpi','c-tabs','c-barchart','c-funnel','c-table','layout','interactions','handoff']
+
+window.addEventListener('scroll', () => {
+  let current = ''
+  sections.forEach(id => {
+    const el = document.getElementById(id)
+    if (el && window.scrollY >= el.offsetTop - 100) current = id
+  })
+  tocLinks.forEach(l => {
+    l.classList.toggle('active', l.getAttribute('href') === '#'+current)
+  })
+})
+</script>
+</body>
+</html>

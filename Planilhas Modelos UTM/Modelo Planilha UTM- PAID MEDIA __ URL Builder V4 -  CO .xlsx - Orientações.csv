@@ -1,0 +1,31 @@
+,
+,O que é UTM? (ORIGENS EXTERNAS)
+,"Os parâmetros UTM (Urchin Traffic Monitor) são textos personalizados que você insere nas URLs para fazer um rastreamento toda vez que alguém clicar nelas. 
+Elas servem para mostrar os resultados específicos de origem do tráfego em relação àquela URL personalizada. 
+Assim, os parâmetros UTM possibilitam analisar o tráfego levando em conta de onde ele veio, ou seja, como ele chegou até você."
+,
+,Importância de usar:
+,"Somente utilizando os parâmetros de UTM  você consegue rastrear de onde vieram os cliques, que podem ter gerado uma venda, um 
+cadastro, um lead. 
+São importantes para entender qual anúncio ou link está gerando mais resultado. "
+,
+,"UTM trata as informações na origem, não no destino. É o destinatário."
+,
+,O que é ITM? (ORIGEM INTERNAS)
+,Os parâmetros ITM são muito importantes quando queremos medir a efetividade de alguma campanha interna.
+,As ITMs precisam estar no clique que leva para alguma outra página da Hotmart.
+,"Faz sentido medir caso a gente tenha a intenção de entender os acessos através de várias fontes diferentes. Exemplo: Diferenciar acessos por um banner na Home, um banner no Blog e um banner na plataforma."
+,"O ITM não é um parâmetro obrigatório, mas sim uma ferramenta que auxilia nas nossas análises de origens internas, sendo a melhor forma de medirmos a performance de múltiplas ações internas."
+,
+,ORIENTAÇÕES PARA MÍDIA PAGA
+,"- GOOGLE: continuar utilizando o tagueamento automático (vamos conseguir avaliar a performance através do parâmetro gclid).
+Utm_Source e utm_Medium seguirão com o padrão nativo do Google, e no utm_Campaign e utm_Content vocês deverão preencher manualmente conforme os campos definidos na planilha)"
+,
+,"- FACEBOOK e INSTAGRAM: utilizar a planilha para tagueamento por enquanto. Vamos avaliar se é possível alguma automatização, porque o fbclid não comunica automaticamente com o GA."
+,
+,"- OUTRAS ORIGENS (exemplos: criteo, linkedin, whatsapp, twitter e programmatic): utilizar a planilha para parametrização."
+,
+,QUANDO ENCURTAR LINKS?
+,"Encurtar apenas se for necessário ter um link mais amigável, para envio por email, releases etc."
+,"- UTM´s: deverá ser utilizado o Gerenciador de links da Hotmart, considerando a manutenção das regras de inclusão de UTM´s desta planilha. O link pode ser copiado no gerenciador de links, já com o tagueamento aqui da planilha. Automaticamente os campos serão preenchidos."
+,"- ITM´s: deverá ser utilizado o Gerenciador de links da Hotmart, considerando a manutenção das regras de inclusão de ITM´s desta planilha. O link pode ser copiado no gerenciador de links, já com o tagueamento aqui da planilha. Os campos não serão preenchidos, mas o link é automaticamente encurtado com os ITM`s, mas ficam ocultos."

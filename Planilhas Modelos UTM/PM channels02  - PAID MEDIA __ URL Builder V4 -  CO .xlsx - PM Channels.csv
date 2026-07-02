@@ -1,0 +1,76 @@
+,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,
+,,,,utm_campaign,,,,,,,,,,,,utm_term,,,,,,utm_content
+"Channel
+(utm_medium)","Tool
+(utm_source)",,Squad,Office,Country,Country,Funnel stage,Funnel stage,Goal,Goal,Project Name,Project Name,Type of campaign/channel,Type of campaign/channel,,Segmento,Segmento,Posicionamento,Posicionamento,,Formato,Formato
+paid,google,,Falcon,v4-fal,Brasil,br,Awareness,awar,Alcance,alc,Josapar ,josapar,Display - Banners em sites,display,,Interesses,int,Apenas Facebook,fb,,Link ad - Single ad: Todos os posicionamentos,linkad
+organic,bing,,Atena,v4-ate,acre,ac,Consideração,cons,Views,viw,Tio João ,tio-joao,Search - Anúncio de texto em buscadores,search,,Look alike / Público semelhante,lal,Apenas Instagram,ig,,Carrossel,carrossel
+,meta,,Grandes contas,v4-web,alagoas,al,Performance,perf,Tráfego,tra,Suprasoy ,suprasoy,Meta - Anúncios que direcionam para um link externo ao Facebook,link,,Listas de clientes,lis,Apenas Stories,sto,,Apenas Stories,stories
+,pinterest,,Thunder,v4-thu,amapa,ap,,,Envolvimento,env,RGC ,rgc,Meta - Anúncios para captura de leads no form nativo,fb-leadad,,Mais de um segmento ao mesmo tempo,all,Apenas Feed,fd,,Vídeo +30'',video-+30
+,influencer,,,,amazonas,am,,,Cadastro ,cad,Lunelli ,lunelli,Meta - Impulsionamento de posts orgânicos,post,,Remarketing,rmkt,Apenas grupos do Facebook,gp,,Vídeo 30'',video-30
+,uol,,,,bahia,ba,,,Lead - Eventos e webinários,led,Lunelli Hangar 33,lunelli-hangar-33,Youtube - Anúncios no youtube,youtube,,Palavra chave,kw,Pos. automático ou mais de um posicionamento manual,all,,Vídeo 15'',video-15
+,linkedin,,,,ceara,ce,,,Venda ,ved,Lunelli Lez a Lez,lunelli-lez-a-lez,Google Discovery,discovery,,Tópico,top,Youtube Bumper,yt-bp,,Vídeo 10'',video-10
+,exame,,,,distrito-federal,df,,,Instalação do App,aci,Leitão Pork Chopp,leitao-pork-chopp,Anúncios na TV,tv,,In Market - Público que planeja ativamente ou passa por eventos importantes,in-mkt,Youtube Trueview For Action,yt-fa,,Vídeo 5'',video-5
+,omelete,,,,espirito-santo,es,,,Engajamento com o App,ace,InPower,inpower,Anúncios em portais,portal,,Engajamento orgânico - Com publicações ou com páginas em redes sociais,eng,Youtube Trueview,yt-tv,,Anúncio dinâmico,dinamico
+,outbrain,,,,goias,go,,,Seguidores,seg,Luchini Tratores,luchini-tratores,Search - Anúncios para captura de leads no form nativo,src-leadad,,Pageview - Visitantes do seu site,pgv,Youtube Discovery,yt-dv,,Banner formatos IAB - Para Google Display ou semelhantes,banner-iab
+,globo,,,,maranhao,ma,,,Engajamento ,eng,Ophicina,ophicina,Linkedin - Anúncios para captura de leads no form nativo,in-leadad,,Demográfico,dmg,tiktok   shop,tk-shop,,Banner responsivo - Para Google Display ou semelhantes,banner-responsivo
+,sms,,,,mato-grosso,mt,,,Local pdv,pdv,Luchini Chevrolet,luchini-chevrolet,Linkedin - Impulsionamento de posts orgânicos - estático,in-post,,Segmentação Dinâmica - Google Ads,din,tiktok ,tkt,,Collection,collection
+,whatsapp,,,,mato-grosso-do-sul,ms,,,,,Valec Nissan,valec-nissan,Linkedin - Anúncio em vídeo,in-video,,Behavior,bhv,,,,Post orgânico,post-organico
+,folha,,,,minas-gerais,mg,,,,,Valec Renault,valec-renault,Pushnews - Anúncio em texto,push,,Inteligencia artificial ,ia,,,,Anúncio de texto expandido,txt-ex
+,tiktok,,,,para,pa,,,,,Valec Seminovos,valec-seminovos,Native Ads,native,,Aberto,abrt,,,,Anúncio de texto responsivo,txt-resp
+,eoestadodeminas,,,,paraiba,pb,,,,,Grupo Luchini Consórcio,grupo-luchini-consorcio,Performance - Max,max,,,,,,,Anúncio de texto push,txt-push
+,verizon,,,,parana,pr,,,,,Inverness,inverness,Visitas a lojas locais e promoções,gmn,,,,,,,Native Ads,native
+,aviva,,,,pernambuco,pe,,,,,Aesa Empilhadeira,aesa-empilhadeira,Geração de demanda,gdm,,,,,,,anúncios pmx,pmax-ad
+,jovempan,,,,piaui,pi,,,,,Taskr. Robotics,taskr-robotics,Google Shopping,google-Shop,,,,,,,anúncios search,srch-ad
+,jovemnerd,,,,rio-de-janeiro,rj,,,,,Digimap,digimap,Google Local,google-local,,,,,,,SiteLinks,stlk
+,pushnews,,,,rio-grande-do-norte,rn,,,,,Hawks Repair,hawks-repair,,,,,,,,,,
+,yahoo,,,,rio-grande-do-sul,rs,,,,,Lion,lion,,,,,,,,,,
+,spotify,,,,rondonia,ro,,,,,AGIBEM,agibem,,,,,,,,,,
+,twitter,,,,roraima,rr,,,,,Brasforno,brasforno,,,,,,,,,,
+,waze,,,,santa-catarina,sc,,,,,SPX Bank (Aptare),spx-bank-aptare,,,,,,,,,,
+,dv360,,,,sao-paulo,sp,,,,,Fleexi,fleexi,,,,,,,,,,
+,taboola,,,,sergipe,se,,,,,Lis Magazine,lis-magazine,,,,,,,,,,
+,amazon-dsp,,,,tocantins,to,,,,,Concrelagos,concrelagos,,,,,,,,,,
+,adform,,,,centro oeste,centro-oeste,,,,,Desempenho,desempenho,,,,,,,,,,
+,mercado-livre-ads,,,,sudeste,sudeste,,,,,Escola de Pizza *,escola-de-pizza,,,,,,,,,,
+,magazine-luiza-ads,,,,sul,sul,,,,,Paellas Pepe *,paellas-pepe,,,,,,,,,,
+,shopee-ads,,,,norte,norte,,,,,Vèro + Leitão + Myspace *,vero-leitao-myspace,,,,,,,,,,
+,olx ,,,,nordeste,nordeste,,,,,Festival do Torresmo *,festival-do-torresmo,,,,,,,,,,
+,midia-ooh,,,,praca-personalizada,pra-perso,,,,,Cristal,cristal,,,,,,,,,,
+,,,,,,,,,,,Attivamente,attivamente,,,,,,,,,,
+,,,,,,,,,,,Laçador de Ofertas,lacador-de-ofertas,,,,,,,,,,
+,,,,,,,,,,,Flight,flight,,,,,,,,,,
+,,,,,,,,,,,Lilolimp,lilolimp,,,,,,,,,,
+,,,,,,,,,,,Soliker,soliker,,,,,,,,,,
+,,,,,,,,,,,B4,b4,,,,,,,,,,
+,,,,,,,,,,,Arqplace,arqplace,,,,,,,,,,
+,,,,,,,,,,,Pousada Vila Serrano,pousada-vila-serrano,,,,,,,,,,
+,,,,,,,,,,,Centauro,centauro,,,,,,,,,,
+,,,,,,,,,,,Dinamica,dinamica,,,,,,,,,,
+,,,,,,,,,,,Destaque,destaque,,,,,,,,,,
+,,,,,,,,,,,Miyamura,miyamura,,,,,,,,,,
+,,,,,,,,,,,Triad,triad,,,,,,,,,,
+,,,,,,,,,,,Omnitrade,omnitrade,,,,,,,,,,
+,,,,,,,,,,,Éffera,effera,,,,,,,,,,
+,,,,,,,,,,,Sensori,sensori,,,,,,,,,,
+,,,,,,,,,,,Softrack,softrack,,,,,,,,,,
+,,,,,,,,,,,Ozaki Engenharia,ozaki-engenharia,,,,,,,,,,
+,,,,,,,,,,,Point Thermic,point-thermic,,,,,,,,,,
+,,,,,,,,,,,Blues Content,blues-content,,,,,,,,,,
+,,,,,,,,,,,Clivasf,clivasf,,,,,,,,,,
+,,,,,,,,,,,Faciles,faciles,,,,,,,,,,
+,,,,,,,,,,,Nagaura,nagaura,,,,,,,,,,
+,,,,,,,,,,,Empório Pirana,emporio-pirana,,,,,,,,,,
+,,,,,,,,,,,Baialuna,baialuna,,,,,,,,,,
+,,,,,,,,,,,Drogalis,drogalis,,,,,,,,,,
+,,,,,,,,,,,LL Indiana,ll-indiana,,,,,,,,,,
+,,,,,,,,,,,Klaus,klaus,,,,,,,,,,
+,,,,,,,,,,,Mercês,merces,,,,,,,,,,
+,,,,,,,,,,,PetTreats,pettreats,,,,,,,,,,
+,,,,,,,,,,,Bugio,bugio,,,,,,,,,,
+,,,,,,,,,,,GL Frutas e Verduras,gl-frutas-e-verduras,,,,,,,,,,
+,,,,,,,,,,,Josapar,josapar,,,,,,,,,,
+,,,,,,,,,,,RGC,rgc,,,,,,,,,,
+,,,,,,,,,,,EJOT,ejot,,,,,,,,,,
+,,,,,,,,,,,Official Time,oft,,,,,,,,,,

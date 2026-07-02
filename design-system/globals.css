@@ -1,0 +1,41 @@
+/* ─── Tracking V4 — Global CSS Variables ────────────────────────────────── */
+/* Adicionar em app/globals.css junto com as diretivas @tailwind */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --bg-base:    #0D1117;
+  --bg-side:    #111827;
+  --bg-card:    #161D2E;
+  --bg-card-h:  #1C2640;
+  --border:     #1F2D45;
+  --border-sub: #192036;
+  --text-1: #E2E8F0;
+  --text-2: #8FA3BF;
+  --text-3: #4A5E78;
+  --accent:  #F97316;
+  --acc-h:   #FB923C;
+  --green:   #10B981;
+  --blue:    #3B82F6;
+  --purple:  #8B5CF6;
+  --red:     #EF4444;
+}
+
+/* Pulse animation para o status dot do cliente */
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+  50%       { box-shadow: 0 0 0 5px rgba(16, 185, 129, 0); }
+}
+
+.pulse-dot {
+  animation: pulse-green 2s ease-in-out infinite;
+}
+
+/* Scrollbar refinada */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+*::-webkit-scrollbar { width: 4px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
