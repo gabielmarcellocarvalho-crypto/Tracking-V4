@@ -15,6 +15,8 @@ export interface Cliente {
   status: ClienteStatus
   /** Chave usada pelo snippet v4track.js para autenticar a ingestão */
   trackingKey?: string
+  /** E-mail (lowercase) do gestor dono deste cliente — resolve qual users/{email}.meta_integration usar no envio CAPI */
+  donoEmail?: string
   /** true = cliente de demonstração (dados mock, não existe no Firestore) */
   demo?: boolean
   criadoEm?: number
@@ -102,6 +104,8 @@ export interface Evento {
   dispositivo?: 'mobile' | 'desktop' | 'tablet' | 'outro'
   valor?: number
   produto?: string
+  /** ID real da transação/pedido (e-commerce) — usado como external_id de dedup no CAPI */
+  transactionId?: string
   origem: Origem
   /** id da identidade unificada dona deste evento */
   visitorId: string
@@ -199,6 +203,22 @@ export interface Conexao {
   status: ConexaoStatus
   campos: Record<string, string>
   atualizadoEm?: number
+}
+
+// ── Integração Meta por usuário (OAuth) ───────────────────────────────────────
+// Doc users/{email} — token compartilhado entre todos os clientes cujo
+// donoEmail aponta para este e-mail. Só gravado/lido por rotas server
+// (firebase-admin); nunca exposto via SDK client.
+export interface UserMetaIntegration {
+  accessToken: string
+  /** epoch ms — token de longa duração do Meta expira em ~60 dias */
+  tokenExpiry: number
+  atualizadoEm: number
+}
+
+export interface UserDoc {
+  email: string
+  meta_integration?: UserMetaIntegration
 }
 
 // ── Insight (agente IA / regras) ──────────────────────────────────────────────
