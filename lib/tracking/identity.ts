@@ -8,12 +8,8 @@
 //   5. IP + user agent (fingerprint fraco — último recurso)
 // Usado pelo endpoint de ingestão (/api/track), roda no servidor.
 
-import {
-  collection, doc, getDocs, query, where, limit,
-  setDoc, deleteDoc,
-} from 'firebase/firestore'
-import { db } from '@/lib/firebase'
 import type { Evento, Identidade, IdentidadeStatus, Toque } from '@/lib/types'
+import type { IdentityStore } from '@/lib/tracking/store-types'
 
 const DIA_MS = 24 * 60 * 60 * 1000
 export const JANELA_META_MS   = 7 * DIA_MS
@@ -49,23 +45,6 @@ function novaIdentidade(id: string, agora: number): Identidade {
     criadoEm: agora,
     atualizadoEm: agora,
   }
-}
-
-async function buscarPor(
-  clienteId: string,
-  campo: string,
-  valor: string | undefined,
-): Promise<Identidade | null> {
-  if (!valor) return null
-  const q = query(
-    collection(db, 'clientes', clienteId, 'identidades'),
-    where(campo, 'array-contains', valor),
-    limit(1),
-  )
-  const snap = await getDocs(q)
-  if (snap.empty) return null
-  const d = snap.docs[0]
-  return { ...(d.data() as Identidade), id: d.id }
 }
 
 /** Funde `b` dentro de `a` (a permanece; b é apagado). */
@@ -104,7 +83,7 @@ function fundir(a: Identidade, b: Identidade): Identidade {
  * Resolve (ou cria) a identidade dona do evento e a atualiza.
  * Retorna o visitorId final — que deve ser gravado no evento.
  */
-export async function resolverIdentidade(clienteId: string, evento: Evento): Promise<string> {
+export async function resolverIdentidade(store: IdentityStore, evento: Evento): Promise<string> {
   const agora = evento.ts || Date.now()
   const { ids, dados, geo } = evento
 
@@ -118,12 +97,12 @@ export async function resolverIdentidade(clienteId: string, evento: Evento): Pro
     ['gclids', ids.gclid],
   ]
   for (const [campo, valor] of buscas) {
-    const achada = await buscarPor(clienteId, campo, valor)
+    const achada = await store.buscarPor(campo, valor)
     if (achada && !encontradas.some((e) => e.id === achada.id)) encontradas.push(achada)
   }
   // fingerprint fraco: só se nada mais achou e não há identificadores fortes
   if (encontradas.length === 0 && !ids.v4id && geo?.ip) {
-    const porIp = await buscarPor(clienteId, 'ips', geo.ip)
+    const porIp = await store.buscarPor('ips', geo.ip)
     if (porIp && porIp.userAgent && porIp.userAgent === evento.userAgent) encontradas.push(porIp)
   }
 
@@ -136,7 +115,7 @@ export async function resolverIdentidade(clienteId: string, evento: Evento): Pro
     ident = encontradas[0]
     for (const outra of encontradas.slice(1)) {
       ident = fundir(ident, outra)
-      await deleteDoc(doc(db, 'clientes', clienteId, 'identidades', String(outra.id)))
+      await store.apagar(String(outra.id))
     }
   }
 
@@ -196,6 +175,6 @@ export async function resolverIdentidade(clienteId: string, evento: Evento): Pro
   const { id, ...payload } = ident
   // Remove undefined (Firestore rejeita)
   const limpo = JSON.parse(JSON.stringify(payload))
-  await setDoc(doc(db, 'clientes', clienteId, 'identidades', String(id)), limpo)
+  await store.salvar(String(id), limpo)
   return String(id)
 }

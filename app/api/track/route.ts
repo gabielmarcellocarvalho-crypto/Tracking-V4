@@ -14,12 +14,12 @@
 // }
 
 import { NextRequest, NextResponse } from 'next/server'
-import { addDoc, collection, doc, getDoc } from 'firebase/firestore'
+import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { parseUTM, detectOrigem } from '@/lib/utm/engine'
-import { resolverIdentidade } from '@/lib/tracking/identity'
-import { montarConversoes, sha256, normalizarTelefone } from '@/lib/tracking/conversoes'
-import { enviarConversaoParaMeta } from '@/lib/integrations/meta-send'
+import { sha256, normalizarTelefone } from '@/lib/tracking/conversoes'
+import { ingerirEvento } from '@/lib/tracking/ingest'
+import { createClientIngestStore } from '@/lib/tracking/stores/client-store'
 import type { Evento, EventoTipo, Cliente } from '@/lib/types'
 
 const CORS = {
@@ -126,36 +126,9 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // Resolução de identidade (cria/atualiza/funde perfis)
-    evento.visitorId = await resolverIdentidade(clienteId, evento)
-
-    // Grava o evento (sem undefined — Firestore rejeita)
-    const limpo = JSON.parse(JSON.stringify(evento))
-    const ref = await addDoc(collection(db, 'clientes', clienteId, 'eventos'), limpo)
-
-    // Enfileira conversões (CAPI / Enhanced) para lead/checkout/compra
-    const conversoes = montarConversoes(evento, ref.id)
-    for (const conv of conversoes) {
-      const convRef = await addDoc(
-        collection(db, 'clientes', clienteId, 'conversoes'),
-        JSON.parse(JSON.stringify(conv)),
-      )
-      // Envio server-side imediato (Meta CAPI) — se não houver token/pixel
-      // configurados ainda, a conversão fica como "aguardando-conexao" e é
-      // reprocessada depois pelo cron de reenvio.
-      if (conv.plataforma === 'meta-capi') {
-        try {
-          await enviarConversaoParaMeta(clienteId, convRef.id)
-        } catch (err) {
-          console.error('[track] falha no envio imediato ao Meta CAPI:', err)
-        }
-      }
-    }
-
-    return NextResponse.json(
-      { ok: true, eventoId: ref.id, visitorId: evento.visitorId, conversoesEnfileiradas: conversoes.length },
-      { headers: CORS },
-    )
+    const store = createClientIngestStore(clienteId)
+    const resultado = await ingerirEvento(store, clienteId, evento)
+    return NextResponse.json({ ok: true, ...resultado }, { headers: CORS })
   } catch (err) {
     console.error('[track] erro ao gravar evento:', err)
     return NextResponse.json({ ok: false, erro: 'falha ao gravar evento' }, { status: 500, headers: CORS })

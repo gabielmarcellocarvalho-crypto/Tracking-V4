@@ -25,7 +25,7 @@ export interface Cliente {
 
 // ── Evento ────────────────────────────────────────────────────────────────────
 export type EventoTipo = 'page_view' | 'lead' | 'checkout' | 'compra' | 'custom'
-export type Origem     = 'meta' | 'google' | 'organico' | 'direto' | 'email' | 'outro'
+export type Origem     = 'meta' | 'google' | 'organico' | 'direto' | 'email' | 'shopify' | 'outro'
 
 export interface UTMSet {
   source?: string
@@ -195,7 +195,7 @@ export interface Conversao {
 }
 
 // ── Conexão de plataforma ─────────────────────────────────────────────────────
-export type ConexaoPlataforma = 'meta' | 'google' | 'ga4'
+export type ConexaoPlataforma = 'meta' | 'google' | 'ga4' | 'shopify'
 export type ConexaoStatus     = 'desconectado' | 'configurado'
 
 export interface Conexao {

@@ -72,6 +72,21 @@ const PLATAFORMAS: {
       'Cole o JSON da service account para habilitar a leitura de relatórios',
     ],
   },
+  {
+    id: 'shopify',
+    nome: 'Shopify',
+    cor: '#96BF48',
+    desc: 'Recebe pedidos da loja Shopify via webhook e injeta como eventos de compra na mesma fila de conversões CAPI.',
+    campos: [
+      { id: 'shopDomain', label: 'Domínio da loja', placeholder: 'sua-loja.myshopify.com' },
+      { id: 'webhookSecret', label: 'Webhook Secret (gerado ao criar o webhook)', placeholder: 'shpss_...', secreto: true },
+    ],
+    passos: [
+      'Shopify Admin → Configurações → Notificações → Webhooks → Criar webhook',
+      'Evento: "Criação de pedido" (orders/create) · Formato: JSON',
+      'Cole a URL abaixo e, depois de criar, copie o "Signing secret" para o campo Webhook Secret aqui',
+    ],
+  },
 ]
 
 function MetaConnectionStatus() {
@@ -123,6 +138,36 @@ function MetaConnectionStatus() {
       <p style={{ fontSize: 10.5, color: 'var(--t3)', margin: '6px 0 0' }}>
         Opcional por enquanto (só login) — o envio de conversões usa o token colado abaixo.
       </p>
+    </div>
+  )
+}
+
+function ShopifyWebhookInfo({ clienteId }: { clienteId: string }) {
+  const [copiado, setCopiado] = useState(false)
+  const origem = typeof window !== 'undefined' ? window.location.origin : 'https://SEU-DOMINIO.vercel.app'
+  const url = `${origem}/api/webhooks/shopify/${clienteId}`
+
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <label style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--t2)', display: 'block', marginBottom: 4 }}>
+        URL do webhook (cole no Shopify Admin)
+      </label>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <code style={{
+          flex: 1, display: 'block', padding: '9px 11px', borderRadius: 8, fontSize: 11,
+          fontFamily: 'monospace', color: 'var(--t2)', background: 'var(--bg-base)',
+          border: '1px solid var(--border)', wordBreak: 'break-all',
+        }}>{url}</code>
+        <button
+          onClick={() => { navigator.clipboard.writeText(url); setCopiado(true); setTimeout(() => setCopiado(false), 1500) }}
+          style={{
+            padding: '9px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, flexShrink: 0,
+            background: copiado ? 'rgba(16,185,129,.12)' : 'var(--bg-base)',
+            border: `1px solid ${copiado ? '#10B981' : 'var(--border)'}`,
+            color: copiado ? '#10B981' : 'var(--t2)', cursor: 'pointer',
+          }}
+        >{copiado ? 'Copiado ✓' : 'Copiar'}</button>
+      </div>
     </div>
   )
 }
@@ -204,7 +249,8 @@ function CardConexao({ plataforma, clienteId, camposSalvos, statusSalvo, isDemo 
       {aberto && (
         <div style={{ padding: '0 18px 18px', borderTop: '1px solid var(--br-s)' }}>
           {plataforma.id === 'meta' && <div style={{ marginTop: 14 }}><MetaConnectionStatus /></div>}
-          <div style={{ display: 'flex', gap: 20, marginTop: plataforma.id === 'meta' ? 0 : 14, flexWrap: 'wrap' }}>
+          {plataforma.id === 'shopify' && <div style={{ marginTop: 14 }}><ShopifyWebhookInfo clienteId={clienteId} /></div>}
+          <div style={{ display: 'flex', gap: 20, marginTop: plataforma.id === 'meta' || plataforma.id === 'shopify' ? 0 : 14, flexWrap: 'wrap' }}>
             {/* Campos */}
             <div style={{ flex: 1, minWidth: 260, display: 'flex', flexDirection: 'column', gap: 10 }}>
               {plataforma.campos.map((c) => (
@@ -337,7 +383,7 @@ export default function ConexoesPage({ params }: { params: Promise<{ clienteId: 
             As conversões já ficam enfileiradas com payload pronto — o envio ativa quando as credenciais forem salvas.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {PLATAFORMAS.map((p) => {
+            {PLATAFORMAS.filter((p) => p.id !== 'shopify' || cliente?.tipo === 'ecommerce').map((p) => {
               const salva = conexoes.find((c) => c.plataforma === p.id)
               return (
                 <CardConexao
