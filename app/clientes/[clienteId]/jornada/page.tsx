@@ -143,11 +143,11 @@ function CookieBadge({ label, value }: { label: string; value?: string }) {
 export default function JornadaPage({ params }: { params: Promise<{ clienteId: string }> }) {
   const { clienteId } = use(params)
   const { cliente, isDemo } = useCliente(clienteId)
-  const { identidades, isDemo: semIdentidades } = useIdentidades(isDemo ? undefined : clienteId)
+  const { identidades } = useIdentidades(isDemo ? undefined : clienteId)
   const { eventos } = useEventos(isDemo ? undefined : clienteId)
   const [busca, setBusca] = useState('')
 
-  const usarDemo = isDemo || semIdentidades
+  const usarDemo = isDemo
 
   // Jornadas reais (identidades unificadas + eventos) ou demo
   const usuarios = useMemo<UsuarioJornada[]>(() => {

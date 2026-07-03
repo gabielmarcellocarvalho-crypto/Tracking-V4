@@ -151,9 +151,9 @@ function EventLogTable({ eventId, logs }: { eventId: string; logs: Record<string
 export default function TrackingPage({ params }: { params: Promise<{ clienteId: string }> }) {
   const { clienteId } = use(params)
   const { cliente, isDemo } = useCliente(clienteId)
-  const { eventos, isDemo: semEventos } = useEventos(isDemo ? undefined : clienteId)
+  const { eventos } = useEventos(isDemo ? undefined : clienteId)
 
-  const usarDemo = isDemo || semEventos
+  const usarDemo = isDemo
 
   // Dados reais agregados dos eventos do Firestore — ou demo quando vazio
   const dados = useMemo(() => {

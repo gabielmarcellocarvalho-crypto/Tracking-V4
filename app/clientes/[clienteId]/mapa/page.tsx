@@ -24,9 +24,9 @@ const GlobeLeads = dynamic(() => import('@/components/mapa/GlobeLeads'), {
 export default function MapaPage({ params }: { params: Promise<{ clienteId: string }> }) {
   const { clienteId } = use(params)
   const { cliente, isDemo } = useCliente(clienteId)
-  const { identidades, isDemo: semIdentidades } = useIdentidades(isDemo ? undefined : clienteId)
+  const { identidades } = useIdentidades(isDemo ? undefined : clienteId)
 
-  const usarDemo = isDemo || semIdentidades
+  const usarDemo = isDemo
   const leads = useMemo(
     () => (usarDemo ? leadsGeoData : identidadesParaGeo(identidades)),
     [usarDemo, identidades],
@@ -58,6 +58,19 @@ export default function MapaPage({ params }: { params: Promise<{ clienteId: stri
       {/* Globe fills remaining space */}
       <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
         <GlobeLeads leads={leads} clienteId={clienteId} />
+        {!usarDemo && leads.length === 0 && (
+          <div style={{
+            position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            pointerEvents: 'none', background: '#0B0B0B',
+          }}>
+            <div style={{ textAlign: 'center', color: 'var(--t3)', maxWidth: 320, padding: 16 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--t2)', margin: 0 }}>Nenhum lead rastreado ainda</p>
+              <p style={{ fontSize: 11.5, margin: '6px 0 0', lineHeight: 1.5 }}>
+                Assim que o snippet capturar visitantes com localização, eles aparecem aqui.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

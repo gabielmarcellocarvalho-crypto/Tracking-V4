@@ -146,7 +146,7 @@ function demoParaRegistros(canal: UTMCanal): UTMRegistro[] {
 export default function UTMsPage({ params }: { params: Promise<{ clienteId: string }> }) {
   const { clienteId } = use(params)
   const { cliente, isDemo } = useCliente(clienteId)
-  const { utms, isDemo: utmsVazias } = useUTMs(isDemo ? undefined : clienteId)
+  const { utms } = useUTMs(isDemo ? undefined : clienteId)
   const { eventos } = useEventos(isDemo ? undefined : clienteId)
 
   const [aba, setAba]       = useState<Aba>('meta')
@@ -158,8 +158,8 @@ export default function UTMsPage({ params }: { params: Promise<{ clienteId: stri
     const canal = aba as UTMCanal
     const reais = utms.filter((u) => u.canal === canal)
     if (reais.length > 0) return reais
-    return utmsVazias || isDemo ? demoParaRegistros(canal) : []
-  }, [aba, utms, utmsVazias, isDemo])
+    return isDemo ? demoParaRegistros(canal) : []
+  }, [aba, utms, isDemo])
 
   // UTMs detectadas nos eventos reais (agrupadas + validadas)
   const detectadas = useMemo(() => {

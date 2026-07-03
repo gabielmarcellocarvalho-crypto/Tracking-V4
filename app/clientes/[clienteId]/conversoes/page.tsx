@@ -40,10 +40,10 @@ const thBase = 'px-5 py-[9px] text-left text-[10px] font-bold uppercase tracking
 export default function ConversoesPage({ params }: { params: Promise<{ clienteId: string }> }) {
   const { clienteId } = use(params)
   const { cliente, isDemo } = useCliente(clienteId)
-  const { conversoes, isDemo: semConversoes } = useConversoes(isDemo ? undefined : clienteId)
+  const { conversoes } = useConversoes(isDemo ? undefined : clienteId)
   const { conexoes } = useConexoes(isDemo ? undefined : clienteId)
 
-  const usarDemo = isDemo || semConversoes
+  const usarDemo = isDemo
 
   const resumo = useMemo(() => {
     const porPlataforma = (p: Conversao['plataforma']) => {
@@ -168,6 +168,13 @@ export default function ConversoesPage({ params }: { params: Promise<{ clienteId
                 </tr>
               </thead>
               <tbody>
+                {conversoes.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-5 py-8 text-center text-[12.5px]" style={{ color: 'var(--text-3)' }}>
+                      Nenhuma conversão enfileirada ainda
+                    </td>
+                  </tr>
+                )}
                 {conversoes.slice(0, 50).map((c, i) => {
                   const cfg = STATUS_CFG[c.status]
                   return (

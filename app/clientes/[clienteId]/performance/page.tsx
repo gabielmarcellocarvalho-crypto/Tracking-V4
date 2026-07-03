@@ -11,9 +11,7 @@ import { useCliente } from '@/lib/data/clientes'
 import { useEventos } from '@/lib/data/colecoes'
 import { agregarPerformance } from '@/lib/data/agregacoes'
 import type { PerformanceTemplate } from '@/lib/demo-data-performance'
-import {
-  DEFAULT_PERSONALIZADO_BLOCKS, perfEcData, perfLeadsData, perfMsgData,
-} from '@/lib/demo-data-performance'
+import { DEFAULT_PERSONALIZADO_BLOCKS } from '@/lib/demo-data-performance'
 
 // Lazy-load templates
 const EcommerceTemplate    = dynamic(() => import('@/components/performance/EcommerceTemplate'))
@@ -59,36 +57,40 @@ const TEMPLATE_META: Record<PerformanceTemplate, { label: string; color: string;
 export default function PerformancePage({ params }: { params: Promise<{ clienteId: string }> }) {
   const { clienteId } = use(params)
   const { cliente, isDemo } = useCliente(clienteId)
-  const { eventos, isDemo: semEventos } = useEventos(isDemo ? undefined : clienteId)
+  const { eventos } = useEventos(isDemo ? undefined : clienteId)
 
-  const usarDemo = isDemo || semEventos
+  const usarDemo = isDemo
 
-  // Agregação real dos eventos do período (30 dias) → shapes dos templates
+  // Agregação real dos eventos do período (30 dias) — null quando cliente é demo
+  const agregado = useMemo(
+    () => (usarDemo ? null : agregarPerformance(eventos, 30)),
+    [usarDemo, eventos],
+  )
+
+  // Shapes específicos de cada template, a partir da mesma agregação
   const real = useMemo(() => {
-    if (usarDemo) return null
-    const p = agregarPerformance(eventos, 30)
+    if (!agregado) return null
+    const p = agregado
     return {
       ecommerce: {
-        ...perfEcData,
         kpis: {
           investimento: p.kpis.investimento, receita: p.kpis.receita, roas: p.kpis.roas,
           ticketMedio: p.kpis.ticketMedio, totalCompras: p.kpis.totalCompras, taxaAbandono: p.kpis.taxaAbandono,
         },
         diario: p.diario.map((d) => ({ dia: d.dia, investimento: d.investimento, receita: d.receita, roas: d.roas })),
         funil: p.funil,
-        canais: p.canais.length ? p.canais : perfEcData.canais,
+        canais: p.canais,
         topProdutos: p.topProdutos,
         recentes: p.recentes.map((r) => ({ nome: r.nome, origem: r.origem, campanha: r.campanha, valor: r.valor ?? 0, data: r.data })),
       },
       leads: {
-        ...perfLeadsData,
         kpis: {
           investimento: p.kpis.investimento, totalLeads: p.kpis.totalLeads, cpl: p.kpis.cpl,
           taxaConversao: p.kpis.taxaConversao, qualificados: p.kpis.totalLeads, naoQualificados: 0, cpa: 0,
         },
         diario: p.diario.map((d) => ({ dia: d.dia, leads: d.leads, cpl: d.cpl })),
         funil: p.funil,
-        canais: p.canais.length ? p.canais : perfLeadsData.canais,
+        canais: p.canais,
         qualChart: [
           { name: 'Leads', value: p.kpis.totalLeads, color: '#10B981' },
           { name: 'Sem classificação', value: 0, color: '#374151' },
@@ -96,18 +98,17 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
         recentes: p.recentes.map((r) => ({ nome: r.nome, origem: r.origem, campanha: r.campanha, status: r.status, data: r.data })),
       },
       mensagens: {
-        ...perfMsgData,
         kpis: {
           investimento: p.kpis.investimento, totalContatos: p.kpis.totalLeads, cpm: 0,
           taxaResposta: 0, conversoes: p.kpis.totalCompras, cpa: 0,
         },
         diario: p.diario.map((d) => ({ dia: d.dia, contatos: d.contatos, cpm: d.cpm })),
         funil: p.funil,
-        canais: p.canais.length ? p.canais : perfMsgData.canais,
+        canais: p.canais,
         recentes: p.recentes.map((r) => ({ nome: r.nome, origem: r.origem, campanha: r.campanha, status: r.status, data: r.data })),
       },
     }
-  }, [usarDemo, eventos])
+  }, [agregado])
 
   const defaultTemplate: PerformanceTemplate = cliente?.tipo ?? 'ecommerce'
 
@@ -250,7 +251,12 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
               {template === 'leads'         && <LeadsTemplate dados={real?.leads} real={!usarDemo} />}
               {template === 'mensagens'     && <MensagensTemplate dados={real?.mensagens} real={!usarDemo} />}
               {template === 'personalizado' && (
-                <PersonalizadoTemplate clienteId={clienteId} initialBlocks={personBlocks} />
+                <PersonalizadoTemplate
+                  clienteId={clienteId}
+                  initialBlocks={personBlocks}
+                  dados={agregado ?? undefined}
+                  real={!usarDemo}
+                />
               )}
             </motion.div>
           </AnimatePresence>
