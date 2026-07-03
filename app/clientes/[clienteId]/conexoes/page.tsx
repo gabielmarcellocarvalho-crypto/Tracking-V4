@@ -28,15 +28,16 @@ const PLATAFORMAS: {
     id: 'meta',
     nome: 'Meta CAPI',
     cor: '#1877F2',
-    desc: 'Envio server-side de conversões (Purchase, Lead, InitiateCheckout) com match quality alto — email/telefone hasheados + fbp/fbc. O token de acesso vem da sua conexão com o Facebook (veja abaixo), não precisa mais colar manualmente.',
+    desc: 'Envio server-side de conversões (Purchase, Lead, InitiateCheckout) com match quality alto — email/telefone hasheados + fbp/fbc. Cole abaixo o token gerado no Gerenciador de Eventos deste pixel (o "Conectar com Facebook" hoje só cobre login, sem permissão de envio).',
     campos: [
       { id: 'pixelId', label: 'Pixel ID', placeholder: 'Ex: 123456789012345' },
+      { id: 'accessToken', label: 'Access Token (Gerenciador de Eventos)', placeholder: 'EAAG...', secreto: true },
       { id: 'testEventCode', label: 'Test Event Code (opcional)', placeholder: 'TEST12345' },
     ],
     passos: [
-      'Conecte sua conta Meta com o botão acima (uma vez só — vale pra todos os seus clientes)',
-      'Gerenciador de Eventos → seu Pixel → copie o Pixel ID',
-      'Cole o Pixel ID aqui — o envio da fila ativa automaticamente',
+      'Gerenciador de Eventos → seu Pixel → Configurações',
+      'Seção "Conversions API" → Gerar token de acesso → copie o token',
+      'Cole o Pixel ID + o token aqui — o envio da fila ativa automaticamente',
     ],
   },
   {
@@ -105,19 +106,24 @@ function MetaConnectionStatus() {
   }
 
   return (
-    <button
-      onClick={iniciarLoginMeta}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 8, width: '100%', marginBottom: 12,
-        padding: '10px 12px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, color: '#fff',
-        background: '#1877F2', border: 'none', cursor: 'pointer',
-      }}
-    >
-      <svg viewBox="0 0 24 24" fill="currentColor" width={15} height={15}>
-        <path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.78-3.89 1.1 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12" />
-      </svg>
-      Conectar com Facebook
-    </button>
+    <div style={{ marginBottom: 12 }}>
+      <button
+        onClick={iniciarLoginMeta}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+          padding: '10px 12px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, color: '#fff',
+          background: '#1877F2', border: 'none', cursor: 'pointer',
+        }}
+      >
+        <svg viewBox="0 0 24 24" fill="currentColor" width={15} height={15}>
+          <path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.78-3.89 1.1 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12" />
+        </svg>
+        Conectar com Facebook
+      </button>
+      <p style={{ fontSize: 10.5, color: 'var(--t3)', margin: '6px 0 0' }}>
+        Opcional por enquanto (só login) — o envio de conversões usa o token colado abaixo.
+      </p>
+    </div>
   )
 }
 

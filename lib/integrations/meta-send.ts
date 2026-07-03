@@ -20,21 +20,30 @@ async function resolverCredenciaisMeta(clienteId: string): Promise<CredenciaisRe
   const clienteSnap = await db.collection('clientes').doc(clienteId).get()
   if (!clienteSnap.exists) return null
   const cliente = clienteSnap.data() as Cliente
-  if (!cliente.donoEmail) return null
 
   const conexaoSnap = await db.collection('clientes').doc(clienteId).collection('conexoes').doc('meta').get()
   if (!conexaoSnap.exists) return null
   const conexao = conexaoSnap.data() as Conexao
   const pixelId = conexao.campos?.pixelId
   if (!pixelId || conexao.status !== 'configurado') return null
+  const testEventCode = conexao.campos?.testEventCode || undefined
 
+  // 1) Token colado manualmente na página de Conexões (Gerenciador de Eventos
+  //    → Pixel → Configurações → Conversions API → Gerar token de acesso) —
+  //    já nasce com permissão de envio pro pixel, sem depender do OAuth
+  //    "Conectar com Facebook" (hoje restrito a email/public_profile).
+  const accessTokenManual = conexao.campos?.accessToken
+  if (accessTokenManual) return { pixelId, accessToken: accessTokenManual, testEventCode }
+
+  // 2) Fallback: token OAuth do dono do cliente (users/{donoEmail}.meta_integration)
+  if (!cliente.donoEmail) return null
   const userSnap = await db.collection('users').doc(cliente.donoEmail.toLowerCase()).get()
   if (!userSnap.exists) return null
   const user = userSnap.data() as UserDoc
   const accessToken = user.meta_integration?.accessToken
   if (!accessToken || (user.meta_integration?.tokenExpiry ?? 0) < Date.now()) return null
 
-  return { pixelId, accessToken, testEventCode: conexao.campos?.testEventCode || undefined }
+  return { pixelId, accessToken, testEventCode }
 }
 
 /** Envia uma conversão meta-capi já enfileirada e atualiza seu status no Firestore. */
