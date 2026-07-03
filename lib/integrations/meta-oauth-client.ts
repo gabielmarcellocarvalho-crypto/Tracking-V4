@@ -3,7 +3,10 @@
 // (fica só no servidor) — seguro pra importar em componentes 'use client'.
 
 export const META_GRAPH_VERSION = 'v21.0'
-export const META_SCOPES = ['ads_read', 'ads_management', 'business_management']
+// App criado só com o caso de uso "Login do Facebook" — ads_read/ads_management/
+// business_management exigem App Review (permissões avançadas). Por enquanto só
+// email/public_profile (padrão, liberado sem revisão); métricas ficam para depois.
+export const META_SCOPES = ['email', 'public_profile']
 
 export function getMetaRedirectUri(): string {
   if (typeof window === 'undefined') return ''
