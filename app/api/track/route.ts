@@ -19,6 +19,7 @@ import { db } from '@/lib/firebase'
 import { parseUTM, detectOrigem } from '@/lib/utm/engine'
 import { resolverIdentidade } from '@/lib/tracking/identity'
 import { montarConversoes, sha256, normalizarTelefone } from '@/lib/tracking/conversoes'
+import { enviarConversaoParaMeta } from '@/lib/integrations/meta-send'
 import type { Evento, EventoTipo, Cliente } from '@/lib/types'
 
 const CORS = {
@@ -119,6 +120,7 @@ export async function POST(req: NextRequest) {
     dispositivo: detectarDispositivo(userAgent),
     valor: typeof body.valor === 'number' ? body.valor : undefined,
     produto: body.produto,
+    transactionId: body.transactionId,
     origem: detectOrigem(utm, ids, body.referrer),
     visitorId: '', // preenchido após a resolução
   }
@@ -134,10 +136,20 @@ export async function POST(req: NextRequest) {
     // Enfileira conversões (CAPI / Enhanced) para lead/checkout/compra
     const conversoes = montarConversoes(evento, ref.id)
     for (const conv of conversoes) {
-      await addDoc(
+      const convRef = await addDoc(
         collection(db, 'clientes', clienteId, 'conversoes'),
         JSON.parse(JSON.stringify(conv)),
       )
+      // Envio server-side imediato (Meta CAPI) — se não houver token/pixel
+      // configurados ainda, a conversão fica como "aguardando-conexao" e é
+      // reprocessada depois pelo cron de reenvio.
+      if (conv.plataforma === 'meta-capi') {
+        try {
+          await enviarConversaoParaMeta(clienteId, convRef.id)
+        } catch (err) {
+          console.error('[track] falha no envio imediato ao Meta CAPI:', err)
+        }
+      }
     }
 
     return NextResponse.json(

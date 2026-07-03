@@ -14,7 +14,7 @@
  *  - dispara page_view automático (inclui SPAs — pushState)
  *  - expõe window.v4track(tipo, dados) para eventos manuais:
  *      v4track('lead',  { email:'x@y.com', telefone:'11999999999', nome:'Fulano' })
- *      v4track('compra',{ email:'x@y.com', valor:189.90, produto:'Plano Anual' })
+ *      v4track('compra',{ email:'x@y.com', valor:189.90, produto:'Plano Anual', transactionId:'PEDIDO123' })
  */
 (function () {
   'use strict';
@@ -125,6 +125,7 @@
         : undefined,
       valor: typeof dados.valor === 'number' ? dados.valor : undefined,
       produto: dados.produto,
+      transactionId: dados.transactionId,
       userAgent: navigator.userAgent,
       ts: Date.now(),
     };

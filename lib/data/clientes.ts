@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   collection, doc, onSnapshot, setDoc, deleteDoc, serverTimestamp,
 } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
+import { db, auth } from '@/lib/firebase'
 import type { Cliente, ClienteTipo } from '@/lib/types'
 import { clientesData as clientesDemo } from '@/lib/demo-data'
 import { slugify } from '@/lib/utm/engine'
@@ -73,6 +73,7 @@ export async function criarCliente(input: {
   tipo: ClienteTipo
 }): Promise<Cliente> {
   const id = slugify(input.nome)
+  const donoEmail = auth.currentUser?.email?.toLowerCase()
   const cliente: Cliente = {
     id,
     nome: input.nome.trim(),
@@ -80,6 +81,8 @@ export async function criarCliente(input: {
     tipo: input.tipo,
     status: 'ativo',
     trackingKey: gerarTrackingKey(),
+    // Dono do token Meta usado no envio CAPI deste cliente — o gestor que o criou.
+    ...(donoEmail ? { donoEmail } : {}),
     criadoEm: Date.now(),
   }
   await setDoc(doc(db, 'clientes', id), { ...cliente, criadoEmServer: serverTimestamp() })

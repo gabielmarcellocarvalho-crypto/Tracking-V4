@@ -35,14 +35,21 @@ const NOME_EVENTO_CAPI: Record<string, string> = {
   compra: 'Purchase',
 }
 
-export function montarPayloadMetaCAPI(e: Evento): Record<string, unknown> {
+export function montarPayloadMetaCAPI(e: Evento, eventoId: string): Record<string, unknown> {
   const userData: Record<string, unknown> = {}
   if (e.dados?.email)    userData.em = [sha256(e.dados.email)]
   if (e.dados?.telefone) userData.ph = [sha256(normalizarTelefone(e.dados.telefone))]
+  if (e.dados?.nome) {
+    const [primeiro, ...resto] = e.dados.nome.trim().split(/\s+/)
+    if (primeiro)      userData.fn = [sha256(primeiro)]
+    if (resto.length)  userData.ln = [sha256(resto.join(' '))]
+  }
   if (e.geo?.ip)         userData.client_ip_address = e.geo.ip
   if (e.userAgent)       userData.client_user_agent = e.userAgent
   if (e.ids.fbp)         userData.fbp = e.ids.fbp
   if (e.ids.fbc)         userData.fbc = e.ids.fbc
+  // Deduplicação: ID real da transação (ou o próprio evento, na ausência dele)
+  userData.external_id = sha256(e.transactionId ?? eventoId)
 
   const payload: Record<string, unknown> = {
     event_name: NOME_EVENTO_CAPI[e.tipo] ?? e.tipo,
@@ -86,7 +93,7 @@ export function montarConversoes(e: Evento, eventoId: string): Omit<Conversao, '
   }
 
   const out: Omit<Conversao, 'id'>[] = [
-    { ...base, plataforma: 'meta-capi', payload: montarPayloadMetaCAPI(e) },
+    { ...base, plataforma: 'meta-capi', payload: montarPayloadMetaCAPI(e, eventoId) },
   ]
   // Google Enhanced só faz sentido com click id do Google ou identificadores de usuário
   if (e.ids.gclid || e.ids.wbraid || e.ids.gbraid || e.dados?.email || e.dados?.telefone) {
