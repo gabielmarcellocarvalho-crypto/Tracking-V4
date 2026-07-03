@@ -62,15 +62,16 @@ const PLATAFORMAS: {
     id: 'meta',
     nome: 'Meta CAPI',
     cor: '#1877F2',
-    desc: 'Envio server-side de conversões (Purchase, Lead, InitiateCheckout) com match quality alto — email/telefone hasheados + fbp/fbc. Cole abaixo o token gerado no Gerenciador de Eventos deste pixel (o "Conectar com Facebook" hoje só cobre login, sem permissão de envio).',
+    desc: 'Envio server-side de conversões (Purchase, Lead, InitiateCheckout) com match quality alto — email/telefone hasheados + fbp/fbc. O campo obrigatório é o Access Token abaixo, gerado no Gerenciador de Eventos deste pixel — exige acesso à Business Manager do cliente. Sem esse acesso, peça o token para quem administra a BM (ex: outro gestor) e cole aqui.',
     campos: [
       { id: 'pixelId', label: 'Pixel ID', placeholder: 'Ex: 123456789012345' },
-      { id: 'accessToken', label: 'Access Token (Gerenciador de Eventos)', placeholder: 'EAAG...', secreto: true },
+      { id: 'accessToken', label: 'Access Token (Gerenciador de Eventos) — obrigatório', placeholder: 'EAAG...', secreto: true },
       { id: 'testEventCode', label: 'Test Event Code (opcional)', placeholder: 'TEST12345' },
     ],
     passos: [
-      'Gerenciador de Eventos → seu Pixel → Configurações',
+      'Gerenciador de Eventos → seu Pixel → Configurações (exige acesso à Business Manager do cliente)',
       'Seção "Conversions API" → Gerar token de acesso → copie o token',
+      'Sem acesso à BM? Peça pra quem administra (ex: outro gestor) gerar e te passar o token',
       'Cole o Pixel ID + o token aqui — o envio da fila ativa automaticamente',
     ],
   },
@@ -170,7 +171,7 @@ function MetaConnectionStatus() {
         Conectar com Facebook
       </button>
       <p style={{ fontSize: 10.5, color: 'var(--t3)', margin: '6px 0 0' }}>
-        Opcional por enquanto (só login) — o envio de conversões usa o token colado abaixo.
+        Este login não envia conversões (só identifica sua conta) — o campo obrigatório é o Access Token abaixo.
       </p>
     </div>
   )
