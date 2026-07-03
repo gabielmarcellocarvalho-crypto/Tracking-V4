@@ -13,7 +13,7 @@
     "firebase": "^11.9.0",
     "firebase-admin": "^14.1.0",
     "framer-motion": "^12.40.0",
-    "next": "15.3.3",
+    "next": "15.3.8",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-globe.gl": "^2.38.0",
