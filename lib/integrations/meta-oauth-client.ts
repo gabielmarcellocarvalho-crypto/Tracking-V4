@@ -4,9 +4,12 @@
 
 export const META_GRAPH_VERSION = 'v21.0'
 // App criado só com o caso de uso "Login do Facebook" — ads_read/ads_management/
-// business_management exigem App Review (permissões avançadas). Por enquanto só
-// email/public_profile (padrão, liberado sem revisão); métricas ficam para depois.
-export const META_SCOPES = ['email', 'public_profile']
+// business_management exigem App Review (permissões avançadas). "email" também
+// exige revisão nesta configuração do app (erro "Invalid Scopes: email"), então
+// fica só public_profile (padrão, liberado sem revisão); métricas ficam para
+// depois. O e-mail usado pra chavear users/{email} vem do Firebase Auth
+// (idToken), nunca do Facebook — remover este escopo não afeta essa lógica.
+export const META_SCOPES = ['public_profile']
 
 export function getMetaRedirectUri(): string {
   if (typeof window === 'undefined') return ''

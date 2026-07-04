@@ -31,7 +31,7 @@ async function resolverCredenciaisMeta(clienteId: string): Promise<CredenciaisRe
   // 1) Token colado manualmente na página de Conexões (Gerenciador de Eventos
   //    → Pixel → Configurações → Conversions API → Gerar token de acesso) —
   //    já nasce com permissão de envio pro pixel, sem depender do OAuth
-  //    "Conectar com Facebook" (hoje restrito a email/public_profile).
+  //    "Conectar com Facebook" (hoje restrito a public_profile).
   const accessTokenManual = conexao.campos?.accessToken
   if (accessTokenManual) return { pixelId, accessToken: accessTokenManual, testEventCode }
 
