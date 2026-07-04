@@ -10,11 +10,15 @@
 // esta URL e copiar o "Signing secret" pro campo webhookSecret na aba
 // Conexões da plataforma.
 //
-// Atribuição (Meta/Google) sem precisar do snippet no site: a Shopify manda
-// `landing_site` (primeira página acessada, com a URL do anúncio — UTMs e
-// gclid/fbclid sobrevivem ali até o pedido fechar) e `referring_site`. Se o
-// link do anúncio não tiver nenhum parâmetro, não tem como recuperar isso
-// depois — a origem cai em 'shopify' (pedido validado, mas sem atribuição).
+// Atribuição (Meta/Google) sem precisar do snippet no site: preferimos
+// consultar customerJourneySummary via Admin API (buscarJornadaPedido) — é o
+// caminho oficial atual, com UTM estruturado, e não depende de cookie. Se o
+// cliente não tiver o Admin API Token configurado (campo adminApiToken em
+// Conexões) ou a consulta falhar, cai pro `landing_site`/`referring_site` do
+// próprio payload do webhook (legado, pode vir vazio — a Shopify descontinuou
+// os cookies que alimentavam esses campos em set/2025). Sem nenhum sinal em
+// nenhuma das duas fontes, a origem cai em 'shopify' (pedido validado, mas
+// sem atribuição).
 //
 // Limitações da v1 (documentadas, não resolvidas aqui):
 // - fbc é sintetizado a partir do fbclid da URL (sem cookie real do pixel) —
@@ -28,6 +32,7 @@ import { sha256, normalizarTelefone } from '@/lib/tracking/conversoes'
 import { ingerirEvento } from '@/lib/tracking/ingest'
 import { createAdminIngestStore } from '@/lib/tracking/stores/admin-store'
 import { parseUTM, detectOrigem } from '@/lib/utm/engine'
+import { buscarJornadaPedido } from '@/lib/integrations/shopify-admin-api'
 import type { Integration, Evento, EventoIds, UTMSet, Origem } from '@/lib/types'
 
 interface ShopifyOrderPayload {
@@ -41,34 +46,38 @@ interface ShopifyOrderPayload {
   created_at?: string
   customer?: { first_name?: string; last_name?: string; phone?: string }
   line_items?: { title?: string }[]
-  /** Primeira página acessada na sessão do checkout — carrega UTMs/click-ids do anúncio */
+  /** Primeira página acessada na sessão do checkout — legado, pode vir vazio (ver nota acima) */
   landing_site?: string
   referring_site?: string
   client_details?: { browser_ip?: string; user_agent?: string }
 }
 
-/** Extrai UTM/gclid/fbclid da URL de destino do anúncio (se a Shopify preservou algum). */
-function atribuicaoDoPedido(landingSite?: string, referringSite?: string): {
+/** Extrai gclid/wbraid/gbraid/fbclid da URL de destino do anúncio + monta UTM/origem. */
+function construirAtribuicao(landingPage?: string, referrerUrl?: string, utmEstruturado?: UTMSet): {
   utm?: UTMSet
   ids: EventoIds
   origem: Origem
 } {
   let params: URLSearchParams | undefined
   try {
-    params = landingSite ? new URL(landingSite, 'https://shopify-landing.internal').searchParams : undefined
+    params = landingPage ? new URL(landingPage, 'https://shopify-landing.internal').searchParams : undefined
   } catch {
     params = undefined
   }
 
-  const utm: UTMSet | undefined = params && (params.get('utm_source') || params.get('utm_medium') || params.get('utm_campaign'))
-    ? {
-        source: params.get('utm_source') ?? undefined,
-        medium: params.get('utm_medium') ?? undefined,
-        campaign: params.get('utm_campaign') ?? undefined,
-        term: params.get('utm_term') ?? undefined,
-        content: params.get('utm_content') ?? undefined,
-      }
-    : undefined
+  // UTM estruturado (vindo do customerJourneySummary) tem prioridade sobre o
+  // parse manual da query string do landing_site legado.
+  const utm: UTMSet | undefined = utmEstruturado?.source || utmEstruturado?.medium || utmEstruturado?.campaign
+    ? utmEstruturado
+    : params && (params.get('utm_source') || params.get('utm_medium') || params.get('utm_campaign'))
+      ? {
+          source: params.get('utm_source') ?? undefined,
+          medium: params.get('utm_medium') ?? undefined,
+          campaign: params.get('utm_campaign') ?? undefined,
+          term: params.get('utm_term') ?? undefined,
+          content: params.get('utm_content') ?? undefined,
+        }
+      : undefined
 
   const fbclid = params?.get('fbclid') ?? undefined
   const ids: EventoIds = {
@@ -80,7 +89,7 @@ function atribuicaoDoPedido(landingSite?: string, referringSite?: string): {
     fbc: fbclid ? `fb.1.${Date.now()}.${fbclid}` : undefined,
   }
 
-  const detectada = detectOrigem(utm, ids, referringSite)
+  const detectada = detectOrigem(utm, ids, referrerUrl)
   // Sem nenhum sinal (UTM/click-id/referrer conhecido), 'shopify' é mais
   // informativo que 'direto' — deixa claro que o pedido é validado, só sem atribuição.
   const origem: Origem = detectada === 'direto' ? 'shopify' : detectada
@@ -143,7 +152,24 @@ export async function POST(
   const telefone = payload.phone ?? payload.customer?.phone
   const nome = [payload.customer?.first_name, payload.customer?.last_name].filter(Boolean).join(' ') || undefined
   const transactionId = String(payload.id ?? payload.order_number ?? payload.name ?? '')
-  const { utm, ids, origem } = atribuicaoDoPedido(payload.landing_site, payload.referring_site)
+
+  // Preferência: Admin API (customerJourneySummary, estruturado) > landing_site
+  // legado do próprio payload do webhook (ver comentário no topo do arquivo).
+  let landingPage = payload.landing_site
+  let referrerUrl = payload.referring_site
+  let utmEstruturado: UTMSet | undefined
+
+  const { shopDomain, adminApiToken } = conexao.campos ?? {}
+  if (shopDomain && adminApiToken && payload.id) {
+    const visita = await buscarJornadaPedido(shopDomain, adminApiToken, payload.id)
+    if (visita) {
+      landingPage = visita.landingPage ?? landingPage
+      referrerUrl = visita.referrerUrl ?? referrerUrl
+      utmEstruturado = visita.utm
+    }
+  }
+
+  const { utm, ids, origem } = construirAtribuicao(landingPage, referrerUrl, utmEstruturado)
 
   const evento: Evento = {
     tipo: 'compra',

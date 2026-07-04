@@ -111,15 +111,17 @@ const PLATAFORMAS: {
     id: 'shopify',
     nome: 'Shopify',
     cor: '#96BF48',
-    desc: 'Recebe pedidos da loja Shopify via webhook e injeta como eventos de compra na mesma fila de conversões CAPI.',
+    desc: 'Recebe pedidos da loja Shopify via webhook, injeta como eventos de compra na fila de conversões CAPI e alimenta a jornada do usuário dentro da própria plataforma — ideal pra cliente que não permite instalar o snippet no site. O Admin API Token (opcional) habilita identificar de qual campanha/anúncio veio o pedido mesmo sem cookie no navegador.',
     campos: [
       { id: 'shopDomain', label: 'Domínio da loja', placeholder: 'sua-loja.myshopify.com' },
       { id: 'webhookSecret', label: 'Webhook Secret (gerado ao criar o webhook)', placeholder: 'shpss_...', secreto: true },
+      { id: 'adminApiToken', label: 'Admin API Access Token (opcional — atribuição de campanha)', placeholder: 'shpat_...', secreto: true },
     ],
     passos: [
       'Shopify Admin → Configurações → Notificações → Webhooks → Criar webhook',
       'Evento: "Criação de pedido" (orders/create) · Formato: JSON',
       'Cole a URL abaixo e, depois de criar, copie o "Signing secret" para o campo Webhook Secret aqui',
+      'Opcional: Configurações → Apps e canais de vendas → Desenvolver apps → Criar um app → Configurar Admin API → escopo "read_orders" → Instalar app → Revelar token e colar em Admin API Access Token',
     ],
   },
 ]
