@@ -205,6 +205,48 @@ export interface Conexao {
   atualizadoEm?: number
 }
 
+// ── Partner (novo modelo — substitui Cliente, ver migração clientes→partners) ─
+// Mesmo formato de campos do Cliente atual; só o container no Firestore muda
+// (clientes/{id} → partners/{id}). Nome do tipo em inglês por ser o schema
+// que a estrutura da empresa usa pra essa coleção especificamente — os demais
+// tipos deste arquivo continuam em português.
+export type PartnerTipo   = ClienteTipo
+export type PartnerStatus = ClienteStatus
+
+export interface Partner {
+  id: string
+  nome: string
+  segmento: string
+  tipo: PartnerTipo
+  status: PartnerStatus
+  trackingKey?: string
+  donoEmail?: string
+  demo?: boolean
+  criadoEm?: number
+  eventos?: number
+}
+
+// ── Integration de plataforma (era Conexao) ───────────────────────────────────
+export type IntegrationPlataforma = ConexaoPlataforma
+export type IntegrationStatus     = ConexaoStatus
+
+export interface Integration {
+  plataforma: IntegrationPlataforma
+  status: IntegrationStatus
+  campos: Record<string, string>
+  atualizadoEm?: number
+}
+
+// ── Membro de um partner (controle de acesso) ─────────────────────────────────
+export type MemberRole = 'admin' | 'viewer'
+
+export interface Member {
+  email: string
+  role: MemberRole
+  addedAt: number
+  addedBy?: string
+}
+
 // ── Integração Meta por usuário (OAuth) ───────────────────────────────────────
 // Doc users/{email} — token compartilhado entre todos os clientes cujo
 // donoEmail aponta para este e-mail. Só gravado/lido por rotas server

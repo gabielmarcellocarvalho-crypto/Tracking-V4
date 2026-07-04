@@ -18,6 +18,77 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ─── PARTNERS (novo modelo — convive com /clientes durante a migração) ────
+    // Controle de acesso real por parceiro: só quem está em members/ (ou é
+    // superadmin via config/superadmins) lê/escreve. "admin" lê+escreve tudo
+    // dentro do parceiro; "viewer" só lê. Leitura pública do doc raiz e create
+    // público em eventos/conversoes seguem o mesmo motivo de hoje (ingestão via
+    // /api/track e webhook, sem sessão de usuário).
+    function emailLogado() {
+      return request.auth.token.email.lower()
+    }
+    function ehSuperAdmin() {
+      return request.auth != null &&
+        emailLogado() in get(/databases/$(database)/documents/config/superadmins).data.emails
+    }
+    function membro(partnerId) {
+      return get(/databases/$(database)/documents/partners/$(partnerId)/members/$(emailLogado()))
+    }
+    function ehMembro(partnerId) {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/partners/$(partnerId)/members/$(emailLogado()))
+    }
+    function ehMembroAdmin(partnerId) {
+      return ehMembro(partnerId) && membro(partnerId).data.role == 'admin'
+    }
+    function temAcesso(partnerId) {
+      return ehSuperAdmin() || ehMembro(partnerId)
+    }
+    function temAcessoAdmin(partnerId) {
+      return ehSuperAdmin() || ehMembroAdmin(partnerId)
+    }
+
+    match /partners/{partnerId} {
+      allow read: if true;             // trackingKey precisa ser lido por /api/track (não autenticado)
+      allow write: if temAcessoAdmin(partnerId);
+
+      match /members/{memberEmail} {
+        allow read, write: if temAcessoAdmin(partnerId);
+      }
+
+      match /eventos/{eventoId} {
+        allow read: if temAcesso(partnerId);
+        allow create: if true;          // ingestão via /api/track
+        allow update, delete: if temAcessoAdmin(partnerId);
+      }
+
+      match /identidades/{visitorId} {
+        // LEITURA PÚBLICA — mesmo motivo/risco aceito documentado no bloco
+        // /clientes abaixo (resolução de identidade em /api/track sem sessão).
+        allow read: if true;
+        allow create, update: if true;
+        allow delete: if temAcessoAdmin(partnerId);
+      }
+
+      match /conversoes/{conversaoId} {
+        allow read: if temAcesso(partnerId);
+        allow create: if true;          // fila montada na ingestão
+        allow update, delete: if temAcessoAdmin(partnerId);
+      }
+
+      match /{subcolecao}/{docId} {
+        allow read: if temAcesso(partnerId);
+        allow write: if temAcessoAdmin(partnerId);
+      }
+    }
+
+    // Doc único e global — lista de e-mails com bypass de superadmin.
+    // Sem "allow read" pra client SDK: só a própria engine de regras (get()
+    // acima) precisa enxergar esse doc; edição é manual via Console.
+    match /config/{doc} {
+      allow read, write: if false;
+    }
+
     match /clientes/{clienteId} {
       allow read: if true;             // trackingKey precisa ser lido por /api/track (não autenticado)
       allow write: if request.auth != null;
