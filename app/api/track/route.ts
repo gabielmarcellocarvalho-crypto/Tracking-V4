@@ -34,6 +34,16 @@ export async function OPTIONS() {
 
 const TIPOS_VALIDOS: EventoTipo[] = ['page_view', 'lead', 'checkout', 'compra', 'custom']
 
+// Crawlers/bots batem no site como um visitante normal (executam o snippet)
+// e poluem os dados — ex: o próprio meta-externalads visita a página de
+// destino do anúncio pra gerar a prévia toda vez que uma campanha é criada/
+// editada, e o bingbot indexa o site. Nenhum dos dois é usuário real.
+const BOT_UA_REGEX = /bot|crawl|spider|slurp|facebookexternalhit|meta-externalads|whatsapp|telegrambot|discordbot|linkedinbot|pinterest|embedly|quora|outbrain|pingdom|ia_archiver|semrush|ahrefsbot|mj12bot|petalbot|bytespider|yandex|baiduspider|duckduckbot|applebot|headlesschrome|phantomjs/i
+
+function pareceBot(userAgent: string | undefined): boolean {
+  return !!userAgent && BOT_UA_REGEX.test(userAgent)
+}
+
 function detectarDispositivo(ua?: string): Evento['dispositivo'] {
   if (!ua) return 'outro'
   if (/mobile|iphone|android.*mobile/i.test(ua)) return 'mobile'
@@ -55,6 +65,12 @@ export async function POST(req: NextRequest) {
       { ok: false, erro: 'clienteId e tipo (page_view|lead|checkout|compra|custom) são obrigatórios' },
       { status: 400, headers: CORS },
     )
+  }
+
+  // Ignora silenciosamente — não é erro, só não é um visitante real
+  const userAgentReq = req.headers.get('user-agent') ?? undefined
+  if (pareceBot(body.userAgent) || pareceBot(userAgentReq)) {
+    return NextResponse.json({ ok: true, ignorado: 'bot' }, { headers: CORS })
   }
 
   // ── Autenticação do cliente ────────────────────────────────────────────────

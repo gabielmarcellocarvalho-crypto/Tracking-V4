@@ -54,6 +54,36 @@ const STATUS_CONFIG = {
   'checkout-abandonado': { label: 'Checkout abandonado', bg: 'rgba(249,115,22,.1)', color: '#F97316' },
 }
 
+type EventoTipoFiltro = keyof typeof EVENTO_CONFIG
+
+// ─── Filtro de tipo de evento ───────────────────────────────────────────────
+function FiltroEventos({ ativos, onToggle }: { ativos: Set<EventoTipoFiltro>; onToggle: (tipo: EventoTipoFiltro) => void }) {
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      {(Object.keys(EVENTO_CONFIG) as EventoTipoFiltro[]).map((tipo) => {
+        const cfg = EVENTO_CONFIG[tipo]
+        const ativo = ativos.has(tipo)
+        return (
+          <button
+            key={tipo}
+            onClick={() => onToggle(tipo)}
+            className="flex items-center gap-[6px] px-3 py-[6px] rounded-full text-[11.5px] font-semibold cursor-pointer transition-all duration-150"
+            style={{
+              background: ativo ? cfg.bg : 'transparent',
+              border: `1px solid ${ativo ? cfg.border : 'var(--border)'}`,
+              color: ativo ? cfg.dot : 'var(--text-3)',
+              opacity: ativo ? 1 : 0.6,
+            }}
+          >
+            <cfg.Icon color={ativo ? cfg.dot : 'var(--text-3)'} />
+            {cfg.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 // ─── Event card ────────────────────────────────────────────────────────────
 function EventCard({ ev }: { ev: EventoJornada }) {
   const cfg = EVENTO_CONFIG[ev.tipo]
@@ -146,6 +176,21 @@ export default function JornadaPage({ params }: { params: Promise<{ clienteId: s
   const { identidades } = useIdentidades(isDemo ? undefined : clienteId)
   const { eventos } = useEventos(isDemo ? undefined : clienteId)
   const [busca, setBusca] = useState('')
+  const [tiposAtivos, setTiposAtivos] = useState<Set<EventoTipoFiltro>>(
+    () => new Set(Object.keys(EVENTO_CONFIG) as EventoTipoFiltro[]),
+  )
+  const toggleTipo = (tipo: EventoTipoFiltro) => {
+    setTiposAtivos((prev) => {
+      const next = new Set(prev)
+      if (next.has(tipo)) {
+        // Nunca deixa zerar tudo — sem filtro nenhum selecionado não faz sentido (timeline vazia sem aviso)
+        if (next.size > 1) next.delete(tipo)
+      } else {
+        next.add(tipo)
+      }
+      return next
+    })
+  }
 
   const usarDemo = isDemo
 
@@ -168,6 +213,11 @@ export default function JornadaPage({ params }: { params: Promise<{ clienteId: s
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const usuario: UsuarioJornada | undefined =
     filtrados.find((u) => u.id === selectedId) ?? filtrados[0]
+
+  const eventosFiltrados = useMemo(
+    () => usuario?.eventos.filter((ev) => tiposAtivos.has(ev.tipo)) ?? [],
+    [usuario, tiposAtivos],
+  )
 
   if (!usuario) {
     return (
@@ -236,18 +286,29 @@ export default function JornadaPage({ params }: { params: Promise<{ clienteId: s
           )}
         </div>
 
+        {/* Filtro de tipo de evento na timeline */}
+        <div className="mb-5">
+          <FiltroEventos ativos={tiposAtivos} onToggle={toggleTipo} />
+        </div>
+
         {/* Content: timeline + side panel */}
         <div className="flex gap-5 items-start">
           {/* Timeline */}
           <div className="flex-1 flex flex-col gap-0">
-            <div className="relative" style={{ paddingLeft: 8 }}>
-              {/* Vertical line */}
-              <div
-                className="absolute left-[4px] top-4 bottom-4 w-[1px]"
-                style={{ background: 'var(--border)' }}
-              />
-              {usuario.eventos.map((ev) => <EventCard key={ev.id} ev={ev} />)}
-            </div>
+            {eventosFiltrados.length === 0 ? (
+              <p className="text-[12.5px] text-[--text-3] py-6 text-center">
+                Nenhum evento desse tipo nessa jornada — tente outro filtro acima.
+              </p>
+            ) : (
+              <div className="relative" style={{ paddingLeft: 8 }}>
+                {/* Vertical line */}
+                <div
+                  className="absolute left-[4px] top-4 bottom-4 w-[1px]"
+                  style={{ background: 'var(--border)' }}
+                />
+                {eventosFiltrados.map((ev) => <EventCard key={ev.id} ev={ev} />)}
+              </div>
+            )}
           </div>
 
           {/* Side panel */}
