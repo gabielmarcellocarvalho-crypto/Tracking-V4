@@ -140,6 +140,34 @@ Plataforma envia conversão para Meta CAPI / Google
 
 ---
 
+## Controle de acesso (partners / members)
+
+> Migração em andamento (2026-07): a coleção raiz do Firestore está virando
+> `partners/{partnerId}` (era `clientes/{clienteId}`) e ganhou controle de
+> acesso real por gestor. A seção "Estrutura de dados" acima ainda descreve o
+> modelo antigo/planejado — será atualizada na limpeza final da migração.
+
+- `partners/{partnerId}/members/{emailMinusculo}` — quem pode acessar aquele
+  cliente. Campos: `email`, `role: 'admin' | 'viewer'`, `addedAt`, `addedBy?`.
+  `admin` lê/escreve tudo; `viewer` só lê.
+- `config/superadmins` — doc único e global `{ emails: string[] }`. Quem está
+  nessa lista enxerga **todos** os partners, independente de membership (é o
+  papel do dono da plataforma).
+- **Não existe tela de convite ainda.** Pra dar acesso a um novo gestor num
+  cliente específico:
+  1. Firebase Console → Firestore Database → `partners/{id}/members`
+  2. "Add document" → ID do documento = e-mail do gestor em minúsculas
+     (ex: `joao@v4company.com`)
+  3. Campos: `email` (mesmo e-mail), `role` (`"admin"` ou `"viewer"`),
+     `addedAt` (número — epoch em ms, ex: `Date.now()` no console do navegador)
+  4. A conta do Firebase Auth precisa já existir (criação de conta continua
+     manual, como sempre foi)
+- Pra tornar alguém superadmin (acesso a tudo), edite `config/superadmins`
+  direto no Console e adicione o e-mail (minúsculo) na lista `emails`.
+- Scripts úteis: `scripts/migrate-clientes-to-partners.mjs` (copia um cliente
+  antigo pra `partners/`, idempotente) e `scripts/seed-superadmin.mjs`
+  (define a lista de superadmins em produção).
+
 ## Variáveis de ambiente necessárias
 
 ```env
