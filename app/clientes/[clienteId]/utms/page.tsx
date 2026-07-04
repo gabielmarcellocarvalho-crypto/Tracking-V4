@@ -3,7 +3,7 @@
 import { use, useMemo, useState } from 'react'
 import DashboardHeader from '@/components/tracking/DashboardHeader'
 import UTMWizard from '@/components/utms/UTMWizard'
-import { useCliente } from '@/lib/data/clientes'
+import { useCliente } from '@/lib/data/partners'
 import { useUTMs, useEventos } from '@/lib/data/colecoes'
 import { validateUTM } from '@/lib/utm/engine'
 import { utmMetaData, utmGoogleData, utmLinkedinData, utmOtherData } from '@/lib/demo-data'

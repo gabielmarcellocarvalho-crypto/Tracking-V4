@@ -13,7 +13,7 @@ import {
   agregarPerformance, gerarAlertas,
 } from '@/lib/data/agregacoes'
 import { validateUTM } from '@/lib/utm/engine'
-import type { Cliente, Evento, Identidade, Conversao } from '@/lib/types'
+import type { Partner, Evento, Identidade, Conversao } from '@/lib/types'
 
 export const maxDuration = 60
 
@@ -41,14 +41,14 @@ const ACOES: Record<string, string> = {
 }
 
 async function montarContexto(clienteId: string): Promise<string | null> {
-  const clienteSnap = await getDoc(doc(db, 'clientes', clienteId))
+  const clienteSnap = await getDoc(doc(db, 'partners', clienteId))
   if (!clienteSnap.exists()) return null
-  const cliente = clienteSnap.data() as Cliente
+  const cliente = clienteSnap.data() as Partner
 
   const [eventosSnap, identidadesSnap, conversoesSnap] = await Promise.all([
-    getDocs(query(collection(db, 'clientes', clienteId, 'eventos'), orderBy('ts', 'desc'), limit(1500))),
-    getDocs(query(collection(db, 'clientes', clienteId, 'identidades'), orderBy('atualizadoEm', 'desc'), limit(300))),
-    getDocs(query(collection(db, 'clientes', clienteId, 'conversoes'), orderBy('ts', 'desc'), limit(300))),
+    getDocs(query(collection(db, 'partners', clienteId, 'eventos'), orderBy('ts', 'desc'), limit(1500))),
+    getDocs(query(collection(db, 'partners', clienteId, 'identidades'), orderBy('atualizadoEm', 'desc'), limit(300))),
+    getDocs(query(collection(db, 'partners', clienteId, 'conversoes'), orderBy('ts', 'desc'), limit(300))),
   ])
 
   const eventos = eventosSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Evento)

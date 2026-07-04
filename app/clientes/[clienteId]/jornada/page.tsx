@@ -5,7 +5,7 @@ import DashboardHeader from '@/components/tracking/DashboardHeader'
 import NotesPad from '@/components/jornada/NotesPad'
 
 import { usuariosJornada, type EventoJornada, type UsuarioJornada } from '@/lib/demo-data'
-import { useCliente } from '@/lib/data/clientes'
+import { useCliente } from '@/lib/data/partners'
 import { useEventos, useIdentidades } from '@/lib/data/colecoes'
 import { identidadeParaUsuarioJornada } from '@/lib/data/agregacoes'
 

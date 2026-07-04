@@ -20,7 +20,7 @@ import { parseUTM, detectOrigem } from '@/lib/utm/engine'
 import { sha256, normalizarTelefone } from '@/lib/tracking/conversoes'
 import { ingerirEvento } from '@/lib/tracking/ingest'
 import { createClientIngestStore } from '@/lib/tracking/stores/client-store'
-import type { Evento, EventoTipo, Cliente } from '@/lib/types'
+import type { Evento, EventoTipo, Partner } from '@/lib/types'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -58,13 +58,13 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Autenticação do cliente ────────────────────────────────────────────────
-  let cliente: Cliente
+  let cliente: Partner
   try {
-    const clienteSnap = await getDoc(doc(db, 'clientes', clienteId))
+    const clienteSnap = await getDoc(doc(db, 'partners', clienteId))
     if (!clienteSnap.exists()) {
       return NextResponse.json({ ok: false, erro: 'cliente não encontrado' }, { status: 404, headers: CORS })
     }
-    cliente = clienteSnap.data() as Cliente
+    cliente = clienteSnap.data() as Partner
   } catch (err) {
     const permissao = err instanceof Error && err.message.includes('permission')
     console.error('[track] erro ao ler cliente:', err)

@@ -3,7 +3,7 @@
 import { use, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import DashboardHeader from '@/components/tracking/DashboardHeader'
-import { useCliente } from '@/lib/data/clientes'
+import { useCliente } from '@/lib/data/partners'
 import { useEventos, useInsights, salvarInsight } from '@/lib/data/colecoes'
 import { gerarAlertas } from '@/lib/data/agregacoes'
 

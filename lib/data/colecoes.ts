@@ -8,7 +8,7 @@ import {
 import { db } from '@/lib/firebase'
 import { useSubcolecao } from './firestore-hooks'
 import type {
-  Evento, Identidade, UTMRegistro, Conversao, Conexao, ConexaoPlataforma, Insight,
+  Evento, Identidade, UTMRegistro, Conversao, Integration, IntegrationPlataforma, Insight,
 } from '@/lib/types'
 
 // ── Eventos ───────────────────────────────────────────────────────────────────
@@ -36,7 +36,7 @@ export function useUTMs(clienteId: string | undefined) {
 }
 
 export async function salvarUTM(clienteId: string, utm: Omit<UTMRegistro, 'id'>) {
-  await addDoc(collection(db, 'clientes', clienteId, 'utms'), {
+  await addDoc(collection(db, 'partners', clienteId, 'utms'), {
     ...utm,
     criadoEmServer: serverTimestamp(),
   })
@@ -50,25 +50,25 @@ export function useConversoes(clienteId: string | undefined) {
   return { conversoes: docs, loading, isDemo }
 }
 
-// ── Conexões ──────────────────────────────────────────────────────────────────
+// ── Conexões (partners/{id}/integrations/{plataforma}) ────────────────────────
 export function useConexoes(clienteId: string | undefined) {
-  const { docs, loading } = useSubcolecao<Conexao & { id: string }>(clienteId, 'conexoes')
+  const { docs, loading } = useSubcolecao<Integration & { id: string }>(clienteId, 'integrations')
   return { conexoes: docs, loading }
 }
 
 export async function salvarConexao(
   clienteId: string,
-  plataforma: ConexaoPlataforma,
+  plataforma: IntegrationPlataforma,
   campos: Record<string, string>,
 ) {
   const preenchida = Object.values(campos).some((v) => v?.trim())
-  const conexao: Conexao = {
+  const conexao: Integration = {
     plataforma,
     status: preenchida ? 'configurado' : 'desconectado',
     campos,
     atualizadoEm: Date.now(),
   }
-  await setDoc(doc(db, 'clientes', clienteId, 'conexoes', plataforma), conexao)
+  await setDoc(doc(db, 'partners', clienteId, 'integrations', plataforma), conexao)
 }
 
 // ── Insights ──────────────────────────────────────────────────────────────────
@@ -80,5 +80,5 @@ export function useInsights(clienteId: string | undefined) {
 }
 
 export async function salvarInsight(clienteId: string, insight: Omit<Insight, 'id'>) {
-  await addDoc(collection(db, 'clientes', clienteId, 'insights'), insight)
+  await addDoc(collection(db, 'partners', clienteId, 'insights'), insight)
 }

@@ -32,7 +32,7 @@ export function useSubcolecao<T>(
   useEffect(() => {
     if (!clienteId) { setDocs([]); setLoading(false); return }
     setLoading(true)
-    let q: Query<DocumentData> = collection(db, 'clientes', clienteId, nome)
+    let q: Query<DocumentData> = collection(db, 'partners', clienteId, nome)
     if (ordenarPor) q = query(q, orderBy(ordenarPor, desc ? 'desc' : 'asc'))
     if (limite)     q = query(q, qLimit(limite))
 

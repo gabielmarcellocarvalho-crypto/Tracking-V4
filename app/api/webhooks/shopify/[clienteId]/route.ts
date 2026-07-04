@@ -22,7 +22,7 @@ import { getDbAdmin } from '@/lib/firebase-admin'
 import { sha256, normalizarTelefone } from '@/lib/tracking/conversoes'
 import { ingerirEvento } from '@/lib/tracking/ingest'
 import { createAdminIngestStore } from '@/lib/tracking/stores/admin-store'
-import type { Conexao, Evento } from '@/lib/types'
+import type { Integration, Evento } from '@/lib/types'
 
 interface ShopifyOrderPayload {
   id?: number | string
@@ -59,13 +59,13 @@ export async function POST(
   // bytes exatos que a Shopify enviou.
   const rawBody = await req.text()
 
-  let conexao: Conexao | undefined
+  let conexao: Integration | undefined
   try {
     const snap = await getDbAdmin()
-      .collection('clientes').doc(clienteId)
-      .collection('conexoes').doc('shopify')
+      .collection('partners').doc(clienteId)
+      .collection('integrations').doc('shopify')
       .get()
-    if (snap.exists) conexao = snap.data() as Conexao
+    if (snap.exists) conexao = snap.data() as Integration
   } catch (err) {
     console.error('[webhooks/shopify] erro ao ler conexão:', err)
     return NextResponse.json({ ok: false, erro: 'falha ao consultar conexão' }, { status: 500 })

@@ -3,16 +3,19 @@
 
 import type { Timestamp } from 'firebase/firestore'
 
-// ── Cliente ───────────────────────────────────────────────────────────────────
-export type ClienteTipo   = 'ecommerce' | 'leads' | 'mensagens'
-export type ClienteStatus = 'ativo' | 'inativo'
+// ── Partner (cliente gerenciado — doc raiz em partners/{partnerId}) ───────────
+// "Cliente"/"conexão" continuam o vocabulário da UI e das rotas (/clientes/**);
+// só a coleção do Firestore e os tipos internos usam "Partner"/"Integration",
+// nome herdado da estrutura definida para o banco desta plataforma.
+export type PartnerTipo   = 'ecommerce' | 'leads' | 'mensagens'
+export type PartnerStatus = 'ativo' | 'inativo'
 
-export interface Cliente {
+export interface Partner {
   id: string
   nome: string
   segmento: string
-  tipo: ClienteTipo
-  status: ClienteStatus
+  tipo: PartnerTipo
+  status: PartnerStatus
   /** Chave usada pelo snippet v4track.js para autenticar a ingestão */
   trackingKey?: string
   /** E-mail (lowercase) do gestor dono deste cliente — resolve qual users/{email}.meta_integration usar no envio CAPI */
@@ -194,41 +197,9 @@ export interface Conversao {
   ultimaResposta?: string
 }
 
-// ── Conexão de plataforma ─────────────────────────────────────────────────────
-export type ConexaoPlataforma = 'meta' | 'google' | 'ga4' | 'shopify'
-export type ConexaoStatus     = 'desconectado' | 'configurado'
-
-export interface Conexao {
-  plataforma: ConexaoPlataforma
-  status: ConexaoStatus
-  campos: Record<string, string>
-  atualizadoEm?: number
-}
-
-// ── Partner (novo modelo — substitui Cliente, ver migração clientes→partners) ─
-// Mesmo formato de campos do Cliente atual; só o container no Firestore muda
-// (clientes/{id} → partners/{id}). Nome do tipo em inglês por ser o schema
-// que a estrutura da empresa usa pra essa coleção especificamente — os demais
-// tipos deste arquivo continuam em português.
-export type PartnerTipo   = ClienteTipo
-export type PartnerStatus = ClienteStatus
-
-export interface Partner {
-  id: string
-  nome: string
-  segmento: string
-  tipo: PartnerTipo
-  status: PartnerStatus
-  trackingKey?: string
-  donoEmail?: string
-  demo?: boolean
-  criadoEm?: number
-  eventos?: number
-}
-
-// ── Integration de plataforma (era Conexao) ───────────────────────────────────
-export type IntegrationPlataforma = ConexaoPlataforma
-export type IntegrationStatus     = ConexaoStatus
+// ── Integração de plataforma (doc raiz em partners/{id}/integrations/{plataforma}) ─
+export type IntegrationPlataforma = 'meta' | 'google' | 'ga4' | 'shopify'
+export type IntegrationStatus     = 'desconectado' | 'configurado'
 
 export interface Integration {
   plataforma: IntegrationPlataforma

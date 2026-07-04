@@ -6,7 +6,7 @@
 
 import { getDbAdmin } from '@/lib/firebase-admin'
 import { enviarConversaoMeta } from '@/lib/integrations/meta-capi'
-import type { Cliente, Conversao, UserDoc, Conexao } from '@/lib/types'
+import type { Partner, Conversao, UserDoc, Integration } from '@/lib/types'
 
 interface CredenciaisResolvidas {
   pixelId: string
@@ -17,13 +17,13 @@ interface CredenciaisResolvidas {
 async function resolverCredenciaisMeta(clienteId: string): Promise<CredenciaisResolvidas | null> {
   const db = getDbAdmin()
 
-  const clienteSnap = await db.collection('clientes').doc(clienteId).get()
+  const clienteSnap = await db.collection('partners').doc(clienteId).get()
   if (!clienteSnap.exists) return null
-  const cliente = clienteSnap.data() as Cliente
+  const cliente = clienteSnap.data() as Partner
 
-  const conexaoSnap = await db.collection('clientes').doc(clienteId).collection('conexoes').doc('meta').get()
+  const conexaoSnap = await db.collection('partners').doc(clienteId).collection('integrations').doc('meta').get()
   if (!conexaoSnap.exists) return null
-  const conexao = conexaoSnap.data() as Conexao
+  const conexao = conexaoSnap.data() as Integration
   const pixelId = conexao.campos?.pixelId
   if (!pixelId || conexao.status !== 'configurado') return null
   const testEventCode = conexao.campos?.testEventCode || undefined
@@ -49,7 +49,7 @@ async function resolverCredenciaisMeta(clienteId: string): Promise<CredenciaisRe
 /** Envia uma conversão meta-capi já enfileirada e atualiza seu status no Firestore. */
 export async function enviarConversaoParaMeta(clienteId: string, conversaoId: string): Promise<void> {
   const db = getDbAdmin()
-  const ref = db.collection('clientes').doc(clienteId).collection('conversoes').doc(conversaoId)
+  const ref = db.collection('partners').doc(clienteId).collection('conversoes').doc(conversaoId)
   const snap = await ref.get()
   if (!snap.exists) return
 

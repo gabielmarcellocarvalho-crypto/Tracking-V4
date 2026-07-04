@@ -10,7 +10,7 @@ import type { IngestStore } from '@/lib/tracking/store-types'
 
 export function createAdminIngestStore(clienteId: string): IngestStore {
   const db = getDbAdmin()
-  const clienteRef = db.collection('clientes').doc(clienteId)
+  const clienteRef = db.collection('partners').doc(clienteId)
 
   return {
     identity: {

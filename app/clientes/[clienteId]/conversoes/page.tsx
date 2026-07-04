@@ -3,7 +3,7 @@
 import { use, useMemo } from 'react'
 import Link from 'next/link'
 import DashboardHeader from '@/components/tracking/DashboardHeader'
-import { useCliente } from '@/lib/data/clientes'
+import { useCliente } from '@/lib/data/partners'
 import { useConversoes, useConexoes } from '@/lib/data/colecoes'
 import type { Conversao, ConversaoStatus } from '@/lib/types'
 

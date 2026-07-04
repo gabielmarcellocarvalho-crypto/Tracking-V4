@@ -16,7 +16,7 @@ export function createClientIngestStore(clienteId: string): IngestStore {
       async buscarPor(campo, valor) {
         if (!valor) return null
         const q = query(
-          collection(db, 'clientes', clienteId, 'identidades'),
+          collection(db, 'partners', clienteId, 'identidades'),
           where(campo, 'array-contains', valor),
           limit(1),
         )
@@ -26,20 +26,20 @@ export function createClientIngestStore(clienteId: string): IngestStore {
         return { ...(d.data() as Identidade), id: d.id }
       },
       async salvar(id, payload) {
-        await setDoc(doc(db, 'clientes', clienteId, 'identidades', id), payload)
+        await setDoc(doc(db, 'partners', clienteId, 'identidades', id), payload)
       },
       async apagar(id) {
-        await deleteDoc(doc(db, 'clientes', clienteId, 'identidades', id))
+        await deleteDoc(doc(db, 'partners', clienteId, 'identidades', id))
       },
     },
     async gravarEvento(evento: Evento) {
       const limpo = JSON.parse(JSON.stringify(evento))
-      const ref = await addDoc(collection(db, 'clientes', clienteId, 'eventos'), limpo)
+      const ref = await addDoc(collection(db, 'partners', clienteId, 'eventos'), limpo)
       return ref.id
     },
     async gravarConversao(conversao: Omit<Conversao, 'id'>) {
       const limpo = JSON.parse(JSON.stringify(conversao))
-      const ref = await addDoc(collection(db, 'clientes', clienteId, 'conversoes'), limpo)
+      const ref = await addDoc(collection(db, 'partners', clienteId, 'conversoes'), limpo)
       return ref.id
     },
   }

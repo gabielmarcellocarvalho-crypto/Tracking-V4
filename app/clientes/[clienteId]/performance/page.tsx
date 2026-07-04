@@ -7,7 +7,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import DashboardHeader from '@/components/tracking/DashboardHeader'
 import TemplateSelect from '@/components/performance/TemplateSelect'
-import { useCliente } from '@/lib/data/clientes'
+import { useCliente } from '@/lib/data/partners'
 import { useEventos } from '@/lib/data/colecoes'
 import { agregarPerformance } from '@/lib/data/agregacoes'
 import type { PerformanceTemplate } from '@/lib/demo-data-performance'
@@ -119,7 +119,7 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
   useEffect(() => {
     const load = async () => {
       try {
-        const ref  = doc(db, 'clientes', clienteId, 'performance_config', 'main')
+        const ref  = doc(db, 'partners', clienteId, 'performance_config', 'main')
         const snap = await getDoc(ref)
         if (snap.exists()) {
           const data = snap.data()
@@ -140,7 +140,7 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
     setTemplate(t)
     try {
       await setDoc(
-        doc(db, 'clientes', clienteId, 'performance_config', 'main'),
+        doc(db, 'partners', clienteId, 'performance_config', 'main'),
         { template: t },
         { merge: true }
       )

@@ -2,15 +2,15 @@
 
 import { motion, useReducedMotion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
-import type { Cliente, ClienteTipo, ClienteStatus } from '@/lib/types'
+import type { Partner, PartnerTipo, PartnerStatus } from '@/lib/types'
 
-const tipoConfig: Record<ClienteTipo, { label: string; bg: string; color: string }> = {
+const tipoConfig: Record<PartnerTipo, { label: string; bg: string; color: string }> = {
   ecommerce: { label: 'E-COMMERCE', bg: 'rgba(200,16,46,.1)',  color: '#C8102E' },
   leads:     { label: 'LEADS',      bg: 'rgba(59,130,246,.1)', color: '#3B82F6' },
   mensagens: { label: 'MENSAGENS',  bg: 'rgba(245,158,11,.1)', color: '#F59E0B' },
 }
 
-const statusConfig: Record<ClienteStatus, { label: string; bg: string; color: string; dot: string }> = {
+const statusConfig: Record<PartnerStatus, { label: string; bg: string; color: string; dot: string }> = {
   ativo:   { label: 'ATIVO',   bg: 'rgba(16,185,129,.1)', color: '#10B981', dot: '#10B981' },
   inativo: { label: 'INATIVO', bg: 'rgba(74,94,120,.12)', color: '#4A5E78', dot: '#4A5E78' },
 }
@@ -40,7 +40,7 @@ function fmt(n?: number) {
   return n >= 1000 ? `${(n / 1000).toFixed(1).replace('.0', '')}k` : String(n)
 }
 
-export default function ClienteCard({ cliente, index = 0 }: { cliente: Cliente; index?: number }) {
+export default function ClienteCard({ cliente, index = 0 }: { cliente: Partner; index?: number }) {
   const router       = useRouter()
   const shouldReduce = useReducedMotion()
   const tipo   = tipoConfig[cliente.tipo]

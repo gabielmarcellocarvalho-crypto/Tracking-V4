@@ -4,7 +4,7 @@ import { use, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import DashboardHeader from '@/components/tracking/DashboardHeader'
 import { leadsGeoData } from '@/lib/demo-data'
-import { useCliente } from '@/lib/data/clientes'
+import { useCliente } from '@/lib/data/partners'
 import { useIdentidades } from '@/lib/data/colecoes'
 import { identidadesParaGeo } from '@/lib/data/agregacoes'
 

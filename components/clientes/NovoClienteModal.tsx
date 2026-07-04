@@ -2,10 +2,10 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { criarCliente } from '@/lib/data/clientes'
-import type { Cliente, ClienteTipo } from '@/lib/types'
+import { criarCliente } from '@/lib/data/partners'
+import type { Partner, PartnerTipo } from '@/lib/types'
 
-const TIPOS: { id: ClienteTipo; label: string; desc: string; color: string }[] = [
+const TIPOS: { id: PartnerTipo; label: string; desc: string; color: string }[] = [
   { id: 'ecommerce', label: 'E-commerce', desc: 'Receita · ROAS · Compras',      color: '#10B981' },
   { id: 'leads',     label: 'Leads',      desc: 'CPL · Qualificados · CPA',      color: '#8B5CF6' },
   { id: 'mensagens', label: 'Mensagens',  desc: 'WhatsApp · Contatos · CPM',     color: '#25D366' },
@@ -13,14 +13,14 @@ const TIPOS: { id: ClienteTipo; label: string; desc: string; color: string }[] =
 
 export default function NovoClienteModal({ onClose, onCriado }: {
   onClose: () => void
-  onCriado?: (c: Cliente) => void
+  onCriado?: (c: Partner) => void
 }) {
   const [nome, setNome]         = useState('')
   const [segmento, setSegmento] = useState('')
-  const [tipo, setTipo]         = useState<ClienteTipo>('ecommerce')
+  const [tipo, setTipo]         = useState<PartnerTipo>('ecommerce')
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro]         = useState('')
-  const [criado, setCriado]     = useState<Cliente | null>(null)
+  const [criado, setCriado]     = useState<Partner | null>(null)
   const [copiado, setCopiado]   = useState(false)
 
   const handleCriar = async () => {

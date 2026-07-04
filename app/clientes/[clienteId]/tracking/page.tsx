@@ -9,7 +9,7 @@ import {
 } from 'recharts'
 import DashboardHeader from '@/components/tracking/DashboardHeader'
 import EventHealthCard from '@/components/tracking/EventHealthCard'
-import { useCliente } from '@/lib/data/clientes'
+import { useCliente } from '@/lib/data/partners'
 import { useEventos } from '@/lib/data/colecoes'
 import {
   agregarSaudeEventos, agregarVolume7Dias, agregarPorOrigem, agregarPaginas, agregarLogs,

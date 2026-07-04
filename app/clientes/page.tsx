@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import AuthGuard from '@/components/auth/AuthGuard'
 import ClienteCard from '@/components/clientes/ClienteCard'
 import NovoClienteModal from '@/components/clientes/NovoClienteModal'
-import { useClientes } from '@/lib/data/clientes'
+import { useClientes } from '@/lib/data/partners'
 import { useAuth } from '@/lib/auth-context'
 import { useRouter } from 'next/navigation'
 

@@ -1,13 +1,16 @@
 'use client'
 
-// ─── CLIENTES — Firestore + fallback demo ────────────────────────────────────
+// ─── CLIENTES (partners/{id} no Firestore) + fallback demo ───────────────────
+// Vocabulário da UI/rotas continua "cliente" — só o container no Firestore e
+// os tipos internos usam "Partner" (nome herdado do schema definido pra essa
+// coleção). Ver migração clientes→partners.
 
 import { useEffect, useMemo, useState } from 'react'
 import {
   collection, doc, onSnapshot, setDoc, deleteDoc, serverTimestamp,
 } from 'firebase/firestore'
 import { db, auth } from '@/lib/firebase'
-import type { Cliente, ClienteTipo } from '@/lib/types'
+import type { Partner, PartnerTipo } from '@/lib/types'
 import { clientesData as clientesDemo } from '@/lib/demo-data'
 import { slugify } from '@/lib/utm/engine'
 
@@ -19,14 +22,14 @@ function gerarTrackingKey(): string {
 
 /** Lista clientes reais do Firestore; se não houver nenhum, mostra os demo. */
 export function useClientes() {
-  const [reais, setReais]     = useState<Cliente[]>([])
+  const [reais, setReais]     = useState<Partner[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const unsub = onSnapshot(
-      collection(db, 'clientes'),
+      collection(db, 'partners'),
       (snap) => {
-        setReais(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Cliente))
+        setReais(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Partner))
         setLoading(false)
       },
       () => { setReais([]); setLoading(false) },
@@ -34,11 +37,11 @@ export function useClientes() {
     return unsub
   }, [])
 
-  const clientes = useMemo<Cliente[]>(() => {
+  const clientes = useMemo<Partner[]>(() => {
     // Assim que existir pelo menos um cliente real, os cards de demonstração
     // somem da lista — só voltam a aparecer se a base ficar vazia de novo.
     if (reais.length > 0) return reais
-    return clientesDemo.map((c) => ({ ...c, demo: true }) as Cliente)
+    return clientesDemo.map((c) => ({ ...c, demo: true }) as Partner)
   }, [reais])
 
   return { clientes, reais, loading }
@@ -46,15 +49,15 @@ export function useClientes() {
 
 /** Um cliente específico (real ou demo). */
 export function useCliente(clienteId: string | undefined) {
-  const [real, setReal]       = useState<Cliente | null>(null)
+  const [real, setReal]       = useState<Partner | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!clienteId) { setLoading(false); return }
     const unsub = onSnapshot(
-      doc(db, 'clientes', clienteId),
+      doc(db, 'partners', clienteId),
       (snap) => {
-        setReal(snap.exists() ? ({ id: snap.id, ...snap.data() } as Cliente) : null)
+        setReal(snap.exists() ? ({ id: snap.id, ...snap.data() } as Partner) : null)
         setLoading(false)
       },
       () => { setReal(null); setLoading(false) },
@@ -63,18 +66,18 @@ export function useCliente(clienteId: string | undefined) {
   }, [clienteId])
 
   const demo = clientesDemo.find((c) => c.id === clienteId)
-  const cliente: Cliente | null = real ?? (demo ? ({ ...demo, demo: true } as Cliente) : null)
+  const cliente: Partner | null = real ?? (demo ? ({ ...demo, demo: true } as Partner) : null)
   return { cliente, loading, isDemo: !real && !!demo }
 }
 
 export async function criarCliente(input: {
   nome: string
   segmento: string
-  tipo: ClienteTipo
-}): Promise<Cliente> {
+  tipo: PartnerTipo
+}): Promise<Partner> {
   const id = slugify(input.nome)
   const donoEmail = auth.currentUser?.email?.toLowerCase()
-  const cliente: Cliente = {
+  const cliente: Partner = {
     id,
     nome: input.nome.trim(),
     segmento: input.segmento.trim(),
@@ -85,10 +88,20 @@ export async function criarCliente(input: {
     ...(donoEmail ? { donoEmail } : {}),
     criadoEm: Date.now(),
   }
-  await setDoc(doc(db, 'clientes', id), { ...cliente, criadoEmServer: serverTimestamp() })
+  await setDoc(doc(db, 'partners', id), { ...cliente, criadoEmServer: serverTimestamp() })
+
+  // Garante que quem criou o cliente já é admin do partner (controle de acesso).
+  if (donoEmail) {
+    await setDoc(doc(db, 'partners', id, 'members', donoEmail), {
+      email: donoEmail,
+      role: 'admin',
+      addedAt: Date.now(),
+    })
+  }
+
   return cliente
 }
 
 export async function excluirCliente(clienteId: string): Promise<void> {
-  await deleteDoc(doc(db, 'clientes', clienteId))
+  await deleteDoc(doc(db, 'partners', clienteId))
 }

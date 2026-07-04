@@ -403,7 +403,7 @@ export default function PersonalizadoTemplate({ clienteId, initialBlocks, dados,
     setSaving(true)
     try {
       await setDoc(
-        doc(db, 'clientes', clienteId, 'performance_config', 'main'),
+        doc(db, 'partners', clienteId, 'performance_config', 'main'),
         { template: 'personalizado', blocos_personalizados: blocks.map((id, i) => ({ id, posicao: i })) },
         { merge: true }
       )
