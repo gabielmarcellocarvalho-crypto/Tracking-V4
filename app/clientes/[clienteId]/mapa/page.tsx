@@ -6,7 +6,7 @@ import DashboardHeader from '@/components/tracking/DashboardHeader'
 import { leadsGeoData } from '@/lib/demo-data'
 import { useCliente } from '@/lib/data/partners'
 import { useIdentidades } from '@/lib/data/colecoes'
-import { identidadesParaGeo } from '@/lib/data/agregacoes'
+import { identidadesParaGeo } from '@/lib/data/geo-mapa'
 
 const GlobeLeads = dynamic(() => import('@/components/mapa/GlobeLeads'), {
   ssr: false,
@@ -27,8 +27,8 @@ export default function MapaPage({ params }: { params: Promise<{ clienteId: stri
   const { identidades } = useIdentidades(isDemo ? undefined : clienteId)
 
   const usarDemo = isDemo
-  const leads = useMemo(
-    () => (usarDemo ? leadsGeoData : identidadesParaGeo(identidades)),
+  const { pontos: leads, foraDoMapa } = useMemo(
+    () => (usarDemo ? { pontos: leadsGeoData, foraDoMapa: 0 } : identidadesParaGeo(identidades)),
     [usarDemo, identidades],
   )
 
@@ -52,6 +52,14 @@ export default function MapaPage({ params }: { params: Promise<{ clienteId: stri
           <div style={{ padding: '5px 12px', borderRadius: 8, fontSize: 11, fontWeight: 600, background: 'rgba(200,16,46,.1)', color: 'var(--red)', border: '1px solid rgba(200,16,46,.25)' }}>
             {leads.length} total
           </div>
+          {foraDoMapa > 0 && (
+            <div
+              title="Eventos com IP fora do Brasil ou sem estado identificável — não entram no mapa pra evitar posição incorreta. Pode indicar tráfego inválido/bot na campanha."
+              style={{ padding: '5px 12px', borderRadius: 8, fontSize: 11, fontWeight: 600, background: 'rgba(245,158,11,.1)', color: '#F59E0B', border: '1px solid rgba(245,158,11,.25)', cursor: 'help' }}
+            >
+              {foraDoMapa} fora do Brasil / sem geo
+            </div>
+          )}
         </div>
       </div>
 

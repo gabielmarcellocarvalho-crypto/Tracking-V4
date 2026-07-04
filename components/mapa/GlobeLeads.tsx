@@ -58,39 +58,36 @@ function buildStateClusters(leads: LeadGeo[]) {
   }))
 }
 
-function buildCityClusters(leads: LeadGeo[]) {
-  const map: Record<string, { count: number; convertidos: number; lat: number; lng: number; cidade: string; estado: string }> = {}
-  for (const l of leads) {
-    const key = `${l.estado}::${l.cidade}`
-    if (!map[key]) map[key] = { count: 0, convertidos: 0, lat: l.lat, lng: l.lng, cidade: l.cidade, estado: l.estado }
-    map[key].count++
-    if (l.status === 'converteu') map[key].convertidos++
-  }
-  return Object.values(map)
+// Raio (em graus, aprox.) de cada nível de heatmap — ~1° de latitude ≈ 111km.
+const RAIO_CIDADE_GRAUS  = 5 / 111  // ~5km — densidade dentro de uma cidade/bairro
+const RAIO_REGIAO_GRAUS  = 10 / 111 // ~10km — visão mais ampla, zoom de estado
+
+/** Distância euclidiana aproximada em graus — suficiente pra raios pequenos (não precisa de haversine). */
+function distanciaGraus(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  return Math.hypot(lat1 - lat2, lng1 - lng2)
 }
 
-function spreadLeads(leads: LeadGeo[]): Array<LeadGeo & { _lat: number; _lng: number }> {
-  const groups: Record<string, LeadGeo[]> = {}
-  for (const l of leads) {
-    const key = `${l.cidade}::${l.estado}`
-    if (!groups[key]) groups[key] = []
-    groups[key].push(l)
+function leadsNoRaio(leads: LeadGeo[], lat: number, lng: number, raioGraus: number): LeadGeo[] {
+  return leads.filter((l) => distanciaGraus(l.lat, l.lng, lat, lng) <= raioGraus)
+}
+
+// Gradiente de calor consistente com a marca (azul frio → laranja → vermelho no pico)
+function heatColor(t: number): string {
+  const stops: [number, number, number, number][] = [
+    [0.0, 59, 130, 246],   // azul (--t2 status "lead")
+    [0.5, 245, 158, 11],   // laranja (--status checkout-abandonado)
+    [1.0, 200, 16, 46],    // vermelho da marca (--red)
+  ]
+  let a = stops[0], b = stops[stops.length - 1]
+  for (let i = 0; i < stops.length - 1; i++) {
+    if (t >= stops[i][0] && t <= stops[i + 1][0]) { a = stops[i]; b = stops[i + 1]; break }
   }
-  return leads.map((lead) => {
-    const key = `${lead.cidade}::${lead.estado}`
-    const grp = groups[key]
-    const idx = grp.indexOf(lead)
-    const n   = grp.length
-    if (n <= 1) return { ...lead, _lat: lead.lat, _lng: lead.lng }
-    // Smaller spread radius so points stay close to city center
-    const spread = Math.min(0.10, 0.04 + n * 0.006)
-    const angle  = (idx / n) * Math.PI * 2
-    return {
-      ...lead,
-      _lat: lead.lat + Math.sin(angle) * spread,
-      _lng: lead.lng + Math.cos(angle) * spread,
-    }
-  })
+  const span = b[0] - a[0] || 1
+  const f = (t - a[0]) / span
+  const r = Math.round(a[1] + (b[1] - a[1]) * f)
+  const g = Math.round(a[2] + (b[2] - a[2]) * f)
+  const bl = Math.round(a[3] + (b[3] - a[3]) * f)
+  return `rgba(${r},${g},${bl},${Math.min(1, 0.25 + t * 0.75)})`
 }
 
 // ── SVG icons ─────────────────────────────────────────────────────────────────
@@ -311,21 +308,34 @@ function ZoomDot({ active }: { active: boolean }) {
 
 // ── Legend ────────────────────────────────────────────────────────────────────
 function Legend({ level }: { level: 'state' | 'city' | 'individual' }) {
+  const isHeatmap = level !== 'state'
   const hint = level === 'state'
     ? 'Clique num estado para ver os leads'
     : level === 'city'
-    ? 'Clique numa cidade para ver os leads'
-    : 'Clique num lead para ver o perfil'
+    ? 'Clique num ponto quente para ver os leads da região (~10km)'
+    : 'Clique num ponto quente para ver os leads próximos (~5km)'
 
   return (
-    <div style={{ position: 'absolute', left: 20, top: 20, background: 'var(--bg-c)', border: '1px solid var(--br)', borderRadius: 10, padding: '10px 14px', zIndex: 20, boxShadow: '0 4px 16px rgba(0,0,0,.4)' }}>
-      <div style={{ fontSize: '9.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--t3)', marginBottom: 8 }}>Status</div>
-      {(Object.entries(STATUS_CFG) as [LeadStatus, typeof STATUS_CFG[LeadStatus]][]).map(([, cfg]) => (
-        <div key={cfg.label} style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: cfg.color, flexShrink: 0, boxShadow: `0 0 6px ${cfg.color}` }} />
-          <span style={{ fontSize: 11, color: 'var(--t2)' }}>{cfg.label}</span>
-        </div>
-      ))}
+    <div style={{ position: 'absolute', left: 20, top: 20, background: 'var(--bg-c)', border: '1px solid var(--br)', borderRadius: 10, padding: '10px 14px', zIndex: 20, boxShadow: '0 4px 16px rgba(0,0,0,.4)', minWidth: 168 }}>
+      {isHeatmap ? (
+        <>
+          <div style={{ fontSize: '9.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--t3)', marginBottom: 8 }}>Densidade de leads</div>
+          <div style={{ height: 8, borderRadius: 4, background: 'linear-gradient(90deg, rgba(59,130,246,.5), rgba(245,158,11,.75), rgba(200,16,46,1))' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5px', color: 'var(--t3)', marginTop: 4 }}>
+            <span>Menos leads</span><span>Mais leads</span>
+          </div>
+        </>
+      ) : (
+        <>
+          <div style={{ fontSize: '9.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--t3)', marginBottom: 8 }}>Status</div>
+          {(Object.entries(STATUS_CFG) as [LeadStatus, typeof STATUS_CFG[LeadStatus]][]).map(([, cfg]) => (
+            <div key={cfg.label} style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: cfg.color, flexShrink: 0, boxShadow: `0 0 6px ${cfg.color}` }} />
+              <span style={{ fontSize: 11, color: 'var(--t2)' }}>{cfg.label}</span>
+            </div>
+          ))}
+        </>
+      )}
       <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--br)', fontSize: 10, color: 'var(--t3)', lineHeight: 1.6 }}>
         {hint}
       </div>
@@ -341,7 +351,7 @@ interface GlobeLeadsProps {
 
 type ClusterSelection =
   | { type: 'state'; estado: string }
-  | { type: 'city'; cidade: string; estado: string }
+  | { type: 'raio'; lat: number; lng: number; raioGraus: number }
 
 export default function GlobeLeads({ leads, clienteId }: GlobeLeadsProps) {
   const globeRef     = useRef<any>(null)
@@ -401,26 +411,33 @@ export default function GlobeLeads({ leads, clienteId }: GlobeLeadsProps) {
 
   // ── Derived layers ──────────────────────────────────────────────────────────
   const stateClusters = useMemo(() => buildStateClusters(leads), [leads])
-  const cityClusters  = useMemo(() => buildCityClusters(leads), [leads])
-  const spreadedLeads = useMemo(() => spreadLeads(leads), [leads])
 
   const isState      = zoomLevel === 'state'
   const isCity       = zoomLevel === 'city'
   const isIndividual = zoomLevel === 'individual'
+
+  // Heatmap ativo em city/individual — mesmo conjunto de pontos, raio (bandwidth) diferente
+  const heatmapData = useMemo(
+    () => (isCity || isIndividual ? [{ points: leads }] : []),
+    [isCity, isIndividual, leads],
+  )
+  const heatmapBandwidth = isIndividual ? RAIO_CIDADE_GRAUS : RAIO_REGIAO_GRAUS
 
   // ── Leads for selected cluster panel ────────────────────────────────────────
   const clusterLeads = useMemo(() => {
     if (!selectedCluster) return []
     if (selectedCluster.type === 'state')
       return leads.filter((l) => l.estado === selectedCluster.estado)
-    return leads.filter((l) => l.estado === selectedCluster.estado && l.cidade === selectedCluster.cidade)
+    return leadsNoRaio(leads, selectedCluster.lat, selectedCluster.lng, selectedCluster.raioGraus)
   }, [leads, selectedCluster])
 
   const clusterTitle = useMemo(() => {
     if (!selectedCluster) return ''
     if (selectedCluster.type === 'state') return selectedCluster.estado
-    return `${selectedCluster.cidade}, ${selectedCluster.estado}`
-  }, [selectedCluster])
+    // Usa a cidade/estado do lead mais próximo do clique como título legível
+    const maisProximo = clusterLeads[0]
+    return maisProximo ? `${maisProximo.cidade}, ${maisProximo.estado}` : 'Região selecionada'
+  }, [selectedCluster, clusterLeads])
 
   // ── Callbacks ───────────────────────────────────────────────────────────────
 
@@ -435,14 +452,6 @@ export default function GlobeLeads({ leads, clienteId }: GlobeLeadsProps) {
     setZoomLevel((prev) => (prev !== next ? next : prev))
   }, [])
 
-  const handleLeadClick = useCallback((point: object) => {
-    const p = point as LeadGeo & { _lat: number; _lng: number }
-    setSelected(p)
-    setSelectedCluster(null)
-    globeRef.current?.pointOfView({ lat: p._lat, lng: p._lng, altitude: 0.18 }, 700)
-    setZoomLevel('individual')
-  }, [])
-
   const handleStateClick = useCallback((cluster: object) => {
     const c = cluster as { lat: number; lng: number; estado: string }
     globeRef.current?.pointOfView({ lat: c.lat, lng: c.lng, altitude: 0.55 }, 700)
@@ -451,13 +460,15 @@ export default function GlobeLeads({ leads, clienteId }: GlobeLeadsProps) {
     setSelectedCluster({ type: 'state', estado: c.estado })
   }, [])
 
-  const handleCityClick = useCallback((cluster: object) => {
-    const c = cluster as { lat: number; lng: number; cidade: string; estado: string }
-    globeRef.current?.pointOfView({ lat: c.lat, lng: c.lng, altitude: 0.25 }, 700)
-    setZoomLevel('individual')
+  // Clique no heatmap não aponta pra um lead específico (é uma superfície de
+  // densidade) — abre o painel com os leads dentro do raio do nível atual.
+  const handleHeatmapClick = useCallback((_heatmap: object, _event: MouseEvent, coords: { lat: number; lng: number }) => {
+    const raioGraus = isIndividual ? RAIO_CIDADE_GRAUS : RAIO_REGIAO_GRAUS
+    globeRef.current?.pointOfView({ lat: coords.lat, lng: coords.lng, altitude: isCity ? 0.25 : 0.15 }, 700)
+    if (isCity) setZoomLevel('individual')
     setSelected(null)
-    setSelectedCluster({ type: 'city', cidade: c.cidade, estado: c.estado })
-  }, [])
+    setSelectedCluster({ type: 'raio', lat: coords.lat, lng: coords.lng, raioGraus })
+  }, [isCity, isIndividual])
 
   const handleClusterLeadSelect = useCallback((lead: LeadGeo) => {
     setSelected(lead)
@@ -522,40 +533,17 @@ export default function GlobeLeads({ leads, clienteId }: GlobeLeadsProps) {
         labelAltitude={0.015}
         onLabelClick={handleStateClick}
 
-        // ── City clusters + individual leads ─────────────────────────────────
-        pointsData={isCity ? cityClusters : isIndividual ? spreadedLeads : []}
-        pointLat={isCity ? 'lat' : '_lat'}
-        pointLng={isCity ? 'lng' : '_lng'}
-        pointColor={(d: object) => {
-          if (isCity) {
-            const c = d as typeof cityClusters[0]
-            return c.convertidos > 0 ? '#C8102E' : '#3B82F6'
-          }
-          return STATUS_CFG[(d as LeadGeo).status].color
-        }}
-        pointRadius={(d: object) => {
-          if (isCity) {
-            const c = d as typeof cityClusters[0]
-            // Smaller radius for individual points; scale by count but cap tightly
-            return Math.max(0.20, Math.min(0.70, c.count * 0.15))
-          }
-          // Smaller individual points so they don't overlap as much
-          return 0.08
-        }}
-        pointAltitude={0.005}
-        pointLabel={(d: object) => {
-          if (isCity) {
-            const c = d as typeof cityClusters[0]
-            return `<div style="background:rgba(0,0,0,.88);border:1px solid #282828;padding:5px 10px;border-radius:7px;font-size:11px;color:#f0f0f0;font-family:Inter,sans-serif;pointer-events:none">
-              <strong>${c.cidade}, ${c.estado}</strong><br/>${c.count} lead${c.count > 1 ? 's' : ''}${c.convertidos ? ` · <span style="color:#10B981">${c.convertidos} convertido${c.convertidos > 1 ? 's' : ''}</span>` : ''}<br/><span style="color:#888;font-size:10px">Clique para ver lista</span>
-            </div>`
-          }
-          const l = d as LeadGeo
-          return `<div style="background:rgba(0,0,0,.88);border:1px solid #282828;padding:5px 10px;border-radius:7px;font-size:11px;color:#f0f0f0;font-family:Inter,sans-serif;pointer-events:none">
-            <strong>${l.nome}</strong><br/>${l.cidade}, ${l.estado}<br/><span style="color:${STATUS_CFG[l.status].color}">${STATUS_CFG[l.status].label}</span>
-          </div>`
-        }}
-        onPointClick={isCity ? handleCityClick : handleLeadClick}
+        // ── Heatmap de densidade — cidade (~10km) ou individual (~5km) ────────
+        heatmapsData={heatmapData}
+        heatmapPointLat={(d: object) => (d as LeadGeo).lat}
+        heatmapPointLng={(d: object) => (d as LeadGeo).lng}
+        heatmapPointWeight={() => 1}
+        heatmapBandwidth={heatmapBandwidth}
+        heatmapColorFn={() => heatColor}
+        heatmapColorSaturation={2.2}
+        heatmapBaseAltitude={0.006}
+        heatmapsTransitionDuration={400}
+        onHeatmapClick={handleHeatmapClick}
 
         onZoom={handleZoom}
         animateIn
