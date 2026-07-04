@@ -10,10 +10,15 @@
 // esta URL e copiar o "Signing secret" pro campo webhookSecret na aba
 // Conexões da plataforma.
 //
+// Atribuição (Meta/Google) sem precisar do snippet no site: a Shopify manda
+// `landing_site` (primeira página acessada, com a URL do anúncio — UTMs e
+// gclid/fbclid sobrevivem ali até o pedido fechar) e `referring_site`. Se o
+// link do anúncio não tiver nenhum parâmetro, não tem como recuperar isso
+// depois — a origem cai em 'shopify' (pedido validado, mas sem atribuição).
+//
 // Limitações da v1 (documentadas, não resolvidas aqui):
-// - Sem fbp/fbc/gclid nesses eventos (webhook server-to-server, sem cookies
-//   do navegador) — a identidade ainda casa por email/telefone se a pessoa
-//   já tinha uma jornada iniciada pelo snippet.
+// - fbc é sintetizado a partir do fbclid da URL (sem cookie real do pixel) —
+//   funciona pro match do CAPI, mas não é o fbc "oficial" do navegador.
 // - Pedido com múltiplos itens vira um único `produto` (o primeiro item).
 
 import { createHmac, timingSafeEqual } from 'node:crypto'
@@ -22,7 +27,8 @@ import { getDbAdmin } from '@/lib/firebase-admin'
 import { sha256, normalizarTelefone } from '@/lib/tracking/conversoes'
 import { ingerirEvento } from '@/lib/tracking/ingest'
 import { createAdminIngestStore } from '@/lib/tracking/stores/admin-store'
-import type { Integration, Evento } from '@/lib/types'
+import { parseUTM, detectOrigem } from '@/lib/utm/engine'
+import type { Integration, Evento, EventoIds, UTMSet, Origem } from '@/lib/types'
 
 interface ShopifyOrderPayload {
   id?: number | string
@@ -35,6 +41,51 @@ interface ShopifyOrderPayload {
   created_at?: string
   customer?: { first_name?: string; last_name?: string; phone?: string }
   line_items?: { title?: string }[]
+  /** Primeira página acessada na sessão do checkout — carrega UTMs/click-ids do anúncio */
+  landing_site?: string
+  referring_site?: string
+  client_details?: { browser_ip?: string; user_agent?: string }
+}
+
+/** Extrai UTM/gclid/fbclid da URL de destino do anúncio (se a Shopify preservou algum). */
+function atribuicaoDoPedido(landingSite?: string, referringSite?: string): {
+  utm?: UTMSet
+  ids: EventoIds
+  origem: Origem
+} {
+  let params: URLSearchParams | undefined
+  try {
+    params = landingSite ? new URL(landingSite, 'https://shopify-landing.internal').searchParams : undefined
+  } catch {
+    params = undefined
+  }
+
+  const utm: UTMSet | undefined = params && (params.get('utm_source') || params.get('utm_medium') || params.get('utm_campaign'))
+    ? {
+        source: params.get('utm_source') ?? undefined,
+        medium: params.get('utm_medium') ?? undefined,
+        campaign: params.get('utm_campaign') ?? undefined,
+        term: params.get('utm_term') ?? undefined,
+        content: params.get('utm_content') ?? undefined,
+      }
+    : undefined
+
+  const fbclid = params?.get('fbclid') ?? undefined
+  const ids: EventoIds = {
+    gclid: params?.get('gclid') ?? undefined,
+    wbraid: params?.get('wbraid') ?? undefined,
+    gbraid: params?.get('gbraid') ?? undefined,
+    // Formato sintético que o Meta aceita (fb.1.<epoch_ms>.<fbclid>) — sem
+    // cookie real, mas dá pro CAPI casar o clique mesmo sem o pixel no site.
+    fbc: fbclid ? `fb.1.${Date.now()}.${fbclid}` : undefined,
+  }
+
+  const detectada = detectOrigem(utm, ids, referringSite)
+  // Sem nenhum sinal (UTM/click-id/referrer conhecido), 'shopify' é mais
+  // informativo que 'direto' — deixa claro que o pedido é validado, só sem atribuição.
+  const origem: Origem = detectada === 'direto' ? 'shopify' : detectada
+
+  return { utm, ids, origem }
 }
 
 function verificarHmac(rawBody: string, headerHmac: string | null, secret: string): boolean {
@@ -92,6 +143,7 @@ export async function POST(
   const telefone = payload.phone ?? payload.customer?.phone
   const nome = [payload.customer?.first_name, payload.customer?.last_name].filter(Boolean).join(' ') || undefined
   const transactionId = String(payload.id ?? payload.order_number ?? payload.name ?? '')
+  const { utm, ids, origem } = atribuicaoDoPedido(payload.landing_site, payload.referring_site)
 
   const evento: Evento = {
     tipo: 'compra',
@@ -99,6 +151,8 @@ export async function POST(
     valor: payload.total_price ? Number(payload.total_price) : undefined,
     produto: payload.line_items?.[0]?.title,
     transactionId: transactionId || undefined,
+    utm,
+    utmParsed: utm ? parseUTM(utm) : undefined,
     dados: (email || telefone || nome)
       ? {
           email,
@@ -108,10 +162,10 @@ export async function POST(
           telefoneHash: telefone ? sha256(normalizarTelefone(telefone)) : undefined,
         }
       : undefined,
-    ids: {},
-    // Server-to-server: não passa por detectOrigem (sem utm/referrer/click-id
-    // reais) — 'direto' seria enganoso, então marca explicitamente a origem.
-    origem: 'shopify',
+    ids,
+    geo: payload.client_details?.browser_ip ? { ip: payload.client_details.browser_ip } : undefined,
+    userAgent: payload.client_details?.user_agent,
+    origem,
     visitorId: '',
   }
 
