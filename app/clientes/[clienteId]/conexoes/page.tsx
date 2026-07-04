@@ -39,6 +39,12 @@ const LOGOS: Record<IntegrationPlataforma, LogoDef> = {
     viewBox: '0 0 24 24',
     path: 'M15.337 23.979l7.216-1.561s-2.604-17.613-2.625-17.73c-.018-.116-.114-.192-.211-.192s-1.929-.136-1.929-.136-1.275-1.274-1.439-1.411c-.045-.037-.075-.057-.121-.074l-.914 21.104h.023zM11.71 11.305s-.81-.424-1.774-.424c-1.447 0-1.504.906-1.504 1.141 0 1.232 3.24 1.715 3.24 4.629 0 2.295-1.44 3.76-3.406 3.76-2.354 0-3.54-1.465-3.54-1.465l.646-2.086s1.245 1.066 2.28 1.066c.675 0 .975-.545.975-.932 0-1.619-2.654-1.694-2.654-4.359-.034-2.237 1.571-4.416 4.827-4.416 1.257 0 1.875.361 1.875.361l-.945 2.715-.02.01zM11.17.83c.136 0 .271.038.405.135-.984.465-2.064 1.639-2.508 3.992-.656.213-1.293.405-1.889.578C7.697 3.75 8.951.84 11.17.84V.83zm1.235 2.949v.135c-.754.232-1.583.484-2.394.736.466-1.777 1.333-2.645 2.085-2.971.193.501.309 1.176.309 2.1zm.539-2.234c.694.074 1.141.867 1.429 1.755-.349.114-.735.231-1.158.366v-.252c0-.752-.096-1.371-.271-1.871v.002zm2.992 1.289c-.02 0-.06.021-.078.021s-.289.075-.714.21c-.423-1.233-1.176-2.37-2.508-2.37h-.115C12.135.209 11.669 0 11.265 0 8.159 0 6.675 3.877 6.21 5.846c-1.194.365-2.063.636-2.16.674-.675.213-.694.232-.772.87-.075.462-1.83 14.063-1.83 14.063L15.009 24l.927-21.166z',
   },
+  // Sem logo oficial verificada (Nuvemshop não está no acervo Simple Icons) —
+  // usa um glifo genérico de loja em vez de arriscar uma marca incorreta.
+  nuvemshop: {
+    viewBox: '0 0 24 24',
+    path: 'M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0',
+  },
 }
 
 function LogoIcon({ plataforma, size = 20 }: { plataforma: IntegrationPlataforma; size?: number }) {
@@ -124,7 +130,24 @@ const PLATAFORMAS: {
       'Opcional: Configurações → Apps e canais de vendas → Desenvolver apps → Criar um app → Configurar Admin API → escopo "read_orders" → Instalar app → Revelar token e colar em Admin API Access Token',
     ],
   },
+  {
+    id: 'nuvemshop',
+    nome: 'Nuvemshop',
+    cor: '#7C4DFF',
+    desc: 'Integração em construção — a Nuvemshop exige um app parceiro cadastrado no painel de desenvolvedor (OAuth) antes de habilitar o envio automático de pedidos. Diferente da Shopify, o pedido da Nuvemshop não carrega UTM/origem — pra esse cliente, o snippet no site é a única forma de saber se a venda veio de anúncio.',
+    campos: [
+      { id: 'storeId', label: 'ID da loja (Nuvemshop)', placeholder: 'Ex: 1234567' },
+      { id: 'accessToken', label: 'Access Token (via app parceiro — ainda não disponível)', placeholder: 'Aguardando app parceiro V4', secreto: true },
+    ],
+    passos: [
+      'Essa integração depende de um app parceiro V4 cadastrado no painel de desenvolvedor da Nuvemshop (OAuth) — ainda não está pronta',
+      'Por enquanto, instale o snippet de tracking no site pra capturar a jornada e a origem do anúncio',
+      'Assim que o app parceiro estiver pronto, o fluxo de conexão aqui é atualizado',
+    ],
+  },
 ]
+
+const ECOMMERCE_IDS: IntegrationPlataforma[] = ['shopify', 'nuvemshop']
 
 function MetaConnectionStatus() {
   const { meta, conectado, loading } = useMetaIntegration()
@@ -368,7 +391,11 @@ export default function ConexoesPage({ params }: { params: Promise<{ clienteId: 
   const { conexoes } = useConexoes(isDemo ? undefined : clienteId)
   const [copiado, setCopiado] = useState(false)
 
-  const plataformasVisiveis = PLATAFORMAS.filter((p) => p.id !== 'shopify' || cliente?.tipo === 'ecommerce')
+  // Cards de e-commerce (shopify/nuvemshop) só aparecem pro cliente que tipo/plataforma
+  // corresponde — cada um tem webhook e credenciais próprios, não faz sentido mostrar os dois.
+  const plataformasVisiveis = PLATAFORMAS.filter((p) =>
+    !ECOMMERCE_IDS.includes(p.id) || p.id === cliente?.ecommercePlataforma,
+  )
 
   const origem = typeof window !== 'undefined' ? window.location.origin : 'https://SEU-DOMINIO.vercel.app'
   const snippet = `<script src="${origem}/v4track.js" data-cliente="${clienteId}" data-key="${cliente?.trackingKey ?? 'SUA_TRACKING_KEY'}" defer></script>`

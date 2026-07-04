@@ -9,6 +9,8 @@ import type { Timestamp } from 'firebase/firestore'
 // nome herdado da estrutura definida para o banco desta plataforma.
 export type PartnerTipo   = 'ecommerce' | 'leads' | 'mensagens'
 export type PartnerStatus = 'ativo' | 'inativo'
+/** Só relevante quando tipo === 'ecommerce' — cada plataforma tem webhook/API própria */
+export type EcommercePlataforma = 'shopify' | 'nuvemshop' | 'outro'
 
 export interface Partner {
   id: string
@@ -16,6 +18,8 @@ export interface Partner {
   segmento: string
   tipo: PartnerTipo
   status: PartnerStatus
+  /** Plataforma de e-commerce (só quando tipo === 'ecommerce') — decide qual card aparece em Conexões */
+  ecommercePlataforma?: EcommercePlataforma
   /** Chave usada pelo snippet v4track.js para autenticar a ingestão */
   trackingKey?: string
   /** E-mail (lowercase) do gestor dono deste cliente — resolve qual users/{email}.meta_integration usar no envio CAPI */
@@ -198,7 +202,7 @@ export interface Conversao {
 }
 
 // ── Integração de plataforma (doc raiz em partners/{id}/integrations/{plataforma}) ─
-export type IntegrationPlataforma = 'meta' | 'google' | 'ga4' | 'shopify'
+export type IntegrationPlataforma = 'meta' | 'google' | 'ga4' | 'shopify' | 'nuvemshop'
 export type IntegrationStatus     = 'desconectado' | 'configurado'
 
 export interface Integration {

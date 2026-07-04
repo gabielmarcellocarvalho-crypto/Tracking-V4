@@ -3,12 +3,18 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { criarCliente } from '@/lib/data/partners'
-import type { Partner, PartnerTipo } from '@/lib/types'
+import type { Partner, PartnerTipo, EcommercePlataforma } from '@/lib/types'
 
 const TIPOS: { id: PartnerTipo; label: string; desc: string; color: string }[] = [
   { id: 'ecommerce', label: 'E-commerce', desc: 'Receita · ROAS · Compras',      color: '#10B981' },
   { id: 'leads',     label: 'Leads',      desc: 'CPL · Qualificados · CPA',      color: '#8B5CF6' },
   { id: 'mensagens', label: 'Mensagens',  desc: 'WhatsApp · Contatos · CPM',     color: '#25D366' },
+]
+
+const ECOMMERCE_PLATAFORMAS: { id: EcommercePlataforma; label: string }[] = [
+  { id: 'shopify',   label: 'Shopify' },
+  { id: 'nuvemshop', label: 'Nuvemshop' },
+  { id: 'outro',     label: 'Outra / não sei ainda' },
 ]
 
 export default function NovoClienteModal({ onClose, onCriado }: {
@@ -18,6 +24,7 @@ export default function NovoClienteModal({ onClose, onCriado }: {
   const [nome, setNome]         = useState('')
   const [segmento, setSegmento] = useState('')
   const [tipo, setTipo]         = useState<PartnerTipo>('ecommerce')
+  const [ecommercePlataforma, setEcommercePlataforma] = useState<EcommercePlataforma>('shopify')
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro]         = useState('')
   const [criado, setCriado]     = useState<Partner | null>(null)
@@ -28,7 +35,10 @@ export default function NovoClienteModal({ onClose, onCriado }: {
     setSalvando(true)
     setErro('')
     try {
-      const c = await criarCliente({ nome, segmento: segmento || 'Geral', tipo })
+      const c = await criarCliente({
+        nome, segmento: segmento || 'Geral', tipo,
+        ...(tipo === 'ecommerce' ? { ecommercePlataforma } : {}),
+      })
       setCriado(c)
       onCriado?.(c)
     } catch (e) {
@@ -89,6 +99,26 @@ export default function NovoClienteModal({ onClose, onCriado }: {
                   </button>
                 ))}
               </div>
+
+              {tipo === 'ecommerce' && (
+                <>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--t2)', display: 'block', margin: '14px 0 6px' }}>Plataforma de e-commerce</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                    {ECOMMERCE_PLATAFORMAS.map((p) => (
+                      <button key={p.id} onClick={() => setEcommercePlataforma(p.id)} style={{
+                        padding: '10px 8px', borderRadius: 8, cursor: 'pointer', textAlign: 'left',
+                        background: ecommercePlataforma === p.id ? '#10B98114' : 'var(--bg-base)',
+                        border: `1px solid ${ecommercePlataforma === p.id ? '#10B98160' : 'var(--border)'}`,
+                      }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: ecommercePlataforma === p.id ? '#10B981' : 'var(--t1)' }}>{p.label}</div>
+                      </button>
+                    ))}
+                  </div>
+                  <p style={{ fontSize: 10.5, color: 'var(--t3)', margin: '6px 0 0' }}>
+                    Isso decide qual conexão aparece na aba Conexões — cada plataforma tem webhook e configuração próprios.
+                  </p>
+                </>
+              )}
 
               {erro && <p style={{ fontSize: 12, color: '#EF4444', marginTop: 12 }}>{erro}</p>}
 

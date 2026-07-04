@@ -7,10 +7,10 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import {
-  collection, doc, onSnapshot, setDoc, deleteDoc, serverTimestamp,
+  collection, doc, onSnapshot, setDoc, serverTimestamp,
 } from 'firebase/firestore'
 import { db, auth } from '@/lib/firebase'
-import type { Partner, PartnerTipo } from '@/lib/types'
+import type { Partner, PartnerTipo, EcommercePlataforma } from '@/lib/types'
 import { clientesData as clientesDemo } from '@/lib/demo-data'
 import { slugify } from '@/lib/utm/engine'
 
@@ -74,6 +74,7 @@ export async function criarCliente(input: {
   nome: string
   segmento: string
   tipo: PartnerTipo
+  ecommercePlataforma?: EcommercePlataforma
 }): Promise<Partner> {
   const id = slugify(input.nome)
   const donoEmail = auth.currentUser?.email?.toLowerCase()
@@ -84,6 +85,7 @@ export async function criarCliente(input: {
     tipo: input.tipo,
     status: 'ativo',
     trackingKey: gerarTrackingKey(),
+    ...(input.tipo === 'ecommerce' && input.ecommercePlataforma ? { ecommercePlataforma: input.ecommercePlataforma } : {}),
     // Dono do token Meta usado no envio CAPI deste cliente — o gestor que o criou.
     ...(donoEmail ? { donoEmail } : {}),
     criadoEm: Date.now(),
@@ -102,6 +104,21 @@ export async function criarCliente(input: {
   return cliente
 }
 
+/**
+ * Remove o cliente por completo (doc raiz + todas as subcoleções) via
+ * /api/clientes/{id} — um deleteDoc() direto no client SDK não apaga
+ * subcoleções e deixaria eventos/identidades/conversões órfãos.
+ */
 export async function excluirCliente(clienteId: string): Promise<void> {
-  await deleteDoc(doc(db, 'partners', clienteId))
+  const idToken = await auth.currentUser?.getIdToken()
+  if (!idToken) throw new Error('sessão inválida — faça login novamente')
+
+  const res = await fetch(`/api/clientes/${clienteId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${idToken}` },
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok || !json.ok) {
+    throw new Error(json.erro ?? 'falha ao remover cliente')
+  }
 }

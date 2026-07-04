@@ -1,7 +1,9 @@
 'use client'
 
+import { useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
+import { excluirCliente } from '@/lib/data/partners'
 import type { Partner, PartnerTipo, PartnerStatus } from '@/lib/types'
 
 const tipoConfig: Record<PartnerTipo, { label: string; bg: string; color: string }> = {
@@ -46,6 +48,22 @@ export default function ClienteCard({ cliente, index = 0 }: { cliente: Partner; 
   const tipo   = tipoConfig[cliente.tipo]
   const status = statusConfig[cliente.status]
 
+  const [confirmando, setConfirmando] = useState(false)
+  const [removendo, setRemovendo]     = useState(false)
+  const [erro, setErro]               = useState('')
+
+  const handleRemover = async () => {
+    setRemovendo(true)
+    setErro('')
+    try {
+      await excluirCliente(cliente.id)
+      // onSnapshot da lista atualiza sozinho e o card some — nada a fazer aqui.
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'falha ao remover cliente')
+      setRemovendo(false)
+    }
+  }
+
   return (
     <motion.div
       initial={shouldReduce ? false : { opacity: 0, y: 24 }}
@@ -75,7 +93,7 @@ export default function ClienteCard({ cliente, index = 0 }: { cliente: Partner; 
         }}>
           <SegIcon seg={cliente.segmento} />
         </div>
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {cliente.demo && (
             <span style={{
               padding: '4px 9px', borderRadius: 20, fontSize: '10.5px', fontWeight: 700,
@@ -92,6 +110,24 @@ export default function ClienteCard({ cliente, index = 0 }: { cliente: Partner; 
             <span style={{ width: 5, height: 5, borderRadius: '50%', background: status.dot, flexShrink: 0 }} />
             {status.label}
           </span>
+          {!cliente.demo && !confirmando && (
+            <button
+              onClick={() => setConfirmando(true)}
+              title="Remover cliente"
+              aria-label="Remover cliente"
+              style={{
+                width: 26, height: 26, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'transparent', border: '1px solid var(--br)', color: 'var(--t3)', cursor: 'pointer',
+                flexShrink: 0,
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,.1)'; e.currentTarget.style.borderColor = '#EF4444'; e.currentTarget.style.color = '#EF4444' }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--br)'; e.currentTarget.style.color = 'var(--t3)' }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" width={13} height={13}>
+                <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 
@@ -109,23 +145,50 @@ export default function ClienteCard({ cliente, index = 0 }: { cliente: Partner; 
         <span style={{ fontWeight: 600, color: 'var(--t2)' }}>{fmt(cliente.eventos)}</span> eventos rastreados
       </p>
 
-      {/* CTA */}
-      <motion.button
-        onClick={() => router.push(`/clientes/${cliente.id}/tracking`)}
-        whileHover={shouldReduce ? {} : { scale: 1.02 }}
-        whileTap={shouldReduce ? {} : { scale: 0.97 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-        style={{
-          width: '100%', padding: '10px 0', borderRadius: 8,
-          fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer',
-          background: 'var(--red)', border: 'none',
-          boxShadow: '0 3px 10px rgba(200,16,46,.3)',
-        }}
-        onMouseEnter={(e) => { const el = e.currentTarget; el.style.background = 'var(--red-h)'; el.style.boxShadow = '0 6px 20px rgba(200,16,46,.45)' }}
-        onMouseLeave={(e) => { const el = e.currentTarget; el.style.background = 'var(--red)'; el.style.boxShadow = '0 3px 10px rgba(200,16,46,.3)' }}
-      >
-        Ver Dashboard
-      </motion.button>
+      {/* CTA — vira confirmação de remoção quando acionado */}
+      {confirmando ? (
+        <div>
+          <p style={{ fontSize: 11.5, color: '#EF4444', fontWeight: 600, margin: '0 0 8px' }}>
+            Remover {cliente.nome}? Apaga todos os dados (eventos, conversões, conexões) — não dá pra desfazer.
+          </p>
+          {erro && <p style={{ fontSize: 11, color: '#EF4444', margin: '0 0 8px' }}>{erro}</p>}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => setConfirmando(false)}
+              disabled={removendo}
+              style={{
+                flex: 1, padding: '9px 0', borderRadius: 8, fontSize: 12.5, cursor: 'pointer',
+                background: 'transparent', border: '1px solid var(--border)', color: 'var(--t2)',
+              }}
+            >Cancelar</button>
+            <button
+              onClick={handleRemover}
+              disabled={removendo}
+              style={{
+                flex: 1, padding: '9px 0', borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
+                background: '#EF4444', border: 'none', color: '#fff', opacity: removendo ? 0.6 : 1,
+              }}
+            >{removendo ? 'Removendo…' : 'Confirmar'}</button>
+          </div>
+        </div>
+      ) : (
+        <motion.button
+          onClick={() => router.push(`/clientes/${cliente.id}/tracking`)}
+          whileHover={shouldReduce ? {} : { scale: 1.02 }}
+          whileTap={shouldReduce ? {} : { scale: 0.97 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+          style={{
+            width: '100%', padding: '10px 0', borderRadius: 8,
+            fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer',
+            background: 'var(--red)', border: 'none',
+            boxShadow: '0 3px 10px rgba(200,16,46,.3)',
+          }}
+          onMouseEnter={(e) => { const el = e.currentTarget; el.style.background = 'var(--red-h)'; el.style.boxShadow = '0 6px 20px rgba(200,16,46,.45)' }}
+          onMouseLeave={(e) => { const el = e.currentTarget; el.style.background = 'var(--red)'; el.style.boxShadow = '0 3px 10px rgba(200,16,46,.3)' }}
+        >
+          Ver Dashboard
+        </motion.button>
+      )}
     </motion.div>
   )
 }
