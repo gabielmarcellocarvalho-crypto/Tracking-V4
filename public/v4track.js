@@ -131,12 +131,16 @@
     };
 
     var corpo = JSON.stringify(payload);
+    // text/plain é um dos content-types "simples" do CORS — evita o preflight
+    // (OPTIONS) que o sendBeacon dispara com application/json e que, cross-
+    // origin, pode fazer o navegador descartar o envio real mesmo o preflight
+    // passando. O corpo continua sendo JSON válido — só muda o rótulo.
     if (navigator.sendBeacon) {
-      navigator.sendBeacon(ENDPOINT, new Blob([corpo], { type: 'application/json' }));
+      navigator.sendBeacon(ENDPOINT, new Blob([corpo], { type: 'text/plain' }));
     } else {
       var xhr = new XMLHttpRequest();
       xhr.open('POST', ENDPOINT, true);
-      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('Content-Type', 'text/plain');
       xhr.send(corpo);
     }
   }
