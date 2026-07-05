@@ -1,12 +1,18 @@
 'use client'
 
-import { use, useMemo } from 'react'
+import { use, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import DashboardHeader from '@/components/tracking/DashboardHeader'
-import { leadsGeoData } from '@/lib/demo-data'
+import { leadsGeoData, type LeadStatus } from '@/lib/demo-data'
 import { useCliente } from '@/lib/data/partners'
 import { useIdentidades } from '@/lib/data/colecoes'
 import { identidadesParaGeo } from '@/lib/data/geo-mapa'
+
+const STATUS_FILTRO_CONFIG: Record<LeadStatus, { label: string; color: string }> = {
+  lead:                  { label: 'Lead',               color: '#3B82F6' },
+  'checkout-abandonado': { label: 'Carrinho/checkout',  color: '#F59E0B' },
+  converteu:             { label: 'Comprou',             color: '#10B981' },
+}
 
 const GlobeLeads = dynamic(() => import('@/components/mapa/GlobeLeads'), {
   ssr: false,
@@ -27,9 +33,28 @@ export default function MapaPage({ params }: { params: Promise<{ clienteId: stri
   const { identidades } = useIdentidades(isDemo ? undefined : clienteId)
 
   const usarDemo = isDemo
-  const { pontos: leads, foraDoMapa } = useMemo(
+  const { pontos: todosLeads, foraDoMapa } = useMemo(
     () => (usarDemo ? { pontos: leadsGeoData, foraDoMapa: 0 } : identidadesParaGeo(identidades)),
     [usarDemo, identidades],
+  )
+
+  const [statusAtivos, setStatusAtivos] = useState<Set<LeadStatus>>(
+    () => new Set(Object.keys(STATUS_FILTRO_CONFIG) as LeadStatus[]),
+  )
+  const toggleStatus = (status: LeadStatus) => {
+    setStatusAtivos((prev) => {
+      const next = new Set(prev)
+      if (next.has(status)) {
+        if (next.size > 1) next.delete(status) // nunca deixa zerar tudo
+      } else {
+        next.add(status)
+      }
+      return next
+    })
+  }
+  const leads = useMemo(
+    () => todosLeads.filter((l) => statusAtivos.has(l.status)),
+    [todosLeads, statusAtivos],
   )
 
   return (
@@ -37,7 +62,7 @@ export default function MapaPage({ params }: { params: Promise<{ clienteId: stri
       <DashboardHeader clienteName={cliente?.nome ?? clienteId} clienteTipo={cliente?.tipo} />
 
       {/* Page title bar */}
-      <div style={{ padding: '12px 24px', borderBottom: '1px solid var(--br)', background: 'var(--bg-s)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+      <div style={{ padding: '12px 24px', borderBottom: '1px solid var(--br)', background: 'var(--bg-s)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--t1)', margin: 0 }}>Mapa de Leads</h2>
           <p style={{ fontSize: 11.5, color: 'var(--t3)', margin: '2px 0 0' }}>
@@ -45,6 +70,31 @@ export default function MapaPage({ params }: { params: Promise<{ clienteId: stri
             {usarDemo ? ' · dados demo' : ' · dados reais'}
           </p>
         </div>
+
+        {/* Filtro por status (carrinho/checkout, comprou, lead) */}
+        <div style={{ display: 'flex', gap: 6 }}>
+          {(Object.keys(STATUS_FILTRO_CONFIG) as LeadStatus[]).map((status) => {
+            const cfg = STATUS_FILTRO_CONFIG[status]
+            const ativo = statusAtivos.has(status)
+            return (
+              <button
+                key={status}
+                onClick={() => toggleStatus(status)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 20,
+                  fontSize: 11.5, fontWeight: 600, cursor: 'pointer', transition: 'all .15s',
+                  background: ativo ? cfg.color + '18' : 'transparent',
+                  border: `1px solid ${ativo ? cfg.color + '55' : 'var(--br)'}`,
+                  color: ativo ? cfg.color : 'var(--t3)', opacity: ativo ? 1 : 0.6,
+                }}
+              >
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: cfg.color, flexShrink: 0 }} />
+                {cfg.label}
+              </button>
+            )
+          })}
+        </div>
+
         <div style={{ display: 'flex', gap: 8 }}>
           <div style={{ padding: '5px 12px', borderRadius: 8, fontSize: 11, fontWeight: 600, background: 'rgba(16,185,129,.1)', color: '#10B981', border: '1px solid rgba(16,185,129,.25)' }}>
             {leads.filter((l) => l.status === 'converteu').length} convertidos

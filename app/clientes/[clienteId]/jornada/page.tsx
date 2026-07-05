@@ -179,6 +179,22 @@ export default function JornadaPage({ params }: { params: Promise<{ clienteId: s
   const [tiposAtivos, setTiposAtivos] = useState<Set<EventoTipoFiltro>>(
     () => new Set(Object.keys(EVENTO_CONFIG) as EventoTipoFiltro[]),
   )
+  // Filtro de status — quais USUÁRIOS aparecem na lista (diferente do filtro de
+  // tipo acima, que filtra os EVENTOS dentro da jornada já selecionada).
+  const [statusAtivos, setStatusAtivos] = useState<Set<keyof typeof STATUS_CONFIG>>(
+    () => new Set(Object.keys(STATUS_CONFIG) as (keyof typeof STATUS_CONFIG)[]),
+  )
+  const toggleStatus = (status: keyof typeof STATUS_CONFIG) => {
+    setStatusAtivos((prev) => {
+      const next = new Set(prev)
+      if (next.has(status)) {
+        if (next.size > 1) next.delete(status)
+      } else {
+        next.add(status)
+      }
+      return next
+    })
+  }
   const toggleTipo = (tipo: EventoTipoFiltro) => {
     setTiposAtivos((prev) => {
       const next = new Set(prev)
@@ -201,14 +217,15 @@ export default function JornadaPage({ params }: { params: Promise<{ clienteId: s
   }, [usarDemo, identidades, eventos])
 
   const filtrados = useMemo(() => {
-    if (!busca.trim()) return usuarios
+    const porStatus = usuarios.filter((u) => statusAtivos.has(u.status))
+    if (!busca.trim()) return porStatus
     const q = busca.toLowerCase()
-    return usuarios.filter((u) =>
+    return porStatus.filter((u) =>
       u.email.toLowerCase().includes(q) ||
       u.dados.telefone?.includes(q) ||
       u.id.toLowerCase().includes(q),
     )
-  }, [usuarios, busca])
+  }, [usuarios, busca, statusAtivos])
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const usuario: UsuarioJornada | undefined =
@@ -226,7 +243,9 @@ export default function JornadaPage({ params }: { params: Promise<{ clienteId: s
         <main className="flex-1 overflow-y-auto p-6" style={{ background: 'var(--bg-base)' }}>
           <h2 className="text-[18px] font-bold text-[--text-1]">Jornada do Usuário</h2>
           <p className="text-[12.5px] text-[--text-3] mt-4">
-            Nenhuma jornada registrada ainda — instale o snippet v4track.js no site do cliente para começar a capturar.
+            {usuarios.length === 0
+              ? 'Nenhuma jornada registrada ainda — instale o snippet v4track.js no site do cliente para começar a capturar.'
+              : 'Nenhum usuário bate com o filtro de status selecionado — tenta marcar outro status acima.'}
           </p>
         </main>
       </>
@@ -286,8 +305,40 @@ export default function JornadaPage({ params }: { params: Promise<{ clienteId: s
           )}
         </div>
 
-        {/* Filtro de tipo de evento na timeline */}
+        {/* Filtro de status — quais usuários aparecem no seletor acima */}
         <div className="mb-5">
+          <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--text-3)' }}>
+            Filtrar usuários por status
+          </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            {(Object.keys(STATUS_CONFIG) as (keyof typeof STATUS_CONFIG)[]).map((s) => {
+              const cfg = STATUS_CONFIG[s]
+              const ativo = statusAtivos.has(s)
+              return (
+                <button
+                  key={s}
+                  onClick={() => toggleStatus(s)}
+                  className="flex items-center gap-[6px] px-3 py-[6px] rounded-full text-[11.5px] font-semibold cursor-pointer transition-all duration-150"
+                  style={{
+                    background: ativo ? cfg.bg : 'transparent',
+                    border: `1px solid ${ativo ? cfg.color + '55' : 'var(--border)'}`,
+                    color: ativo ? cfg.color : 'var(--text-3)',
+                    opacity: ativo ? 1 : 0.6,
+                  }}
+                >
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: cfg.color, flexShrink: 0 }} />
+                  {cfg.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Filtro de tipo de evento na timeline do usuário selecionado */}
+        <div className="mb-5">
+          <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--text-3)' }}>
+            Filtrar eventos da jornada por tipo
+          </p>
           <FiltroEventos ativos={tiposAtivos} onToggle={toggleTipo} />
         </div>
 
