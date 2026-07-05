@@ -58,18 +58,13 @@ function buildStateClusters(leads: LeadGeo[]) {
   }))
 }
 
-// Raio (em graus, aprox.) de cada nível de heatmap — ~1° de latitude ≈ 111km.
-const RAIO_CIDADE_GRAUS  = 5 / 111  // ~5km — densidade dentro de uma cidade/bairro
-const RAIO_REGIAO_GRAUS  = 10 / 111 // ~10km — visão mais ampla, zoom de estado
-
-/** Distância euclidiana aproximada em graus — suficiente pra raios pequenos (não precisa de haversine). */
-function distanciaGraus(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  return Math.hypot(lat1 - lat2, lng1 - lng2)
-}
-
-function leadsNoRaio(leads: LeadGeo[], lat: number, lng: number, raioGraus: number): LeadGeo[] {
-  return leads.filter((l) => distanciaGraus(l.lat, l.lng, lat, lng) <= raioGraus)
-}
+// Resolução do grid hexagonal H3 (mesmo sistema do Uber) — agrupa por área real
+// em km, ao contrário do heatmap "borrado" (que renderiza um raio de 5km como
+// menos de 1 pixel de textura e some da tela). Tabela oficial de aresta média
+// por resolução: res 5 ≈ 8.5km, res 6 ≈ 3.2km — os níveis mais próximos dos
+// ~10km (zoom de cidade) / ~5km (zoom individual) pedidos.
+const HEX_RES_CIDADE     = 5 // ~8-10km por célula
+const HEX_RES_INDIVIDUAL = 6 // ~3-5km por célula
 
 // Gradiente de calor consistente com a marca (azul frio → laranja → vermelho no pico)
 function heatColor(t: number): string {
@@ -308,16 +303,16 @@ function ZoomDot({ active }: { active: boolean }) {
 
 // ── Legend ────────────────────────────────────────────────────────────────────
 function Legend({ level }: { level: 'state' | 'city' | 'individual' }) {
-  const isHeatmap = level !== 'state'
+  const isHexbin = level !== 'state'
   const hint = level === 'state'
     ? 'Clique num estado para ver os leads'
     : level === 'city'
-    ? 'Clique num ponto quente para ver os leads da região (~10km)'
-    : 'Clique num ponto quente para ver os leads próximos (~5km)'
+    ? 'Clique num hexágono para ver os leads da região (~8-10km)'
+    : 'Clique num hexágono para ver os leads próximos (~3-5km)'
 
   return (
     <div style={{ position: 'absolute', left: 20, top: 20, background: 'var(--bg-c)', border: '1px solid var(--br)', borderRadius: 10, padding: '10px 14px', zIndex: 20, boxShadow: '0 4px 16px rgba(0,0,0,.4)', minWidth: 168 }}>
-      {isHeatmap ? (
+      {isHexbin ? (
         <>
           <div style={{ fontSize: '9.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--t3)', marginBottom: 8 }}>Densidade de leads</div>
           <div style={{ height: 8, borderRadius: 4, background: 'linear-gradient(90deg, rgba(59,130,246,.5), rgba(245,158,11,.75), rgba(200,16,46,1))' }} />
@@ -351,7 +346,7 @@ interface GlobeLeadsProps {
 
 type ClusterSelection =
   | { type: 'state'; estado: string }
-  | { type: 'raio'; lat: number; lng: number; raioGraus: number }
+  | { type: 'hex'; points: LeadGeo[]; lat: number; lng: number }
 
 export default function GlobeLeads({ leads, clienteId }: GlobeLeadsProps) {
   const globeRef     = useRef<any>(null)
@@ -416,27 +411,28 @@ export default function GlobeLeads({ leads, clienteId }: GlobeLeadsProps) {
   const isCity       = zoomLevel === 'city'
   const isIndividual = zoomLevel === 'individual'
 
-  // Heatmap ativo em city/individual — mesmo conjunto de pontos, raio (bandwidth) diferente
-  const heatmapData = useMemo(
-    () => (isCity || isIndividual ? [{ points: leads }] : []),
+  // Hexágonos ativos em city/individual — mesmo conjunto de pontos, resolução
+  // (tamanho de célula) diferente por nível de zoom.
+  const hexBinData = useMemo(
+    () => (isCity || isIndividual ? leads : []),
     [isCity, isIndividual, leads],
   )
-  const heatmapBandwidth = isIndividual ? RAIO_CIDADE_GRAUS : RAIO_REGIAO_GRAUS
+  const hexResolution = isIndividual ? HEX_RES_INDIVIDUAL : HEX_RES_CIDADE
 
   // ── Leads for selected cluster panel ────────────────────────────────────────
   const clusterLeads = useMemo(() => {
     if (!selectedCluster) return []
     if (selectedCluster.type === 'state')
       return leads.filter((l) => l.estado === selectedCluster.estado)
-    return leadsNoRaio(leads, selectedCluster.lat, selectedCluster.lng, selectedCluster.raioGraus)
+    return selectedCluster.points
   }, [leads, selectedCluster])
 
   const clusterTitle = useMemo(() => {
     if (!selectedCluster) return ''
     if (selectedCluster.type === 'state') return selectedCluster.estado
-    // Usa a cidade/estado do lead mais próximo do clique como título legível
-    const maisProximo = clusterLeads[0]
-    return maisProximo ? `${maisProximo.cidade}, ${maisProximo.estado}` : 'Região selecionada'
+    // Usa a cidade/estado do primeiro lead do hexágono como título legível
+    const primeiro = clusterLeads[0]
+    return primeiro ? `${primeiro.cidade}, ${primeiro.estado}` : 'Região selecionada'
   }, [selectedCluster, clusterLeads])
 
   // ── Callbacks ───────────────────────────────────────────────────────────────
@@ -460,15 +456,15 @@ export default function GlobeLeads({ leads, clienteId }: GlobeLeadsProps) {
     setSelectedCluster({ type: 'state', estado: c.estado })
   }, [])
 
-  // Clique no heatmap não aponta pra um lead específico (é uma superfície de
-  // densidade) — abre o painel com os leads dentro do raio do nível atual.
-  const handleHeatmapClick = useCallback((_heatmap: object, _event: MouseEvent, coords: { lat: number; lng: number }) => {
-    const raioGraus = isIndividual ? RAIO_CIDADE_GRAUS : RAIO_REGIAO_GRAUS
-    globeRef.current?.pointOfView({ lat: coords.lat, lng: coords.lng, altitude: isCity ? 0.25 : 0.15 }, 700)
+  // Clique no hexágono abre o painel com os leads reais daquela célula
+  // (hex.points já vem pronto da lib — nada de calcular distância aqui).
+  const handleHexClick = useCallback((hex: object) => {
+    const h = hex as { points: LeadGeo[]; center: { lat: number; lng: number } }
+    globeRef.current?.pointOfView({ lat: h.center.lat, lng: h.center.lng, altitude: isCity ? 0.25 : 0.15 }, 700)
     if (isCity) setZoomLevel('individual')
     setSelected(null)
-    setSelectedCluster({ type: 'raio', lat: coords.lat, lng: coords.lng, raioGraus })
-  }, [isCity, isIndividual])
+    setSelectedCluster({ type: 'hex', points: h.points as LeadGeo[], lat: h.center.lat, lng: h.center.lng })
+  }, [isCity])
 
   const handleClusterLeadSelect = useCallback((lead: LeadGeo) => {
     setSelected(lead)
@@ -533,17 +529,25 @@ export default function GlobeLeads({ leads, clienteId }: GlobeLeadsProps) {
         labelAltitude={0.015}
         onLabelClick={handleStateClick}
 
-        // ── Heatmap de densidade — cidade (~10km) ou individual (~5km) ────────
-        heatmapsData={heatmapData}
-        heatmapPointLat={(d: object) => (d as LeadGeo).lat}
-        heatmapPointLng={(d: object) => (d as LeadGeo).lng}
-        heatmapPointWeight={() => 1}
-        heatmapBandwidth={heatmapBandwidth}
-        heatmapColorFn={() => heatColor}
-        heatmapColorSaturation={2.2}
-        heatmapBaseAltitude={0.006}
-        heatmapsTransitionDuration={400}
-        onHeatmapClick={handleHeatmapClick}
+        // ── Densidade por hexágono (H3) — células de área real, não um blur ──
+        // que desaparece em raios pequenos. Cidade (~8-10km) ou individual (~3-5km).
+        hexBinPointsData={hexBinData}
+        hexBinPointLat={(d: object) => (d as LeadGeo).lat}
+        hexBinPointLng={(d: object) => (d as LeadGeo).lng}
+        hexBinResolution={hexResolution}
+        hexMargin={0.15}
+        hexTopColor={(h: object) => heatColor(Math.min(1, (h as { points: LeadGeo[] }).points.length / 12))}
+        hexSideColor={(h: object) => heatColor(Math.min(1, (h as { points: LeadGeo[] }).points.length / 12))}
+        hexAltitude={(h: object) => 0.003 + Math.min(0.025, (h as { points: LeadGeo[] }).points.length * 0.0018)}
+        hexLabel={(h: object) => {
+          const hb = h as { points: LeadGeo[] }
+          const convertidos = hb.points.filter((p) => p.status === 'converteu').length
+          const primeiro = hb.points[0]
+          return `<div style="background:rgba(0,0,0,.88);border:1px solid #282828;padding:5px 10px;border-radius:7px;font-size:11px;color:#f0f0f0;font-family:Inter,sans-serif;pointer-events:none">
+            <strong>${primeiro ? `${primeiro.cidade}, ${primeiro.estado}` : 'Região'}</strong><br/>${hb.points.length} lead${hb.points.length > 1 ? 's' : ''}${convertidos ? ` · <span style="color:#10B981">${convertidos} convertido${convertidos > 1 ? 's' : ''}</span>` : ''}<br/><span style="color:#888;font-size:10px">Clique para ver lista</span>
+          </div>`
+        }}
+        onHexClick={handleHexClick}
 
         onZoom={handleZoom}
         animateIn
