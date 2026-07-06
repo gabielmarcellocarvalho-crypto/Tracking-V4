@@ -252,49 +252,68 @@ export default function AgentePage({ params }: { params: Promise<{ clienteId: st
             </AnimatePresence>
           </div>
 
-          {/* Input */}
-          <div style={{ padding: '14px 24px 20px', borderTop: '1px solid var(--br)', display: 'flex', gap: 10, position: 'relative', zIndex: 1 }}>
-            <div style={{ position: 'relative', flex: 1 }}>
-              <input
+          {/* Input — caixa única "glass", inspirada na referência (chat IA.png) */}
+          <div style={{ padding: '14px 24px 20px', position: 'relative', zIndex: 1 }}>
+            <motion.div
+              animate={{
+                borderColor: inputFocado ? 'rgba(200,16,46,.4)' : 'var(--br)',
+                boxShadow: inputFocado ? '0 0 0 3px rgba(200,16,46,.14)' : '0 0 0 0px rgba(200,16,46,0)',
+              }}
+              transition={{ duration: 0.18 }}
+              style={{
+                borderRadius: 16, border: '1px solid var(--br)', background: 'var(--bg-c)',
+                backdropFilter: 'blur(20px)', boxShadow: '0 8px 30px rgba(0,0,0,.12)', overflow: 'hidden',
+              }}
+            >
+              <textarea
                 value={pergunta}
                 onChange={(e) => setPergunta(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') enviarPergunta() }}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarPergunta() } }}
                 onFocus={() => setInputFocado(true)}
                 onBlur={() => setInputFocado(false)}
                 disabled={carregando || isDemo}
+                rows={1}
                 placeholder={isDemo ? 'Disponível apenas para clientes reais' : 'Pergunte sobre os dados deste cliente…'}
                 style={{
-                  position: 'relative', zIndex: 1, width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
-                  background: 'var(--bg-c)', border: '1px solid var(--br)', color: 'var(--t1)', outline: 'none',
+                  width: '100%', minHeight: 52, maxHeight: 160, padding: '15px 18px', fontSize: 13.5,
+                  background: 'transparent', border: 'none', color: 'var(--t1)', outline: 'none',
+                  resize: 'none', fontFamily: 'inherit', lineHeight: 1.5, display: 'block',
+                }}
+                onInput={(e) => {
+                  const el = e.currentTarget
+                  el.style.height = '52px'
+                  el.style.height = `${Math.min(el.scrollHeight, 160)}px`
                 }}
               />
-              <AnimatePresence>
-                {inputFocado && (
-                  <motion.span
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.18 }}
-                    style={{
-                      position: 'absolute', inset: -3, borderRadius: 13, pointerEvents: 'none', zIndex: 0,
-                      boxShadow: '0 0 0 3px rgba(200,16,46,.18)',
-                    }}
-                  />
-                )}
-              </AnimatePresence>
-            </div>
-            <motion.button
-              onClick={enviarPergunta}
-              disabled={carregando || isDemo || !pergunta.trim()}
-              whileHover={carregando || isDemo || !pergunta.trim() ? undefined : { scale: 1.03 }}
-              whileTap={carregando || isDemo || !pergunta.trim() ? undefined : { scale: 0.96 }}
-              style={{
-                padding: '11px 20px', borderRadius: 10, fontSize: 13, fontWeight: 600,
-                background: 'var(--red)', border: 'none', color: '#fff',
-                cursor: carregando || isDemo ? 'not-allowed' : 'pointer',
-                opacity: carregando || isDemo || !pergunta.trim() ? 0.5 : 1,
-              }}
-            >Enviar</motion.button>
+              <div style={{
+                padding: '10px 14px', borderTop: '1px solid var(--br)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+              }}>
+                <span style={{ fontSize: 10.5, color: 'var(--t3)' }}>
+                  Enter envia · Shift+Enter quebra linha
+                </span>
+                <motion.button
+                  onClick={enviarPergunta}
+                  disabled={carregando || isDemo || !pergunta.trim()}
+                  whileHover={carregando || isDemo || !pergunta.trim() ? undefined : { scale: 1.03 }}
+                  whileTap={carregando || isDemo || !pergunta.trim() ? undefined : { scale: 0.96 }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 7,
+                    padding: '8px 16px', borderRadius: 10, fontSize: 12.5, fontWeight: 600,
+                    background: pergunta.trim() ? 'var(--red)' : 'var(--bg-base)',
+                    border: pergunta.trim() ? 'none' : '1px solid var(--br)',
+                    color: pergunta.trim() ? '#fff' : 'var(--t3)',
+                    cursor: carregando || isDemo ? 'not-allowed' : 'pointer',
+                    opacity: carregando || isDemo ? 0.5 : 1,
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" width={13} height={13}>
+                    <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+                  </svg>
+                  Enviar
+                </motion.button>
+              </div>
+            </motion.div>
           </div>
         </div>
 
