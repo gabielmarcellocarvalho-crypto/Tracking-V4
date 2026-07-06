@@ -12,6 +12,13 @@ function CallbackConteudo() {
 
   const autenticar = useCallback(async (code: string) => {
     try {
+      // Essa página abre numa janela nova — o Firebase Auth ainda não terminou
+      // de restaurar a sessão (persistência via IndexedDB é assíncrona) no
+      // instante em que o componente monta. Checar auth.currentUser direto é
+      // uma corrida: quase sempre vem null mesmo com o usuário logado no app,
+      // e é isso que gerava o erro "precisa estar logado" de forma espúria.
+      // authStateReady() espera essa restauração inicial terminar antes de checar.
+      await auth.authStateReady()
       const user = auth.currentUser
       if (!user) throw new Error('Você precisa estar logado na plataforma para conectar o Facebook.')
 

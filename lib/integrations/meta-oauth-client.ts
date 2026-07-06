@@ -16,11 +16,15 @@ export function getMetaRedirectUri(): string {
   return `${window.location.origin}/meta/callback`
 }
 
-export function iniciarLoginMeta() {
+/** Retorna a referência do popup (ou null se o navegador bloqueou) — quem
+ * chama usa isso pra saber quando a janela fechou e mostrar feedback
+ * enquanto o usuário confirma no Facebook, já que sem isso a aba original
+ * parece "travada" sem nenhuma indicação do que está acontecendo. */
+export function iniciarLoginMeta(): Window | null {
   const appId = process.env.NEXT_PUBLIC_META_APP_ID
   if (!appId) {
     alert('NEXT_PUBLIC_META_APP_ID não configurado no .env.local')
-    return
+    return null
   }
 
   const params = new URLSearchParams({
@@ -37,5 +41,11 @@ export function iniciarLoginMeta() {
   const height = 700
   const left = window.screen.width / 2 - width / 2
   const top = window.screen.height / 2 - height / 2
-  window.open(url, 'Meta Login', `width=${width},height=${height},top=${top},left=${left}`)
+  const popup = window.open(url, 'Meta Login', `width=${width},height=${height},top=${top},left=${left}`)
+
+  if (!popup) {
+    alert('O navegador bloqueou o pop-up de login do Facebook. Permita pop-ups para este site e clique em "Conectar com Facebook" de novo.')
+    return null
+  }
+  return popup
 }

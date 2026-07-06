@@ -172,6 +172,24 @@ const ECOMMERCE_IDS: IntegrationPlataforma[] = ['shopify', 'nuvemshop']
 
 function MetaConnectionStatus() {
   const { meta, conectado, loading } = useMetaIntegration()
+  const [aguardando, setAguardando] = useState(false)
+
+  // Sem isso, a aba original fica parada sem nenhuma pista de que o login
+  // está rolando na outra janela — parece "travada". Detecta o popup
+  // fechando (sucesso, cancelamento ou erro) e volta ao estado normal; o
+  // status "conectado" em si vem do onSnapshot em tempo real de useMetaIntegration.
+  const handleConectar = () => {
+    const popup = iniciarLoginMeta()
+    if (!popup) return
+
+    setAguardando(true)
+    const verificar = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(verificar)
+        setAguardando(false)
+      }
+    }, 500)
+  }
 
   if (loading) return null
 
@@ -192,10 +210,11 @@ function MetaConnectionStatus() {
           )}
         </div>
         <button
-          onClick={iniciarLoginMeta}
-          style={{ fontSize: 11, fontWeight: 600, color: 'var(--t3)', background: 'transparent', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+          onClick={handleConectar}
+          disabled={aguardando}
+          style={{ fontSize: 11, fontWeight: 600, color: 'var(--t3)', background: 'transparent', border: 'none', cursor: aguardando ? 'default' : 'pointer', textDecoration: 'underline', opacity: aguardando ? 0.6 : 1 }}
         >
-          Reconectar
+          {aguardando ? 'Aguardando…' : 'Reconectar'}
         </button>
       </div>
     )
@@ -204,17 +223,22 @@ function MetaConnectionStatus() {
   return (
     <div style={{ marginBottom: 12 }}>
       <button
-        onClick={iniciarLoginMeta}
+        onClick={handleConectar}
+        disabled={aguardando}
         style={{
           display: 'flex', alignItems: 'center', gap: 8, width: '100%',
           padding: '10px 12px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, color: '#fff',
-          background: '#1877F2', border: 'none', cursor: 'pointer',
+          background: aguardando ? '#6b93c9' : '#1877F2', border: 'none', cursor: aguardando ? 'default' : 'pointer',
         }}
       >
-        <svg viewBox="0 0 24 24" fill="currentColor" width={15} height={15}>
-          <path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.78-3.89 1.1 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12" />
-        </svg>
-        Conectar com Facebook
+        {aguardando ? (
+          <span style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid rgba(255,255,255,.4)', borderTopColor: '#fff', display: 'inline-block' }} className="animate-spin" />
+        ) : (
+          <svg viewBox="0 0 24 24" fill="currentColor" width={15} height={15}>
+            <path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.78-3.89 1.1 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12" />
+          </svg>
+        )}
+        {aguardando ? 'Aguardando confirmação no Facebook…' : 'Conectar com Facebook'}
       </button>
       <p style={{ fontSize: 10.5, color: 'var(--t3)', margin: '6px 0 0' }}>
         Este login não envia conversões (só identifica sua conta) — o campo obrigatório é o Access Token abaixo.
