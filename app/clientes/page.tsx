@@ -1,13 +1,35 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import AuthGuard from '@/components/auth/AuthGuard'
 import ClienteCard from '@/components/clientes/ClienteCard'
 import NovoClienteModal from '@/components/clientes/NovoClienteModal'
+import NovoUsuarioModal from '@/components/clientes/NovoUsuarioModal'
 import { useClientes } from '@/lib/data/partners'
 import { useAuth } from '@/lib/auth-context'
 import { useRouter } from 'next/navigation'
+
+/** Só o dono da plataforma vê a opção de criar usuário — checagem via rota
+ * server porque config/superadmins não é legível pelo SDK client (de propósito). */
+function useSuperAdmin() {
+  const { user } = useAuth()
+  const [superAdmin, setSuperAdmin] = useState(false)
+
+  useEffect(() => {
+    if (!user) { setSuperAdmin(false); return }
+    let cancelado = false
+    user.getIdToken().then((idToken) =>
+      fetch('/api/auth/whoami', { headers: { Authorization: `Bearer ${idToken}` } })
+        .then((r) => r.json())
+        .then((j) => { if (!cancelado) setSuperAdmin(!!j.superAdmin) })
+        .catch(() => { if (!cancelado) setSuperAdmin(false) }),
+    )
+    return () => { cancelado = true }
+  }, [user])
+
+  return superAdmin
+}
 
 function ClientesHeader() {
   const { user, signOut } = useAuth()
@@ -57,6 +79,8 @@ function ClientesHeader() {
 export default function ClientesPage() {
   const { clientes, reais, loading } = useClientes()
   const [modal, setModal] = useState(false)
+  const [modalUsuario, setModalUsuario] = useState(false)
+  const souSuperAdmin = useSuperAdmin()
 
   const ativos   = clientes.filter((c) => c.status === 'ativo')
   const inativos = clientes.filter((c) => c.status === 'inativo')
@@ -81,16 +105,32 @@ export default function ClientesPage() {
                 {reais.length === 0 && !loading && ' Os cards abaixo são demonstração — crie seu primeiro cliente real.'}
               </p>
             </div>
-            <button
-              onClick={() => setModal(true)}
-              className="flex items-center gap-2 px-5 py-[10px] rounded-[9px] text-[13px] font-semibold text-white cursor-pointer transition-all duration-[180ms]"
-              style={{ background: 'var(--red)', boxShadow: '0 3px 12px rgba(200,16,46,.35)' }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--red-h)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--red)'; e.currentTarget.style.transform = 'translateY(0)' }}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" width={14} height={14}><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-              Novo cliente
-            </button>
+            <div className="flex items-center gap-2">
+              {souSuperAdmin && (
+                <button
+                  onClick={() => setModalUsuario(true)}
+                  className="flex items-center gap-2 px-5 py-[10px] rounded-[9px] text-[13px] font-semibold cursor-pointer transition-all duration-[180ms]"
+                  style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-2)' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--text-3)' }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)' }}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" width={14} height={14}>
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" />
+                  </svg>
+                  Novo usuário
+                </button>
+              )}
+              <button
+                onClick={() => setModal(true)}
+                className="flex items-center gap-2 px-5 py-[10px] rounded-[9px] text-[13px] font-semibold text-white cursor-pointer transition-all duration-[180ms]"
+                style={{ background: 'var(--red)', boxShadow: '0 3px 12px rgba(200,16,46,.35)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--red-h)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--red)'; e.currentTarget.style.transform = 'translateY(0)' }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" width={14} height={14}><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                Novo cliente
+              </button>
+            </div>
           </motion.div>
 
           {/* Active clients */}
@@ -117,6 +157,7 @@ export default function ClientesPage() {
         </main>
 
         {modal && <NovoClienteModal onClose={() => setModal(false)} />}
+        {modalUsuario && <NovoUsuarioModal clientes={reais} onClose={() => setModalUsuario(false)} />}
       </div>
     </AuthGuard>
   )

@@ -11,18 +11,8 @@
 // partner específico (partners/{id}/members/{email}.role === 'admin').
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthAdmin, getDbAdmin } from '@/lib/firebase-admin'
-
-async function podeExcluir(email: string, clienteId: string): Promise<boolean> {
-  const db = getDbAdmin()
-
-  const superadminsSnap = await db.doc('config/superadmins').get()
-  const emails = (superadminsSnap.data()?.emails as string[] | undefined) ?? []
-  if (emails.includes(email)) return true
-
-  const memberSnap = await db.collection('partners').doc(clienteId).collection('members').doc(email).get()
-  return memberSnap.exists && memberSnap.data()?.role === 'admin'
-}
+import { getDbAdmin } from '@/lib/firebase-admin'
+import { emailDoToken, ehAdminDoPartner } from '@/lib/server/auth-helpers'
 
 export async function DELETE(
   req: NextRequest,
@@ -30,26 +20,13 @@ export async function DELETE(
 ) {
   const { clienteId } = await params
 
-  const authHeader = req.headers.get('authorization')
-  const idToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : undefined
-  if (!idToken) {
-    return NextResponse.json({ ok: false, erro: 'sessão inválida — faça login novamente' }, { status: 401 })
-  }
-
-  let email: string
-  try {
-    const decoded = await getAuthAdmin().verifyIdToken(idToken)
-    if (!decoded.email) {
-      return NextResponse.json({ ok: false, erro: 'usuário sem e-mail no token' }, { status: 400 })
-    }
-    email = decoded.email.toLowerCase()
-  } catch (err) {
-    console.error('[api/clientes] idToken inválido:', err)
+  const email = await emailDoToken(req)
+  if (!email) {
     return NextResponse.json({ ok: false, erro: 'sessão inválida — faça login novamente' }, { status: 401 })
   }
 
   try {
-    if (!(await podeExcluir(email, clienteId))) {
+    if (!(await ehAdminDoPartner(email, clienteId))) {
       return NextResponse.json({ ok: false, erro: 'sem permissão para remover este cliente' }, { status: 403 })
     }
 
