@@ -132,13 +132,7 @@ export default function AgentePage({ params }: { params: Promise<{ clienteId: st
 
       <main className="flex-1 overflow-hidden flex" style={{ background: 'var(--bg-base)' }}>
         {/* Coluna principal — chat */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, position: 'relative', overflow: 'hidden' }}>
-          {/* Blobs ambiente — puramente decorativo, atrás de tudo */}
-          <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
-            <div className="animate-pulse" style={{ position: 'absolute', top: -60, left: '8%', width: 300, height: 300, borderRadius: '50%', background: 'var(--red)', opacity: 0.06, filter: 'blur(100px)' }} />
-            <div className="animate-pulse" style={{ position: 'absolute', bottom: -80, right: '10%', width: 320, height: 320, borderRadius: '50%', background: 'var(--purple)', opacity: 0.06, filter: 'blur(110px)', animationDelay: '0.7s' }} />
-          </div>
-
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, position: 'relative' }}>
           {/* Header */}
           <div style={{ padding: '18px 24px 0', position: 'relative', zIndex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -253,18 +247,23 @@ export default function AgentePage({ params }: { params: Promise<{ clienteId: st
           </div>
 
           {/* Input — caixa única "glass", inspirada na referência (chat IA.png) */}
-          <div style={{ padding: '14px 24px 20px', position: 'relative', zIndex: 1 }}>
+          <div style={{ padding: '10px 24px 36px', position: 'relative', zIndex: 1 }}>
             <motion.div
               animate={{
-                borderColor: inputFocado ? 'rgba(200,16,46,.4)' : 'var(--br)',
-                boxShadow: inputFocado ? '0 0 0 3px rgba(200,16,46,.14)' : '0 0 0 0px rgba(200,16,46,0)',
+                borderColor: inputFocado ? 'rgba(200,16,46,.45)' : 'var(--br)',
+                boxShadow: inputFocado
+                  ? '0 0 0 3px rgba(200,16,46,.16), 0 14px 40px rgba(0,0,0,.18)'
+                  : '0 0 0 0px rgba(200,16,46,0), 0 10px 32px rgba(0,0,0,.1)',
               }}
-              transition={{ duration: 0.18 }}
+              transition={{ duration: 0.2 }}
               style={{
-                borderRadius: 16, border: '1px solid var(--br)', background: 'var(--bg-c)',
-                backdropFilter: 'blur(20px)', boxShadow: '0 8px 30px rgba(0,0,0,.12)', overflow: 'hidden',
+                borderRadius: 20, border: '1px solid var(--br)', background: 'var(--bg-c)',
+                overflow: 'hidden', position: 'relative',
               }}
             >
+              {/* Hairline de destaque no topo — mesmo gradiente da marca */}
+              <div style={{ height: 2, background: 'linear-gradient(90deg, var(--red), var(--purple))', opacity: 0.6 }} />
+
               <textarea
                 value={pergunta}
                 onChange={(e) => setPergunta(e.target.value)}
@@ -275,18 +274,18 @@ export default function AgentePage({ params }: { params: Promise<{ clienteId: st
                 rows={1}
                 placeholder={isDemo ? 'Disponível apenas para clientes reais' : 'Pergunte sobre os dados deste cliente…'}
                 style={{
-                  width: '100%', minHeight: 52, maxHeight: 160, padding: '15px 18px', fontSize: 13.5,
+                  width: '100%', minHeight: 56, maxHeight: 160, padding: '17px 20px 12px', fontSize: 13.5,
                   background: 'transparent', border: 'none', color: 'var(--t1)', outline: 'none',
                   resize: 'none', fontFamily: 'inherit', lineHeight: 1.5, display: 'block',
                 }}
                 onInput={(e) => {
                   const el = e.currentTarget
-                  el.style.height = '52px'
+                  el.style.height = '56px'
                   el.style.height = `${Math.min(el.scrollHeight, 160)}px`
                 }}
               />
               <div style={{
-                padding: '10px 14px', borderTop: '1px solid var(--br)',
+                padding: '10px 16px 14px',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
               }}>
                 <span style={{ fontSize: 10.5, color: 'var(--t3)' }}>
@@ -300,6 +299,7 @@ export default function AgentePage({ params }: { params: Promise<{ clienteId: st
                   style={{
                     display: 'flex', alignItems: 'center', gap: 7,
                     padding: '8px 16px', borderRadius: 10, fontSize: 12.5, fontWeight: 600,
+                    boxShadow: pergunta.trim() ? '0 4px 14px rgba(200,16,46,.35)' : 'none',
                     background: pergunta.trim() ? 'var(--red)' : 'var(--bg-base)',
                     border: pergunta.trim() ? 'none' : '1px solid var(--br)',
                     color: pergunta.trim() ? '#fff' : 'var(--t3)',
