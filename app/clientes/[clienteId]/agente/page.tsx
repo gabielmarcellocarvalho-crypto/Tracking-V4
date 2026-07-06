@@ -49,6 +49,23 @@ function Markdown({ texto }: { texto: string }) {
   )
 }
 
+// Três pontinhos pulsando em loop — usado no indicador "Analisando os dados".
+function TypingDots() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', marginLeft: 2 }}>
+      {[0, 1, 2].map((dot) => (
+        <motion.span
+          key={dot}
+          style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--red)', margin: '0 2px', boxShadow: '0 0 5px var(--red)' }}
+          initial={{ opacity: 0.3, scale: 0.85 }}
+          animate={{ opacity: [0.3, 1, 0.3], scale: [0.85, 1.15, 0.85] }}
+          transition={{ duration: 1.1, repeat: Infinity, delay: dot * 0.15, ease: 'easeInOut' }}
+        />
+      ))}
+    </div>
+  )
+}
+
 export default function AgentePage({ params }: { params: Promise<{ clienteId: string }> }) {
   const { clienteId } = use(params)
   const { cliente, isDemo } = useCliente(clienteId)
@@ -59,6 +76,7 @@ export default function AgentePage({ params }: { params: Promise<{ clienteId: st
   const [pergunta, setPergunta]   = useState('')
   const [carregando, setCarregando] = useState(false)
   const [semKey, setSemKey]       = useState(false)
+  const [inputFocado, setInputFocado] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const alertas = useMemo(() => gerarAlertas(eventos), [eventos])
@@ -114,9 +132,15 @@ export default function AgentePage({ params }: { params: Promise<{ clienteId: st
 
       <main className="flex-1 overflow-hidden flex" style={{ background: 'var(--bg-base)' }}>
         {/* Coluna principal — chat */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, position: 'relative', overflow: 'hidden' }}>
+          {/* Blobs ambiente — puramente decorativo, atrás de tudo */}
+          <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
+            <div className="animate-pulse" style={{ position: 'absolute', top: -60, left: '8%', width: 300, height: 300, borderRadius: '50%', background: 'var(--red)', opacity: 0.06, filter: 'blur(100px)' }} />
+            <div className="animate-pulse" style={{ position: 'absolute', bottom: -80, right: '10%', width: 320, height: 320, borderRadius: '50%', background: 'var(--purple)', opacity: 0.06, filter: 'blur(110px)', animationDelay: '0.7s' }} />
+          </div>
+
           {/* Header */}
-          <div style={{ padding: '18px 24px 0' }}>
+          <div style={{ padding: '18px 24px 0', position: 'relative', zIndex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{
                 width: 34, height: 34, borderRadius: 10, flexShrink: 0,
@@ -139,28 +163,28 @@ export default function AgentePage({ params }: { params: Promise<{ clienteId: st
             {/* Ações rápidas */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginTop: 16 }}>
               {ACOES.map((a) => (
-                <button
+                <motion.button
                   key={a.id}
                   disabled={carregando || isDemo}
                   onClick={() => consultar({ acao: a.id }, a.label)}
+                  whileHover={carregando || isDemo ? undefined : { y: -2, borderColor: a.color + '70' }}
+                  whileTap={carregando || isDemo ? undefined : { scale: 0.97 }}
                   style={{
                     textAlign: 'left', padding: '11px 13px', borderRadius: 10,
                     cursor: carregando || isDemo ? 'not-allowed' : 'pointer',
                     background: 'var(--bg-c)', border: '1px solid var(--br)',
-                    opacity: carregando || isDemo ? 0.5 : 1, transition: 'all .15s',
+                    opacity: carregando || isDemo ? 0.5 : 1,
                   }}
-                  onMouseEnter={(e) => { if (!carregando && !isDemo) { e.currentTarget.style.borderColor = a.color + '70'; e.currentTarget.style.transform = 'translateY(-1px)' } }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--br)'; e.currentTarget.style.transform = 'translateY(0)' }}
                 >
                   <div style={{ fontSize: 12.5, fontWeight: 700, color: a.color }}>{a.label}</div>
                   <div style={{ fontSize: 10.5, color: 'var(--t3)', marginTop: 2 }}>{a.desc}</div>
-                </button>
+                </motion.button>
               ))}
             </div>
           </div>
 
           {/* Mensagens */}
-          <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '18px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '18px 24px', display: 'flex', flexDirection: 'column', gap: 14, position: 'relative', zIndex: 1 }}>
             {isDemo && (
               <div style={{ padding: '14px 16px', borderRadius: 10, background: 'rgba(139,92,246,.07)', border: '1px solid rgba(139,92,246,.25)', fontSize: 12.5, color: 'var(--t2)' }}>
                 Cliente demo — o agente analisa apenas dados reais. Crie um cliente e instale o snippet para usar.
@@ -185,8 +209,9 @@ export default function AgentePage({ params }: { params: Promise<{ clienteId: st
               {mensagens.map((m, i) => (
                 <motion.div
                   key={i}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 26 }}
                   style={{
                     alignSelf: m.papel === 'usuario' ? 'flex-end' : 'flex-start',
                     maxWidth: m.papel === 'usuario' ? '70%' : '92%',
@@ -203,37 +228,73 @@ export default function AgentePage({ params }: { params: Promise<{ clienteId: st
                 </motion.div>
               ))}
             </AnimatePresence>
-            {carregando && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--t3)', fontSize: 12 }}>
-                <span className="pulse-dot" style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--red)' }} />
-                Analisando os dados…
-              </div>
-            )}
+            <AnimatePresence>
+              {carregando && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  style={{
+                    alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '9px 14px', borderRadius: 999, fontSize: 12, color: 'var(--t3)',
+                    background: 'var(--bg-c)', border: '1px solid var(--br)',
+                  }}
+                >
+                  <motion.span
+                    style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--red)' }}
+                    animate={{ opacity: [1, 0.3, 1] }}
+                    transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+                  />
+                  Analisando os dados
+                  <TypingDots />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Input */}
-          <div style={{ padding: '14px 24px 20px', borderTop: '1px solid var(--br)', display: 'flex', gap: 10 }}>
-            <input
-              value={pergunta}
-              onChange={(e) => setPergunta(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') enviarPergunta() }}
-              disabled={carregando || isDemo}
-              placeholder={isDemo ? 'Disponível apenas para clientes reais' : 'Pergunte sobre os dados deste cliente…'}
-              style={{
-                flex: 1, padding: '11px 14px', borderRadius: 10, fontSize: 13,
-                background: 'var(--bg-c)', border: '1px solid var(--br)', color: 'var(--t1)', outline: 'none',
-              }}
-            />
-            <button
+          <div style={{ padding: '14px 24px 20px', borderTop: '1px solid var(--br)', display: 'flex', gap: 10, position: 'relative', zIndex: 1 }}>
+            <div style={{ position: 'relative', flex: 1 }}>
+              <input
+                value={pergunta}
+                onChange={(e) => setPergunta(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') enviarPergunta() }}
+                onFocus={() => setInputFocado(true)}
+                onBlur={() => setInputFocado(false)}
+                disabled={carregando || isDemo}
+                placeholder={isDemo ? 'Disponível apenas para clientes reais' : 'Pergunte sobre os dados deste cliente…'}
+                style={{
+                  position: 'relative', zIndex: 1, width: '100%', padding: '11px 14px', borderRadius: 10, fontSize: 13,
+                  background: 'var(--bg-c)', border: '1px solid var(--br)', color: 'var(--t1)', outline: 'none',
+                }}
+              />
+              <AnimatePresence>
+                {inputFocado && (
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    style={{
+                      position: 'absolute', inset: -3, borderRadius: 13, pointerEvents: 'none', zIndex: 0,
+                      boxShadow: '0 0 0 3px rgba(200,16,46,.18)',
+                    }}
+                  />
+                )}
+              </AnimatePresence>
+            </div>
+            <motion.button
               onClick={enviarPergunta}
               disabled={carregando || isDemo || !pergunta.trim()}
+              whileHover={carregando || isDemo || !pergunta.trim() ? undefined : { scale: 1.03 }}
+              whileTap={carregando || isDemo || !pergunta.trim() ? undefined : { scale: 0.96 }}
               style={{
                 padding: '11px 20px', borderRadius: 10, fontSize: 13, fontWeight: 600,
                 background: 'var(--red)', border: 'none', color: '#fff',
                 cursor: carregando || isDemo ? 'not-allowed' : 'pointer',
                 opacity: carregando || isDemo || !pergunta.trim() ? 0.5 : 1,
               }}
-            >Enviar</button>
+            >Enviar</motion.button>
           </div>
         </div>
 
