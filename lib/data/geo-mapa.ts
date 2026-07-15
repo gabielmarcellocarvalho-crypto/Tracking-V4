@@ -51,6 +51,8 @@ export function identidadesParaGeo(identidades: Identidade[]): GeoResultado {
   let foraDoMapa = 0
 
   for (const i of identidades) {
+    // Visitante que só teve page_view não é lead — não polui o mapa; fica só em Tracking/Performance
+    if (i.status === 'visitante') continue
     if (!i.geo?.estado && !i.geo?.cidade) continue
 
     const uf = (i.geo?.estado ?? '').toUpperCase()

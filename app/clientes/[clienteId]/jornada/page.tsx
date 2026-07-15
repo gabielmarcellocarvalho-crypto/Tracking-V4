@@ -213,7 +213,10 @@ export default function JornadaPage({ params }: { params: Promise<{ clienteId: s
   // Jornadas reais (identidades unificadas + eventos) ou demo
   const usuarios = useMemo<UsuarioJornada[]>(() => {
     if (usarDemo) return usuariosJornada
-    return identidades.map((i) => identidadeParaUsuarioJornada(i, eventos))
+    // Visitante que só teve page_view não é lead — não polui a jornada; fica só em Tracking/Performance
+    return identidades
+      .filter((i) => i.status !== 'visitante')
+      .map((i) => identidadeParaUsuarioJornada(i, eventos))
   }, [usarDemo, identidades, eventos])
 
   const filtrados = useMemo(() => {
