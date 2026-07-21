@@ -1,11 +1,11 @@
 // ─── AGENTE IA — POST /api/agent ─────────────────────────────────────────────
 // Analisa os dados do cliente (eventos, identidades, UTMs, conversões) com a
-// Claude API. Requer ANTHROPIC_API_KEY no .env.local.
+// Gemini API. Requer GEMINI_API_KEY no .env.local.
 //
 // Body: { clienteId, pergunta?, acao?: 'analise-geral'|'auditar-utms'|'cross-check'|'sugerir-dashboard' }
 
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
+import { GoogleGenAI } from '@google/genai'
 import { collection, doc, getDoc, getDocs, limit, orderBy, query } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import {
@@ -117,10 +117,10 @@ async function montarContexto(clienteId: string): Promise<string | null> {
 }
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.ANTHROPIC_API_KEY
+  const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) {
     return NextResponse.json(
-      { ok: false, configurado: false, erro: 'ANTHROPIC_API_KEY não configurada no .env.local' },
+      { ok: false, configurado: false, erro: 'GEMINI_API_KEY não configurada no .env.local' },
       { status: 503 },
     )
   }
@@ -144,38 +144,41 @@ export async function POST(req: NextRequest) {
 
   const instrucao = acao ? ACOES[acao] ?? pergunta : pergunta
 
-  const client = new Anthropic({ apiKey })
+  const client = new GoogleGenAI({ apiKey })
   try {
-    const response = await client.messages.create({
-      model: 'claude-sonnet-5',
-      max_tokens: 4096,
-      system: [
-        { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
-      ],
-      messages: [
+    const response = await client.models.generateContent({
+      model: 'gemini-2.5-pro',
+      config: {
+        systemInstruction: SYSTEM_PROMPT,
+        // gemini-2.5-pro reserva parte do budget para "thinking" antes de
+        // gerar a resposta final — 4096 deixava respostas longas cortadas.
+        maxOutputTokens: 8192,
+      },
+      contents: [
         {
           role: 'user',
-          content: `Dados do cliente (JSON):\n\`\`\`json\n${contexto}\n\`\`\`\n\nSolicitação: ${instrucao}`,
+          parts: [{ text: `Dados do cliente (JSON):\n\`\`\`json\n${contexto}\n\`\`\`\n\nSolicitação: ${instrucao}` }],
         },
       ],
     })
 
-    const texto = response.content
-      .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-      .map((b) => b.text)
-      .join('\n')
+    const texto = response.text ?? ''
 
     return NextResponse.json({
       ok: true,
       resposta: texto,
-      uso: { entrada: response.usage.input_tokens, saida: response.usage.output_tokens },
+      uso: {
+        entrada: response.usageMetadata?.promptTokenCount ?? 0,
+        saida: response.usageMetadata?.candidatesTokenCount ?? 0,
+      },
     })
   } catch (err) {
-    if (err instanceof Anthropic.AuthenticationError) {
-      return NextResponse.json({ ok: false, configurado: false, erro: 'ANTHROPIC_API_KEY inválida' }, { status: 503 })
+    const status = (err as { status?: number })?.status
+    if (status === 401 || status === 403) {
+      return NextResponse.json({ ok: false, configurado: false, erro: 'GEMINI_API_KEY inválida' }, { status: 503 })
     }
-    if (err instanceof Anthropic.RateLimitError) {
-      return NextResponse.json({ ok: false, erro: 'Limite de requisições da Claude API atingido — tente em instantes' }, { status: 429 })
+    if (status === 429) {
+      return NextResponse.json({ ok: false, erro: 'Limite de requisições da Gemini API atingido — tente em instantes' }, { status: 429 })
     }
     console.error('[agent] erro:', err)
     return NextResponse.json({ ok: false, erro: 'falha ao consultar o agente' }, { status: 500 })

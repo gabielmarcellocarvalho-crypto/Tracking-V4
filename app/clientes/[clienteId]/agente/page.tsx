@@ -94,7 +94,7 @@ export default function AgentePage({ params }: { params: Promise<{ clienteId: st
       const data = await res.json()
       if (data.configurado === false) {
         setSemKey(true)
-        setMensagens((m) => [...m, { papel: 'erro', texto: 'ANTHROPIC_API_KEY não configurada.' }])
+        setMensagens((m) => [...m, { papel: 'erro', texto: 'GEMINI_API_KEY não configurada.' }])
       } else if (data.ok) {
         setMensagens((m) => [...m, { papel: 'agente', texto: data.resposta }])
         // Persiste ações rápidas como insight do cliente
@@ -188,8 +188,8 @@ export default function AgentePage({ params }: { params: Promise<{ clienteId: st
               <div style={{ padding: '16px 18px', borderRadius: 10, background: 'rgba(245,158,11,.06)', border: '1px solid rgba(245,158,11,.3)' }}>
                 <p style={{ fontSize: 13, fontWeight: 700, color: '#F59E0B', margin: 0 }}>Configure a API key do agente</p>
                 <p style={{ fontSize: 12, color: 'var(--t2)', margin: '6px 0 0', lineHeight: 1.6 }}>
-                  1. Crie uma key em <span style={{ fontFamily: 'monospace', color: 'var(--t1)' }}>console.anthropic.com</span><br />
-                  2. Adicione no <span style={{ fontFamily: 'monospace', color: 'var(--t1)' }}>.env.local</span>: <span style={{ fontFamily: 'monospace', color: '#10B981' }}>ANTHROPIC_API_KEY=sk-ant-…</span><br />
+                  1. Crie uma key em <span style={{ fontFamily: 'monospace', color: 'var(--t1)' }}>aistudio.google.com/apikey</span><br />
+                  2. Adicione no <span style={{ fontFamily: 'monospace', color: 'var(--t1)' }}>.env.local</span>: <span style={{ fontFamily: 'monospace', color: '#10B981' }}>GEMINI_API_KEY=…</span><br />
                   3. Reinicie o servidor (<span style={{ fontFamily: 'monospace', color: 'var(--t1)' }}>npm run dev</span>)
                 </p>
               </div>
