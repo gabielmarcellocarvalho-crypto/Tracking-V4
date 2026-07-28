@@ -14,6 +14,7 @@ const TIPOS: { id: PartnerTipo; label: string; desc: string; color: string }[] =
 const ECOMMERCE_PLATAFORMAS: { id: EcommercePlataforma; label: string }[] = [
   { id: 'shopify',   label: 'Shopify' },
   { id: 'nuvemshop', label: 'Nuvemshop' },
+  { id: 'tray',      label: 'Tray' },
   { id: 'outro',     label: 'Outra / não sei ainda' },
 ]
 

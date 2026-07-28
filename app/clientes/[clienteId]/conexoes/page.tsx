@@ -50,6 +50,11 @@ const LOGOS: Record<IntegrationPlataforma, LogoDef> = {
     viewBox: '0 0 24 24',
     path: 'M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0',
   },
+  // Idem — sem ícone oficial da Tray no Simple Icons, mesmo glifo genérico.
+  tray: {
+    viewBox: '0 0 24 24',
+    path: 'M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0',
+  },
 }
 
 function LogoIcon({ plataforma, size = 20 }: { plataforma: IntegrationPlataforma; size?: number }) {
@@ -166,9 +171,26 @@ const PLATAFORMAS: {
       'Assim que o app parceiro estiver pronto, o fluxo de conexão aqui é atualizado',
     ],
   },
+  {
+    id: 'tray',
+    nome: 'Tray',
+    cor: '#00A650',
+    desc: 'Integração em construção — a Tray exige um app parceiro aprovado pelo painel de parceiros (tray.com.br/quero-ser-parceiro) antes de habilitar o OAuth por loja. Diferente da Shopify, o webhook da Tray não envia os dados do pedido (só o ID) — o envio automático de compras só liga depois que o app estiver aprovado e a loja autorizada.',
+    campos: [
+      { id: 'storeUrl', label: 'URL da loja (Tray)', placeholder: 'Ex: sua-loja.commercesuite.com.br' },
+      { id: 'consumerKey', label: 'Consumer Key (via app parceiro — ainda não disponível)', placeholder: 'Aguardando aprovação de parceiro V4', secreto: true },
+      { id: 'consumerSecret', label: 'Consumer Secret (via app parceiro — ainda não disponível)', placeholder: 'Aguardando aprovação de parceiro V4', secreto: true },
+    ],
+    passos: [
+      'Essa integração depende de um app parceiro V4 aprovado no painel de parceiros da Tray (tray.com.br/quero-ser-parceiro) — cadastro em análise, ainda não está pronta',
+      'Depois de aprovado, cada loja autoriza o app via OAuth (tela de permissão na própria loja) — não é um campo que se cola direto aqui',
+      'Por enquanto, instale o snippet de tracking no site pra capturar a jornada e a origem do anúncio',
+      'Assim que o app parceiro estiver aprovado, o fluxo de conexão aqui é atualizado',
+    ],
+  },
 ]
 
-const ECOMMERCE_IDS: IntegrationPlataforma[] = ['shopify', 'nuvemshop']
+const ECOMMERCE_IDS: IntegrationPlataforma[] = ['shopify', 'nuvemshop', 'tray']
 
 function MetaConnectionStatus() {
   const { meta, conectado, loading } = useMetaIntegration()

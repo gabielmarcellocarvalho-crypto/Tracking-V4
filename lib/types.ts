@@ -10,7 +10,7 @@ import type { Timestamp } from 'firebase/firestore'
 export type PartnerTipo   = 'ecommerce' | 'leads' | 'mensagens'
 export type PartnerStatus = 'ativo' | 'inativo'
 /** Só relevante quando tipo === 'ecommerce' — cada plataforma tem webhook/API própria */
-export type EcommercePlataforma = 'shopify' | 'nuvemshop' | 'outro'
+export type EcommercePlataforma = 'shopify' | 'nuvemshop' | 'tray' | 'outro'
 
 export interface Partner {
   id: string
@@ -202,7 +202,7 @@ export interface Conversao {
 }
 
 // ── Integração de plataforma (doc raiz em partners/{id}/integrations/{plataforma}) ─
-export type IntegrationPlataforma = 'meta' | 'meta-ads' | 'google' | 'ga4' | 'shopify' | 'nuvemshop'
+export type IntegrationPlataforma = 'meta' | 'meta-ads' | 'google' | 'ga4' | 'shopify' | 'nuvemshop' | 'tray'
 export type IntegrationStatus     = 'desconectado' | 'configurado'
 
 export interface Integration {
