@@ -31,6 +31,14 @@ service cloud.firestore {
       return request.auth != null &&
         emailLogado() in get(/databases/$(database)/documents/config/superadmins).data.emails
     }
+    // Admin em pelo menos um cliente (config/admins, mantido por /api/usuarios
+    // sempre que role === 'admin' é concedido) — libera criar clientes novos,
+    // já que ehMembroAdmin(partnerId) é sempre falso pra um partnerId que
+    // ainda não existe (não tem como checar membership de um doc inexistente).
+    function ehAdminGeral() {
+      return request.auth != null &&
+        emailLogado() in get(/databases/$(database)/documents/config/admins).data.emails
+    }
     function membro(partnerId) {
       return get(/databases/$(database)/documents/partners/$(partnerId)/members/$(emailLogado()))
     }
@@ -50,7 +58,11 @@ service cloud.firestore {
 
     match /partners/{partnerId} {
       allow read: if true;             // trackingKey precisa ser lido por /api/track (não autenticado)
-      allow write: if temAcessoAdmin(partnerId);
+      // create: admin de QUALQUER cliente pode criar um cliente novo (não só
+      // superadmin) — depois de criado, quem editar/apagar precisa ser admin
+      // DESSE partner específico (temAcessoAdmin), daí o split de update/delete.
+      allow create: if temAcessoAdmin(partnerId) || ehAdminGeral();
+      allow update, delete: if temAcessoAdmin(partnerId);
 
       match /members/{memberEmail} {
         allow read, write: if temAcessoAdmin(partnerId);

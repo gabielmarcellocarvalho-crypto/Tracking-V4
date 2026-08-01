@@ -1,14 +1,21 @@
 // ─── POST /api/usuarios ───────────────────────────────────────────────────
-// Cria um novo usuário (Firebase Auth, sem senha) + concede acesso a uma
-// lista de clientes (partners/{id}/members/{email}) com o role escolhido.
-// Só superadmin pode chamar essa rota — criar conta e distribuir acesso é
-// uma ação sensível, não algo que qualquer membro admin de um cliente deveria
-// poder fazer.
+// Cria um novo usuário (Firebase Auth, com a senha que quem chamou definiu)
+// + concede acesso a uma lista de clientes (partners/{id}/members/{email})
+// com o role escolhido. Só superadmin pode chamar essa rota — criar conta e
+// distribuir acesso é uma ação sensível, não algo que qualquer membro admin
+// de um cliente deveria poder fazer.
 //
-// Não enviamos e-mail (sem serviço de SMTP configurado): devolvemos o link de
-// "definir senha" pra quem chamou repassar manualmente pro novo usuário.
+// A senha é definida por quem chama (não geramos link de "defina sua senha"
+// — o gestor prefere repassar a senha ele mesmo). Só se aplica a conta NOVA;
+// se o e-mail já tinha conta, a senha dele não é tocada, só concedemos acesso
+// aos clientes selecionados.
+//
+// Quando role === 'admin', o e-mail também entra em config/admins — lista
+// global (mesmo padrão de config/superadmins) que a firestore.rule usa pra
+// liberar "criar cliente novo" pra qualquer admin, não só superadmin.
 
 import { NextRequest, NextResponse } from 'next/server'
+import { FieldValue } from 'firebase-admin/firestore'
 import { getAuthAdmin, getDbAdmin } from '@/lib/firebase-admin'
 import { emailDoToken, ehSuperAdmin } from '@/lib/server/auth-helpers'
 import type { MemberRole } from '@/lib/types'
@@ -18,6 +25,7 @@ interface CriarUsuarioBody {
   nome?: string
   clienteIds?: string[]
   role?: MemberRole
+  senha?: string
 }
 
 export async function POST(req: NextRequest) {
@@ -39,6 +47,7 @@ export async function POST(req: NextRequest) {
   const email = body.email?.trim().toLowerCase()
   const clienteIds = body.clienteIds ?? []
   const role = body.role
+  const senha = body.senha
 
   if (!email || !email.includes('@')) {
     return NextResponse.json({ ok: false, erro: 'e-mail inválido' }, { status: 400 })
@@ -54,26 +63,27 @@ export async function POST(req: NextRequest) {
   let jaExistia = false
 
   try {
-    await authAdmin.createUser({
-      email,
-      displayName: body.nome?.trim() || undefined,
-      emailVerified: false,
-    })
-  } catch (err: any) {
-    if (err?.code === 'auth/email-already-exists') {
-      jaExistia = true
-    } else {
+    await authAdmin.getUserByEmail(email)
+    jaExistia = true
+  } catch {
+    // Não existe ainda — segue pro fluxo de criação abaixo.
+  }
+
+  if (!jaExistia) {
+    if (!senha || senha.length < 6) {
+      return NextResponse.json({ ok: false, erro: 'defina uma senha com pelo menos 6 caracteres' }, { status: 400 })
+    }
+    try {
+      await authAdmin.createUser({
+        email,
+        password: senha,
+        displayName: body.nome?.trim() || undefined,
+        emailVerified: false,
+      })
+    } catch (err: any) {
       console.error('[api/usuarios] erro ao criar usuário:', err)
       return NextResponse.json({ ok: false, erro: 'falha ao criar usuário no Firebase Auth' }, { status: 500 })
     }
-  }
-
-  let passwordResetLink: string | undefined
-  try {
-    passwordResetLink = await authAdmin.generatePasswordResetLink(email)
-  } catch (err) {
-    // Não bloqueia a concessão de acesso por causa disso — só avisa que o link não saiu.
-    console.error('[api/usuarios] erro ao gerar link de senha:', err)
   }
 
   const db = getDbAdmin()
@@ -89,5 +99,9 @@ export async function POST(req: NextRequest) {
     ),
   )
 
-  return NextResponse.json({ ok: true, jaExistia, passwordResetLink, clientesConcedidos: clienteIds.length })
+  if (role === 'admin') {
+    await db.doc('config/admins').set({ emails: FieldValue.arrayUnion(email) }, { merge: true })
+  }
+
+  return NextResponse.json({ ok: true, jaExistia, clientesConcedidos: clienteIds.length })
 }

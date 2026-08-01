@@ -7,8 +7,16 @@ import type { Partner, MemberRole } from '@/lib/types'
 
 interface ResultadoCriacao {
   jaExistia: boolean
-  passwordResetLink?: string
+  senha?: string
   clientesConcedidos: number
+}
+
+/** Senha aleatória (12 chars, letras+números) pra preencher o campo — o gestor pode editar antes de enviar. */
+function gerarSenhaAleatoria(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
+  const bytes = new Uint8Array(12)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes, (b) => chars[b % chars.length]).join('')
 }
 
 export default function NovoUsuarioModal({ clientes, onClose }: {
@@ -17,6 +25,7 @@ export default function NovoUsuarioModal({ clientes, onClose }: {
 }) {
   const [email, setEmail]       = useState('')
   const [nome, setNome]         = useState('')
+  const [senha, setSenha]       = useState('')
   const [role, setRole]         = useState<MemberRole>('viewer')
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [salvando, setSalvando] = useState(false)
@@ -35,6 +44,7 @@ export default function NovoUsuarioModal({ clientes, onClose }: {
   const handleCriar = async () => {
     if (!email.trim() || !email.includes('@')) { setErro('Informe um e-mail válido'); return }
     if (selecionados.size === 0) { setErro('Selecione pelo menos um cliente'); return }
+    if (senha && senha.length < 6) { setErro('A senha precisa ter pelo menos 6 caracteres'); return }
 
     setSalvando(true)
     setErro('')
@@ -50,12 +60,13 @@ export default function NovoUsuarioModal({ clientes, onClose }: {
           nome: nome.trim() || undefined,
           clienteIds: Array.from(selecionados),
           role,
+          senha: senha || undefined,
         }),
       })
       const json = await res.json()
       if (!res.ok || !json.ok) throw new Error(json.erro ?? 'falha ao criar usuário')
 
-      setResultado({ jaExistia: json.jaExistia, passwordResetLink: json.passwordResetLink, clientesConcedidos: json.clientesConcedidos })
+      setResultado({ jaExistia: json.jaExistia, senha: json.jaExistia ? undefined : senha, clientesConcedidos: json.clientesConcedidos })
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'falha ao criar usuário')
     } finally {
@@ -99,6 +110,19 @@ export default function NovoUsuarioModal({ clientes, onClose }: {
 
               <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--t2)', display: 'block', margin: '14px 0 6px' }}>Nome (opcional)</label>
               <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: João Silva" style={inputStyle} />
+
+              <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--t2)', display: 'block', margin: '14px 0 6px' }}>Senha (só usada se o e-mail ainda não tiver conta)</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input value={senha} onChange={(e) => setSenha(e.target.value)} placeholder="Mínimo 6 caracteres" style={{ ...inputStyle, fontFamily: 'monospace' }} />
+                <button
+                  onClick={() => setSenha(gerarSenhaAleatoria())}
+                  type="button"
+                  style={{
+                    padding: '0 14px', borderRadius: 8, fontSize: 11.5, fontWeight: 600, cursor: 'pointer', flexShrink: 0,
+                    background: 'transparent', border: '1px solid var(--border)', color: 'var(--t2)',
+                  }}
+                >Gerar</button>
+              </div>
 
               <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--t2)', display: 'block', margin: '14px 0 6px' }}>Nível de acesso</label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -188,26 +212,26 @@ export default function NovoUsuarioModal({ clientes, onClose }: {
                 </div>
               </div>
 
-              {resultado.passwordResetLink && (
+              {resultado.senha && (
                 <>
                   <p style={{ fontSize: 11.5, color: 'var(--t2)', margin: '0 0 6px' }}>
-                    Manda esse link pro usuário — ele define a própria senha (não temos envio de e-mail automático ainda):
+                    Repassa e-mail + senha pro usuário (não temos envio automático ainda):
                   </p>
                   <div style={{
                     padding: 12, borderRadius: 8, background: 'var(--bg-base)',
-                    border: '1px solid var(--border)', fontFamily: 'monospace', fontSize: 10.5,
+                    border: '1px solid var(--border)', fontFamily: 'monospace', fontSize: 12,
                     color: 'var(--t2)', wordBreak: 'break-all', lineHeight: 1.6,
                   }}>
-                    {resultado.passwordResetLink}
+                    {resultado.senha}
                   </div>
                 </>
               )}
 
               <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
-                {resultado.passwordResetLink && (
+                {resultado.senha && (
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(resultado.passwordResetLink!)
+                      navigator.clipboard.writeText(resultado.senha!)
                       setCopiado(true)
                       setTimeout(() => setCopiado(false), 1500)
                     }}
@@ -215,7 +239,7 @@ export default function NovoUsuarioModal({ clientes, onClose }: {
                       padding: '9px 16px', borderRadius: 8, fontSize: 12.5, cursor: 'pointer',
                       background: 'transparent', border: `1px solid ${copiado ? '#10B981' : 'var(--border)'}`,
                       color: copiado ? '#10B981' : 'var(--t2)',
-                    }}>{copiado ? 'Copiado ✓' : 'Copiar link'}</button>
+                    }}>{copiado ? 'Copiado ✓' : 'Copiar senha'}</button>
                 )}
                 <button onClick={onClose} style={{
                   padding: '9px 20px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',

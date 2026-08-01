@@ -27,6 +27,13 @@ export async function ehSuperAdmin(email: string): Promise<boolean> {
   return emails.includes(email)
 }
 
+/** Admin em pelo menos um cliente (não escopado a um partner específico) — libera criar clientes novos. */
+export async function ehAdminGeral(email: string): Promise<boolean> {
+  const snap = await getDbAdmin().doc('config/admins').get()
+  const emails = (snap.data()?.emails as string[] | undefined) ?? []
+  return emails.includes(email)
+}
+
 export async function ehAdminDoPartner(email: string, partnerId: string): Promise<boolean> {
   if (await ehSuperAdmin(email)) return true
   const snap = await getDbAdmin().collection('partners').doc(partnerId).collection('members').doc(email).get()

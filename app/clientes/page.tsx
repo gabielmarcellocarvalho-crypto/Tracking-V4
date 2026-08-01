@@ -10,25 +10,28 @@ import { useClientes } from '@/lib/data/partners'
 import { useAuth } from '@/lib/auth-context'
 import { useRouter } from 'next/navigation'
 
-/** Só o dono da plataforma vê a opção de criar usuário — checagem via rota
- * server porque config/superadmins não é legível pelo SDK client (de propósito). */
-function useSuperAdmin() {
+/** Resolve o nível de acesso do usuário logado (superadmin / admin geral) via
+ * rota server — config/superadmins e config/admins não são legíveis pelo SDK
+ * client de propósito. "Novo usuário" continua exclusivo de superadmin;
+ * "Novo cliente" libera pra quem for admin em pelo menos um cliente. */
+function useAcesso() {
   const { user } = useAuth()
   const [superAdmin, setSuperAdmin] = useState(false)
+  const [adminGeral, setAdminGeral] = useState(false)
 
   useEffect(() => {
-    if (!user) { setSuperAdmin(false); return }
+    if (!user) { setSuperAdmin(false); setAdminGeral(false); return }
     let cancelado = false
     user.getIdToken().then((idToken) =>
       fetch('/api/auth/whoami', { headers: { Authorization: `Bearer ${idToken}` } })
         .then((r) => r.json())
-        .then((j) => { if (!cancelado) setSuperAdmin(!!j.superAdmin) })
-        .catch(() => { if (!cancelado) setSuperAdmin(false) }),
+        .then((j) => { if (!cancelado) { setSuperAdmin(!!j.superAdmin); setAdminGeral(!!j.adminGeral) } })
+        .catch(() => { if (!cancelado) { setSuperAdmin(false); setAdminGeral(false) } }),
     )
     return () => { cancelado = true }
   }, [user])
 
-  return superAdmin
+  return { superAdmin, adminGeral }
 }
 
 function ClientesHeader() {
@@ -80,7 +83,7 @@ export default function ClientesPage() {
   const { clientes, reais, loading } = useClientes()
   const [modal, setModal] = useState(false)
   const [modalUsuario, setModalUsuario] = useState(false)
-  const souSuperAdmin = useSuperAdmin()
+  const { superAdmin: souSuperAdmin, adminGeral: souAdminGeral } = useAcesso()
 
   const ativos   = clientes.filter((c) => c.status === 'ativo')
   const inativos = clientes.filter((c) => c.status === 'inativo')
@@ -120,16 +123,18 @@ export default function ClientesPage() {
                   Novo usuário
                 </button>
               )}
-              <button
-                onClick={() => setModal(true)}
-                className="flex items-center gap-2 px-5 py-[10px] rounded-[9px] text-[13px] font-semibold text-white cursor-pointer transition-all duration-[180ms]"
-                style={{ background: 'var(--red)', boxShadow: '0 3px 12px rgba(200,16,46,.35)' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--red-h)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--red)'; e.currentTarget.style.transform = 'translateY(0)' }}
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" width={14} height={14}><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-                Novo cliente
-              </button>
+              {(souSuperAdmin || souAdminGeral) && (
+                <button
+                  onClick={() => setModal(true)}
+                  className="flex items-center gap-2 px-5 py-[10px] rounded-[9px] text-[13px] font-semibold text-white cursor-pointer transition-all duration-[180ms]"
+                  style={{ background: 'var(--red)', boxShadow: '0 3px 12px rgba(200,16,46,.35)' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--red-h)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--red)'; e.currentTarget.style.transform = 'translateY(0)' }}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" width={14} height={14}><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                  Novo cliente
+                </button>
+              )}
             </div>
           </motion.div>
 
