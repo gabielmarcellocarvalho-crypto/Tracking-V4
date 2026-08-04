@@ -8,6 +8,12 @@ import type { UsuarioJornada, EventoJornada } from '@/lib/demo-data'
 
 const DIA_MS = 24 * 60 * 60 * 1000
 
+export interface JanelaPeriodo { start: Date; end: Date }
+
+// Máximo de pontos numa série temporal — períodos maiores agrupam por semana
+// pra não estourar o gráfico (ex: um "Personalizado" de vários meses).
+const MAX_PONTOS_SERIE = 60
+
 export const ORIGEM_LABEL: Record<Origem, string> = {
   meta: 'Meta Ads',
   google: 'Google Ads',
@@ -96,14 +102,25 @@ export function agregarSaudeEventos(eventos: Evento[]): EventHealth[] {
 // ── Volume por dia (últimos 7 dias) ──────────────────────────────────────────
 const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
-export function agregarVolume7Dias(eventos: Evento[]) {
+export function agregarVolume7Dias(eventos: Evento[], janela: JanelaPeriodo | number = 7) {
+  const range: JanelaPeriodo = typeof janela === 'number'
+    ? { start: new Date(Date.now() - janela * DIA_MS), end: new Date() }
+    : janela
+
+  const corte = new Date(range.start).setHours(0, 0, 0, 0)
+  const ateFim = new Date(range.end).setHours(23, 59, 59, 999)
+  const totalDias = Math.max(1, Math.round((ateFim - corte) / DIA_MS) + 1)
+  const agrupaPorSemana = totalDias > MAX_PONTOS_SERIE
+  const passoMs = agrupaPorSemana ? 7 * DIA_MS : DIA_MS
+
   const dias: { dia: string; page_view: number; lead: number; checkout: number; compra: number }[] = []
-  for (let i = 6; i >= 0; i--) {
-    const inicio = new Date(Date.now() - i * DIA_MS).setHours(0, 0, 0, 0)
-    const fim = inicio + DIA_MS
+  for (let inicio = corte; inicio <= ateFim; inicio += passoMs) {
+    const fim = Math.min(inicio + passoMs, ateFim + 1)
     const doDia = eventos.filter((e) => e.ts >= inicio && e.ts < fim)
     dias.push({
-      dia: DIAS_SEMANA[new Date(inicio).getDay()],
+      dia: agrupaPorSemana
+        ? `${new Date(inicio).getDate().toString().padStart(2, '0')}/${(new Date(inicio).getMonth() + 1).toString().padStart(2, '0')}`
+        : DIAS_SEMANA[new Date(inicio).getDay()],
       page_view: doDia.filter((e) => e.tipo === 'page_view').length,
       lead:      doDia.filter((e) => e.tipo === 'lead').length,
       checkout:  doDia.filter((e) => e.tipo === 'checkout').length,
@@ -243,9 +260,15 @@ export function identidadeParaUsuarioJornada(ident: Identidade, eventos: Evento[
 // qualquer outra função deste arquivo).
 
 // ── Performance: KPIs e séries por template ──────────────────────────────────
-export function agregarPerformance(eventos: Evento[], dias = 30) {
-  const corte = Date.now() - dias * DIA_MS
-  const periodo = eventos.filter((e) => e.ts >= corte)
+export function agregarPerformance(eventos: Evento[], janela: JanelaPeriodo | number = 30) {
+  const agora = new Date()
+  const range: JanelaPeriodo = typeof janela === 'number'
+    ? { start: new Date(Date.now() - janela * DIA_MS), end: agora }
+    : janela
+
+  const corte = new Date(range.start).setHours(0, 0, 0, 0)
+  const ateFim = new Date(range.end).setHours(23, 59, 59, 999)
+  const periodo = eventos.filter((e) => e.ts >= corte && e.ts <= ateFim)
 
   const compras = periodo.filter((e) => e.tipo === 'compra')
   const leads = periodo.filter((e) => e.tipo === 'lead')
@@ -254,20 +277,30 @@ export function agregarPerformance(eventos: Evento[], dias = 30) {
 
   const receita = compras.reduce((s, e) => s + (e.valor ?? 0), 0)
 
-  // Série diária (7 pontos)
-  const diario: { dia: string; investimento: number; receita: number; roas: number; leads: number; cpl: number; contatos: number; cpm: number }[] = []
-  for (let i = 6; i >= 0; i--) {
-    const inicio = new Date(Date.now() - i * DIA_MS).setHours(0, 0, 0, 0)
-    const fim = inicio + DIA_MS
-    const doDia = periodo.filter((e) => e.ts >= inicio && e.ts < fim)
+  // Série ao longo do período — um ponto por dia, ou por semana quando o
+  // período é longo demais pra caber em pontos diários legíveis.
+  const totalDias = Math.max(1, Math.round((ateFim - corte) / DIA_MS) + 1)
+  const agrupaPorSemana = totalDias > MAX_PONTOS_SERIE
+  const passoMs = agrupaPorSemana ? 7 * DIA_MS : DIA_MS
+
+  const diario: { dia: string; dataISO: string; investimento: number; receita: number; roas: number; leads: number; cpl: number; contatos: number; cpm: number }[] = []
+  for (let inicio = corte; inicio <= ateFim; inicio += passoMs) {
+    const fim = Math.min(inicio + passoMs, ateFim + 1)
+    const doPeriodo = periodo.filter((e) => e.ts >= inicio && e.ts < fim)
+    const dataInicio = new Date(inicio)
     diario.push({
-      dia: DIAS_SEMANA[new Date(inicio).getDay()],
-      investimento: 0, // vem da API de ads quando conectada
-      receita: doDia.filter((e) => e.tipo === 'compra').reduce((s, e) => s + (e.valor ?? 0), 0),
+      dia: agrupaPorSemana
+        ? `${dataInicio.getDate().toString().padStart(2, '0')}/${(dataInicio.getMonth() + 1).toString().padStart(2, '0')}`
+        : DIAS_SEMANA[dataInicio.getDay()],
+      // Início do bucket em YYYY-MM-DD — usado pra casar com gasto real de
+      // ads (buscado por data), já que `dia` é só o rótulo de exibição.
+      dataISO: dataInicio.toISOString().slice(0, 10),
+      investimento: 0, // preenchido pelo caller quando há conexão de Ads
+      receita: doPeriodo.filter((e) => e.tipo === 'compra').reduce((s, e) => s + (e.valor ?? 0), 0),
       roas: 0,
-      leads: doDia.filter((e) => e.tipo === 'lead').length,
+      leads: doPeriodo.filter((e) => e.tipo === 'lead').length,
       cpl: 0,
-      contatos: doDia.filter((e) => e.tipo === 'lead').length,
+      contatos: doPeriodo.filter((e) => e.tipo === 'lead').length,
       cpm: 0,
     })
   }
@@ -314,6 +347,10 @@ export function agregarPerformance(eventos: Evento[], dias = 30) {
       totalEventos: periodo.length,
     },
     diario,
+    // Largura de cada bucket de `diario`, em dias — 1 (diário) ou 7 (semanal
+    // em períodos longos). O caller usa isso pra somar gasto real de ads por
+    // bucket a partir de `dataISO`.
+    passoDias: agrupaPorSemana ? 7 : 1,
     funil: [
       { label: 'Visitou',  count: views.length,     pct: 100,                              color: '#3B82F6' },
       { label: 'Lead',     count: leads.length,     pct: pct(leads.length, views.length),  color: '#F59E0B' },

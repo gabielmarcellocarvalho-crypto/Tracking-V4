@@ -39,3 +39,10 @@ export async function ehAdminDoPartner(email: string, partnerId: string): Promis
   const snap = await getDbAdmin().collection('partners').doc(partnerId).collection('members').doc(email).get()
   return snap.exists && snap.data()?.role === 'admin'
 }
+
+/** Admin OU viewer desse partner — libera rotas só-leitura (ex: métricas de Ads). */
+export async function ehMembroDoPartner(email: string, partnerId: string): Promise<boolean> {
+  if (await ehSuperAdmin(email)) return true
+  const snap = await getDbAdmin().collection('partners').doc(partnerId).collection('members').doc(email).get()
+  return snap.exists
+}

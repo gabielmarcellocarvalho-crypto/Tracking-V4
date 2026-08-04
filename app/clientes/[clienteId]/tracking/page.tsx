@@ -11,6 +11,7 @@ import DashboardHeader from '@/components/tracking/DashboardHeader'
 import EventHealthCard from '@/components/tracking/EventHealthCard'
 import { useCliente } from '@/lib/data/partners'
 import { useEventos } from '@/lib/data/colecoes'
+import { useDateRange } from '@/lib/date-range-context'
 import {
   agregarSaudeEventos, agregarVolume7Dias, agregarPorOrigem, agregarPaginas, agregarLogs,
 } from '@/lib/data/agregacoes'
@@ -152,10 +153,13 @@ export default function TrackingPage({ params }: { params: Promise<{ clienteId: 
   const { clienteId } = use(params)
   const { cliente, isDemo } = useCliente(clienteId)
   const { eventos } = useEventos(isDemo ? undefined : clienteId)
+  const { range: periodo } = useDateRange()
 
   const usarDemo = isDemo
 
-  // Dados reais agregados dos eventos do Firestore — ou demo quando vazio
+  // Dados reais agregados dos eventos do Firestore — ou demo quando vazio.
+  // Saúde do tracking fica de fora do filtro de período (é sobre "está
+  // disparando agora", não sobre histórico); o resto respeita o período.
   const dados = useMemo(() => {
     if (usarDemo) {
       return {
@@ -166,14 +170,17 @@ export default function TrackingPage({ params }: { params: Promise<{ clienteId: 
         logs: eventLogs,
       }
     }
+    const inicio = new Date(periodo.start).setHours(0, 0, 0, 0)
+    const fim = new Date(periodo.end).setHours(23, 59, 59, 999)
+    const noPeriodo = eventos.filter((e) => e.ts >= inicio && e.ts <= fim)
     return {
       saude: agregarSaudeEventos(eventos),
-      volume: agregarVolume7Dias(eventos),
-      porOrigem: agregarPorOrigem(eventos),
-      paginas: agregarPaginas(eventos),
-      logs: agregarLogs(eventos),
+      volume: agregarVolume7Dias(eventos, periodo),
+      porOrigem: agregarPorOrigem(noPeriodo),
+      paginas: agregarPaginas(noPeriodo),
+      logs: agregarLogs(noPeriodo),
     }
-  }, [usarDemo, eventos])
+  }, [usarDemo, eventos, periodo])
 
   const [selectedEventId, setSelectedEventId] = useState<string>('lead')
   const selectedEvent = dados.saude.find(e => e.id === selectedEventId)
@@ -222,7 +229,7 @@ export default function TrackingPage({ params }: { params: Promise<{ clienteId: 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
 
           {/* Volume por dia */}
-          <Card title="Volume de eventos · últimos 7 dias" sub="Cada linha representa um tipo de evento">
+          <Card title={`Volume de eventos · ${periodo.label}`} sub="Cada linha representa um tipo de evento">
             <ResponsiveContainer width="100%" height={210}>
               <LineChart data={dados.volume}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />

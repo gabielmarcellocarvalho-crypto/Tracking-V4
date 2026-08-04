@@ -1,16 +1,14 @@
 'use client'
 
-import { useState } from 'react'
 import type { ClienteTipo } from '@/lib/demo-data'
-import DateRangePicker, { type DateRange } from './DateRangePicker'
+import { useDateRange } from '@/lib/date-range-context'
+import DateRangePicker from './DateRangePicker'
 
 const tipoConfig: Record<ClienteTipo, { label: string; bg: string; color: string }> = {
   ecommerce: { label: 'E-COMMERCE', bg: 'rgba(200,16,46,.1)',  color: '#C8102E' },
   leads:     { label: 'LEADS',      bg: 'rgba(59,130,246,.1)', color: '#3B82F6' },
   mensagens: { label: 'MENSAGENS',  bg: 'rgba(245,158,11,.1)', color: '#F59E0B' },
 }
-
-function addDays(d: Date, n: number) { const r = new Date(d); r.setDate(r.getDate() + n); return r }
 
 const BellIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="w-[15px] h-[15px]">
@@ -25,12 +23,7 @@ export interface DashboardHeaderProps {
 
 export default function DashboardHeader({ clienteName, clienteTipo = 'leads' }: DashboardHeaderProps) {
   const tipo = tipoConfig[clienteTipo]
-
-  const [dateRange, setDateRange] = useState<DateRange>(() => {
-    const end   = new Date(); end.setHours(0, 0, 0, 0)
-    const start = addDays(end, -29)
-    return { start, end, label: '30 dias' }
-  })
+  const { range: dateRange, setRange: setDateRange } = useDateRange()
 
   const btnBase: React.CSSProperties = {
     display: 'flex', alignItems: 'center', gap: 7,

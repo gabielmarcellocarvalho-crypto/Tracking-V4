@@ -8,6 +8,8 @@ import { db } from '@/lib/firebase'
 import DashboardHeader from '@/components/tracking/DashboardHeader'
 import TemplateSelect from '@/components/performance/TemplateSelect'
 import { useCliente } from '@/lib/data/partners'
+import { useDateRange } from '@/lib/date-range-context'
+import { useMetaAdsGasto } from '@/lib/data/meta-ads-metrics'
 import { useEventos } from '@/lib/data/colecoes'
 import { agregarPerformance } from '@/lib/data/agregacoes'
 import type { PerformanceTemplate } from '@/lib/demo-data-performance'
@@ -58,14 +60,46 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
   const { clienteId } = use(params)
   const { cliente, isDemo } = useCliente(clienteId)
   const { eventos } = useEventos(isDemo ? undefined : clienteId)
+  const { range: periodo } = useDateRange()
 
   const usarDemo = isDemo
 
-  // Agregação real dos eventos do período (30 dias) — null quando cliente é demo
-  const agregado = useMemo(
-    () => (usarDemo ? null : agregarPerformance(eventos, 30)),
-    [usarDemo, eventos],
+  // Agregação real dos eventos dentro do período selecionado — null quando cliente é demo
+  const agregadoBase = useMemo(
+    () => (usarDemo ? null : agregarPerformance(eventos, periodo)),
+    [usarDemo, eventos, periodo],
   )
+
+  // Gasto real do Meta Ads (Conexões → "Meta Ads (Métricas)"), pro mesmo período
+  const { gasto: metaGasto } = useMetaAdsGasto(usarDemo ? undefined : clienteId, periodo)
+
+  // Injeta o gasto real de Ads na agregação de eventos — sem isso,
+  // investimento/ROAS ficam sempre zerados (não vêm do tracking próprio)
+  const agregado = useMemo(() => {
+    if (!agregadoBase) return null
+    if (!metaGasto) return agregadoBase
+
+    const addDays = (d: Date, n: number) => { const r = new Date(d); r.setDate(r.getDate() + n); return r }
+    const diario = agregadoBase.diario.map((d) => {
+      let investimento = 0
+      const inicioBucket = new Date(`${d.dataISO}T00:00:00`)
+      for (let i = 0; i < agregadoBase.passoDias; i++) {
+        const chave = addDays(inicioBucket, i).toISOString().slice(0, 10)
+        investimento += metaGasto.porData.get(chave) ?? 0
+      }
+      return { ...d, investimento, roas: investimento > 0 ? d.receita / investimento : 0 }
+    })
+
+    return {
+      ...agregadoBase,
+      diario,
+      kpis: {
+        ...agregadoBase.kpis,
+        investimento: metaGasto.total,
+        roas: metaGasto.total > 0 ? agregadoBase.kpis.receita / metaGasto.total : 0,
+      },
+    }
+  }, [agregadoBase, metaGasto])
 
   // Shapes específicos de cada template, a partir da mesma agregação
   const real = useMemo(() => {
@@ -219,7 +253,7 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
           display: 'flex', alignItems: 'center', gap: 20,
         }}>
           <span style={{ fontSize: 10.5, color: 'var(--t3)', fontWeight: 500 }}>
-            Período: <span style={{ color: 'var(--t2)', fontWeight: 600 }}>Últimos 30 dias</span>
+            Período: <span style={{ color: 'var(--t2)', fontWeight: 600 }}>{periodo.label}</span>
           </span>
           <span style={{ width: 1, height: 12, background: 'var(--br)' }} />
           <span style={{ fontSize: 10.5, color: 'var(--t3)', fontWeight: 500 }}>
