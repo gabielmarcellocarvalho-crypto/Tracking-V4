@@ -36,6 +36,11 @@ const LOGOS: Record<IntegrationPlataforma, LogoDef> = {
     viewBox: '0 0 24 24',
     path: 'M3.9998 22.9291C1.7908 22.9291 0 21.1383 0 18.9293s1.7908-3.9998 3.9998-3.9998 3.9998 1.7908 3.9998 3.9998-1.7908 3.9998-3.9998 3.9998zm19.4643-6.0004L15.4632 3.072C14.3586 1.1587 11.9121.5028 9.9988 1.6074S7.4295 5.1585 8.5341 7.0718l8.0009 13.8567c1.1046 1.9133 3.5511 2.5679 5.4644 1.4646 1.9134-1.1046 2.568-3.5511 1.4647-5.4644zM7.5137 4.8438L1.5645 15.1484A4.5 4.5 0 0 1 4 14.4297c2.5597-.0075 4.6248 2.1585 4.4941 4.7148l3.2168-5.5723-3.6094-6.25c-.4499-.7793-.6322-1.6394-.5878-2.4784z',
   },
+  // Mesma marca do card acima (Enhanced Conversions) — é o mesmo Google Ads, só uma API diferente (Reporting em vez de Enhanced Conversions)
+  'google-ads': {
+    viewBox: '0 0 24 24',
+    path: 'M3.9998 22.9291C1.7908 22.9291 0 21.1383 0 18.9293s1.7908-3.9998 3.9998-3.9998 3.9998 1.7908 3.9998 3.9998-1.7908 3.9998-3.9998 3.9998zm19.4643-6.0004L15.4632 3.072C14.3586 1.1587 11.9121.5028 9.9988 1.6074S7.4295 5.1585 8.5341 7.0718l8.0009 13.8567c1.1046 1.9133 3.5511 2.5679 5.4644 1.4646 1.9134-1.1046 2.568-3.5511 1.4647-5.4644zM7.5137 4.8438L1.5645 15.1484A4.5 4.5 0 0 1 4 14.4297c2.5597-.0075 4.6248 2.1585 4.4941 4.7148l3.2168-5.5723-3.6094-6.25c-.4499-.7793-.6322-1.6394-.5878-2.4784z',
+  },
   ga4: {
     viewBox: '0 0 24 24',
     path: 'M22.84 2.9982v17.9987c.0086 1.6473-1.3197 2.9897-2.967 2.9984a2.9808 2.9808 0 01-.3677-.0208c-1.528-.226-2.6477-1.5558-2.6105-3.1V3.1204c-.0369-1.5458 1.0856-2.8762 2.6157-3.1 1.6361-.1915 3.1178.9796 3.3093 2.6158.014.1201.0208.241.0202.3619zM4.1326 18.0548c-1.6417 0-2.9726 1.331-2.9726 2.9726C1.16 22.6691 2.4909 24 4.1326 24s2.9726-1.3309 2.9726-2.9726-1.331-2.9726-2.9726-2.9726zm7.8728-9.0098c-.0171 0-.0342 0-.0513.0003-1.6495.0904-2.9293 1.474-2.891 3.1256v7.9846c0 2.167.9535 3.4825 2.3505 3.763 1.6118.3266 3.1832-.7152 3.5098-2.327.04-.1974.06-.3983.0593-.5998v-8.9585c.003-1.6474-1.33-2.9852-2.9773-2.9882z',
@@ -95,16 +100,16 @@ const PLATAFORMAS: {
     id: 'meta-ads',
     nome: 'Meta Ads (Métricas)',
     cor: '#0866FF',
-    desc: 'Puxa gasto, campanhas e resultados direto da conta de anúncios via Marketing API — diferente do CAPI acima (que só envia conversão pra dentro do Meta). Alimenta o Performance com os números oficiais da plataforma, cruzados com os dados primários daqui. Recomendado usar um token de System User (Business Manager), que não expira.',
+    desc: 'Puxa gasto, campanhas e resultados direto da conta de anúncios via Marketing API — diferente do CAPI acima (que só envia conversão pra dentro do Meta). Alimenta o Performance com os números oficiais da plataforma, cruzados com os dados primários daqui. A maioria dos clientes está dentro da nossa Business Manager — nesse caso só o ID da conta de anúncios já basta, o token de acesso é compartilhado automaticamente pelo servidor.',
     campos: [
       { id: 'adAccountId', label: 'ID da conta de anúncios', placeholder: 'act_1234567890' },
-      { id: 'accessToken', label: 'Access Token (System User) — obrigatório', placeholder: 'EAAG...', secreto: true },
+      { id: 'accessToken', label: 'Access Token próprio (só se a conta não estiver na nossa BM)', placeholder: 'Deixe em branco para usar o token compartilhado da BM', secreto: true },
     ],
     passos: [
-      'Business Manager → Configurações do negócio → Usuários → Usuários do sistema → Criar usuário de sistema',
+      'Se a conta de anúncios do cliente já está na nossa Business Manager: só cole o ID da conta acima e salve — o token é compartilhado automaticamente.',
+      'Se for uma conta fora da nossa BM, ela precisa de um token próprio: Business Manager do cliente → Usuários do sistema → Criar usuário de sistema',
       'Atribuir acesso à conta de anúncios do cliente (permissão de leitura já basta)',
-      'Gerar token → marcar o escopo "ads_read" → copiar o token (não expira, mas guarde com segurança)',
-      'ID da conta de anúncios fica em Configurações do negócio → Contas de anúncios (formato act_XXXXXXXXXX)',
+      'Gerar token → marcar o escopo "ads_read" → colar no campo Access Token acima',
     ],
   },
   {
@@ -121,6 +126,20 @@ const PLATAFORMAS: {
       'Google Ads → Ferramentas → Configuração → Centro de API → Developer Token',
       'Anote o Customer ID da conta (canto superior direito)',
       'O envio exige OAuth (etapa posterior) — os payloads ficam prontos na fila',
+    ],
+  },
+  {
+    id: 'google-ads',
+    nome: 'Google Ads (Métricas)',
+    cor: '#34A853',
+    desc: 'Puxa gasto, campanhas e resultados direto da conta via Google Ads API — diferente do card acima (que só envia conversão pro Google). A maioria dos clientes está dentro da nossa MCC — nesse caso só o Customer ID já basta, as credenciais são compartilhadas automaticamente pelo servidor.',
+    campos: [
+      { id: 'customerId', label: 'Customer ID', placeholder: 'Ex: 1234567890 (sem hífens)' },
+    ],
+    passos: [
+      'Se a conta do cliente já está na nossa MCC: só cole o Customer ID acima e salve — as credenciais são compartilhadas automaticamente.',
+      'Customer ID fica no canto superior direito do Google Ads, sem hífens',
+      'Conta fora da nossa MCC precisa de um vínculo próprio via convite de gerente — combine com quem administra antes de tentar conectar',
     ],
   },
   {
@@ -269,6 +288,66 @@ function MetaConnectionStatus() {
   )
 }
 
+function MetaBmStatusBadge() {
+  const [status, setStatus] = useState<'carregando' | 'configurado' | 'ausente'>('carregando')
+
+  useEffect(() => {
+    fetch('/api/meta/bm-status')
+      .then((r) => r.json())
+      .then((d) => setStatus(d.configurado ? 'configurado' : 'ausente'))
+      .catch(() => setStatus('ausente'))
+  }, [])
+
+  if (status === 'carregando') return null
+
+  const configurado = status === 'configurado'
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 8,
+      padding: '10px 12px', borderRadius: 8, marginBottom: 12,
+      background: configurado ? 'rgba(16,185,129,.1)' : 'rgba(245,158,11,.08)',
+      border: `1px solid ${configurado ? 'rgba(16,185,129,.25)' : 'rgba(245,158,11,.3)'}`,
+    }}>
+      <span style={{ width: 7, height: 7, borderRadius: '50%', background: configurado ? '#10B981' : '#F59E0B', flexShrink: 0 }} />
+      <span style={{ fontSize: 12, color: 'var(--t2)' }}>
+        {configurado
+          ? 'Token compartilhado da BM configurado no servidor — só o ID da conta já basta.'
+          : 'Token compartilhado da BM ainda não configurado no servidor — por enquanto, use um Access Token próprio abaixo.'}
+      </span>
+    </div>
+  )
+}
+
+function GoogleAdsMccStatusBadge() {
+  const [status, setStatus] = useState<'carregando' | 'configurado' | 'ausente'>('carregando')
+
+  useEffect(() => {
+    fetch('/api/google-ads/mcc-status')
+      .then((r) => r.json())
+      .then((d) => setStatus(d.configurado ? 'configurado' : 'ausente'))
+      .catch(() => setStatus('ausente'))
+  }, [])
+
+  if (status === 'carregando') return null
+
+  const configurado = status === 'configurado'
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 8,
+      padding: '10px 12px', borderRadius: 8, marginBottom: 12,
+      background: configurado ? 'rgba(16,185,129,.1)' : 'rgba(245,158,11,.08)',
+      border: `1px solid ${configurado ? 'rgba(16,185,129,.25)' : 'rgba(245,158,11,.3)'}`,
+    }}>
+      <span style={{ width: 7, height: 7, borderRadius: '50%', background: configurado ? '#10B981' : '#F59E0B', flexShrink: 0 }} />
+      <span style={{ fontSize: 12, color: 'var(--t2)' }}>
+        {configurado
+          ? 'Credenciais compartilhadas da MCC configuradas no servidor — só o Customer ID já basta.'
+          : 'Credenciais da MCC ainda não configuradas no servidor — essa conexão não funciona por enquanto.'}
+      </span>
+    </div>
+  )
+}
+
 function ShopifyWebhookInfo({ clienteId }: { clienteId: string }) {
   const [copiado, setCopiado] = useState(false)
   const origem = typeof window !== 'undefined' ? window.location.origin : 'https://SEU-DOMINIO.vercel.app'
@@ -388,8 +467,10 @@ function CardConexao({ plataforma, clienteId, camposSalvos, statusSalvo, isDemo 
       {aberto && (
         <div style={{ padding: '0 18px 18px', borderTop: '1px solid var(--br-s)' }}>
           {plataforma.id === 'meta' && <div style={{ marginTop: 14 }}><MetaConnectionStatus /></div>}
+          {plataforma.id === 'meta-ads' && <div style={{ marginTop: 14 }}><MetaBmStatusBadge /></div>}
+          {plataforma.id === 'google-ads' && <div style={{ marginTop: 14 }}><GoogleAdsMccStatusBadge /></div>}
           {plataforma.id === 'shopify' && <div style={{ marginTop: 14 }}><ShopifyWebhookInfo clienteId={clienteId} /></div>}
-          <div style={{ display: 'flex', gap: 20, marginTop: plataforma.id === 'meta' || plataforma.id === 'shopify' ? 0 : 14, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 20, marginTop: ['meta', 'meta-ads', 'google-ads', 'shopify'].includes(plataforma.id) ? 0 : 14, flexWrap: 'wrap' }}>
             {/* Campos */}
             <div style={{ flex: 1, minWidth: 260, display: 'flex', flexDirection: 'column', gap: 10 }}>
               {plataforma.campos.map((c) => (

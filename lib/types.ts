@@ -202,7 +202,7 @@ export interface Conversao {
 }
 
 // ── Integração de plataforma (doc raiz em partners/{id}/integrations/{plataforma}) ─
-export type IntegrationPlataforma = 'meta' | 'meta-ads' | 'google' | 'ga4' | 'shopify' | 'nuvemshop' | 'tray'
+export type IntegrationPlataforma = 'meta' | 'meta-ads' | 'google' | 'google-ads' | 'ga4' | 'shopify' | 'nuvemshop' | 'tray'
 export type IntegrationStatus     = 'desconectado' | 'configurado'
 
 export interface Integration {
