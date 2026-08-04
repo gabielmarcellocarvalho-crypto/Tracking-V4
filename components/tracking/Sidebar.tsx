@@ -14,6 +14,7 @@ const icons = {
   mapa:       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px] shrink-0"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>,
   agente:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px] shrink-0"><path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-8a3 3 0 0 1 3-3h1V6a4 4 0 0 1 4-4z"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/></svg>,
   conexoes:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px] shrink-0"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><line x1="8" y1="12" x2="16" y2="12"/></svg>,
+  midia:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px] shrink-0"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>,
   meta:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px] shrink-0"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>,
   google:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px] shrink-0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
   ga4:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px] shrink-0"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
@@ -115,13 +116,16 @@ export default function Sidebar({ clienteId }: { clienteId?: string }) {
           <SectionLabel>Análise</SectionLabel>
           <NavItem label="Performance"      href={`${base}/performance`} icon={icons.performance} active={isActive(`${base}/performance`)} />
           <NavItem label="Jornada do Usuário" href={`${base}/jornada`}  icon={icons.jornada}     active={isActive(`${base}/jornada`)} />
-          <NavItem label="Mapa de Leads"    href={`${base}/mapa`}       icon={icons.mapa}        active={isActive(`${base}/mapa`)} />
           <NavItem label="Agente IA"        href={`${base}/agente`}     icon={icons.agente}      active={isActive(`${base}/agente`)} />
 
           <SectionLabel>Tracking</SectionLabel>
+          <NavItem label="Leads"      href={`${base}/mapa`}       icon={icons.mapa}       active={isActive(`${base}/mapa`)} />
           <NavItem label="Eventos"    href={`${base}/tracking`}   icon={icons.tracking}   active={isActive(`${base}/tracking`)} />
           <NavItem label="UTMs"       href={`${base}/utms`}       icon={icons.utms}       active={isActive(`${base}/utms`)} />
           <NavItem label="Conversões" href={`${base}/conversoes`} icon={icons.conversoes} active={isActive(`${base}/conversoes`)} />
+
+          <SectionLabel>Gestor de Mídia</SectionLabel>
+          <NavItem label="Gestor de Mídia" href={`${base}/midia`} icon={icons.midia} active={isActive(`${base}/midia`)} />
 
           <SectionLabel>Configuração</SectionLabel>
           <NavItem label="Conexões" href={`${base}/conexoes`} icon={icons.conexoes} active={isActive(`${base}/conexoes`)} />
