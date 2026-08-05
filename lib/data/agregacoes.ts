@@ -434,11 +434,11 @@ export interface GrowthPackLinhaMes {
   mes: string   // 'AAAA-MM'
   label: string // 'Janeiro' etc
   realizado: Record<string, number>
-  // true quando algum campo do funil no canal 'geral' veio de estimativa de
-  // Ads (Meta/Google) em vez do evento próprio rastreado no site — Meta e
-  // Google podem reportar a MESMA conversão (ex: um usuário clicou nos dois
-  // anúncios antes de comprar), então "geral" usa o MAIOR valor entre as
-  // fontes em vez de somar, pra não contar a mesma venda duas vezes.
+  // true quando o canal 'geral' inclui algum valor de funil vindo do Meta ou
+  // Google (não só do site) — 'geral' SOMA site + Meta + Google (decisão do
+  // usuário), o que pode contar a mesma conversão mais de uma vez se ela foi
+  // atribuída por mais de uma plataforma. Este flag só avisa que a soma
+  // inclui dado de Ads, não corrige a sobreposição.
   estimativaAds?: boolean
 }
 
@@ -521,13 +521,15 @@ function calcularLinhaGrowthPack(
       addToCart = googleTotal.addToCart; checkout = googleTotal.checkout
       purchase = googleTotal.purchase; faturamento = googleTotal.faturamento
     } else {
-      // 'geral' — maior valor entre site/Meta/Google por métrica, nunca soma
-      sessoes = Math.max(views, metaTotal.sessoes, googleTotal.clicks)
-      addToCart = Math.max(metaTotal.addToCart, googleTotal.addToCart)
-      checkout = Math.max(checkoutsSite, metaTotal.checkout, googleTotal.checkout)
-      purchase = Math.max(comprasSite.length, metaTotal.purchase, googleTotal.purchase)
-      faturamento = Math.max(faturamentoSite, metaTotal.faturamento, googleTotal.faturamento)
-      estimativaAds = sessoes > views || checkout > checkoutsSite || purchase > comprasSite.length || faturamento > faturamentoSite
+      // 'geral' — soma site + Meta + Google (decisão explícita do usuário:
+      // prioriza ver o total consolidado do período em vez de proteger
+      // contra dupla contagem entre plataformas — risco aceito).
+      sessoes = views + metaTotal.sessoes + googleTotal.clicks
+      addToCart = metaTotal.addToCart + googleTotal.addToCart
+      checkout = checkoutsSite + metaTotal.checkout + googleTotal.checkout
+      purchase = comprasSite.length + metaTotal.purchase + googleTotal.purchase
+      faturamento = faturamentoSite + metaTotal.faturamento + googleTotal.faturamento
+      estimativaAds = metaTotal.checkout + metaTotal.purchase + googleTotal.checkout + googleTotal.purchase > 0
     }
     realizado = {
       investimento, alcance,

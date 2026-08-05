@@ -31,6 +31,19 @@ function labelMes(mes: string) {
   return `${nomes[Number(m) - 1]} de ${ano}`
 }
 
+// Precisa ficar FORA de ItemFormModal: um componente definido dentro do
+// corpo de outro componente é recriado (nova identidade) a cada re-render —
+// como o formulário re-renderiza a cada tecla digitada, isso desmontava e
+// remontava o <input>, tirando o foco a cada letra.
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label style={{ fontSize: 10.5, color: 'var(--t2)', display: 'block', marginBottom: 4 }}>{label}</label>
+      {children}
+    </div>
+  )
+}
+
 function ItemFormModal({
   clienteId, itemAtual, funil, onClose,
 }: {
@@ -70,12 +83,6 @@ function ItemFormModal({
     width: '100%', padding: '8px 10px', borderRadius: 7, fontSize: 12.5,
     background: 'var(--bg-base)', border: '1px solid var(--border)', color: 'var(--t1)', outline: 'none',
   }
-  const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <div>
-      <label style={{ fontSize: 10.5, color: 'var(--t2)', display: 'block', marginBottom: 4 }}>{label}</label>
-      {children}
-    </div>
-  )
 
   return (
     <div style={{
@@ -97,8 +104,14 @@ function ItemFormModal({
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
-          <Field label="Data início"><input type="date" value={form.dataInicio} onChange={(e) => set('dataInicio', e.target.value)} style={inputStyle} /></Field>
-          <Field label="Data fim"><input type="date" value={form.dataFim} onChange={(e) => set('dataFim', e.target.value)} style={inputStyle} /></Field>
+          <Field label="Data início"><input type="date" className="pm-date-vermelho" value={form.dataInicio} onChange={(e) => set('dataInicio', e.target.value)} style={inputStyle} /></Field>
+          <Field label="Data fim"><input type="date" className="pm-date-vermelho" value={form.dataFim} onChange={(e) => set('dataFim', e.target.value)} style={inputStyle} /></Field>
+          <style>{`
+            .pm-date-vermelho::-webkit-calendar-picker-indicator {
+              filter: invert(13%) sepia(94%) saturate(7151%) hue-rotate(356deg) brightness(90%) contrast(119%);
+              cursor: pointer;
+            }
+          `}</style>
           <Field label="Veículo">
             <select value={form.veiculo} onChange={(e) => set('veiculo', e.target.value as PlanoMidiaVeiculo)} style={inputStyle}>
               <option value="meta">Meta Ads</option>

@@ -371,7 +371,7 @@ export default function VisaoGeralGrowthPack({ clienteId, clienteTipo, isDemo }:
                     {linha.label}
                     {linha.estimativaAds && (
                       <span
-                        title="Add to Cart/Checkout/Purchase/Faturamento deste mês vieram de estimativa do Meta ou Google (maior valor entre as fontes) — não é o mesmo que evento próprio rastreado no site."
+                        title="Add to Cart/Checkout/Purchase/Faturamento deste mês somam site + Meta + Google — se a mesma venda foi atribuída por mais de uma plataforma, ela pode estar contada mais de uma vez."
                         style={{ marginLeft: 6, fontSize: 10, color: '#F59E0B', cursor: 'help' }}
                       >
                         ⚠
