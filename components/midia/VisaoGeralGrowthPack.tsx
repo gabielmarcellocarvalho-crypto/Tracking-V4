@@ -261,7 +261,17 @@ export default function VisaoGeralGrowthPack({ clienteId, clienteTipo, isDemo }:
               const projetado = salvo?.projetado ?? {}
               return (
                 <tr key={linha.mes}>
-                  <td style={{ ...tdStyle, textAlign: 'left', fontWeight: 600, color: 'var(--t1)' }}>{linha.label}</td>
+                  <td style={{ ...tdStyle, textAlign: 'left', fontWeight: 600, color: 'var(--t1)' }}>
+                    {linha.label}
+                    {linha.estimativaAds && (
+                      <span
+                        title="Add to Cart/Checkout/Purchase/Faturamento deste mês vieram de estimativa do Meta ou Google (maior valor entre as fontes) — não é o mesmo que evento próprio rastreado no site."
+                        style={{ marginLeft: 6, fontSize: 10, color: '#F59E0B', cursor: 'help' }}
+                      >
+                        ⚠
+                      </span>
+                    )}
+                  </td>
                   {colunas.map((c) => {
                     const valor = c.fonte === 'manual' ? (manual[c.key] ?? 0) : linha.realizado[c.key]
                     const meta = projetado[c.key]

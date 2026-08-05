@@ -421,17 +421,43 @@ export function gerarAlertas(eventos: Evento[]): Alerta[] {
 export type GrowthPackFunil = 'ecommerce' | 'leadsFunil'
 export type GrowthPackCanal = 'geral' | 'meta' | 'google'
 
-export interface MetricasAdsMes { spend: number; reach: number; clicks: number }
+export interface MetricasAdsMes {
+  spend: number; reach: number; clicks: number
+  sessoes: number; addToCart: number; checkout: number; purchase: number; faturamento: number
+}
+export interface MetricasAdsMesGoogle {
+  spend: number; impressions: number; clicks: number
+  addToCart: number; checkout: number; purchase: number; faturamento: number
+}
 
 export interface GrowthPackLinhaMes {
   mes: string   // 'AAAA-MM'
   label: string // 'Janeiro' etc
   realizado: Record<string, number>
+  // true quando algum campo do funil no canal 'geral' veio de estimativa de
+  // Ads (Meta/Google) em vez do evento próprio rastreado no site — Meta e
+  // Google podem reportar a MESMA conversão (ex: um usuário clicou nos dois
+  // anúncios antes de comprar), então "geral" usa o MAIOR valor entre as
+  // fontes em vez de somar, pra não contar a mesma venda duas vezes.
+  estimativaAds?: boolean
 }
 
 const MESES_PT_LONGO = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
 
-export interface MetricasAdsMesGoogle { spend: number; impressions: number; clicks: number }
+const ADS_MES_ZERADO: MetricasAdsMes = { spend: 0, reach: 0, clicks: 0, sessoes: 0, addToCart: 0, checkout: 0, purchase: 0, faturamento: 0 }
+const ADS_MES_ZERADO_GOOGLE: MetricasAdsMesGoogle = { spend: 0, impressions: 0, clicks: 0, addToCart: 0, checkout: 0, purchase: 0, faturamento: 0 }
+
+function somarMes<T extends object>(porDia: Map<string, T> | undefined, inicioMes: Date, fimMes: Date, zerado: T): T {
+  const total: Record<string, number> = { ...zerado } as unknown as Record<string, number>
+  if (porDia) {
+    for (let d = new Date(inicioMes); d < fimMes; d.setDate(d.getDate() + 1)) {
+      const dia = porDia.get(d.toISOString().slice(0, 10)) as unknown as Record<string, number> | undefined
+      if (!dia) continue
+      for (const k of Object.keys(total)) total[k] += dia[k] ?? 0
+    }
+  }
+  return total as unknown as T
+}
 
 export function agregarGrowthPackAno(
   eventos: Evento[],
@@ -451,48 +477,67 @@ export function agregarGrowthPackAno(
     const fimMes = new Date(ano, mes + 1, 1)
     const doMes = doCanal.filter((e) => e.ts >= inicioMes.getTime() && e.ts < fimMes.getTime())
 
+    const metaMes = somarMes(metaAdsPorDia, inicioMes, fimMes, ADS_MES_ZERADO)
+    const googleMes = somarMes(googleAdsPorDia, inicioMes, fimMes, ADS_MES_ZERADO_GOOGLE)
+
+    // Investimento/alcance/cliques são aditivos de verdade (gasto no Meta e
+    // no Google são reais e distintos) — soma sem risco de duplicar.
     let investimento = 0, alcance = 0, cliques = 0
-    for (let d = new Date(inicioMes); d < fimMes; d.setDate(d.getDate() + 1)) {
-      const chave = d.toISOString().slice(0, 10)
-      if (usaMeta && metaAdsPorDia) {
-        const m = metaAdsPorDia.get(chave)
-        if (m) { investimento += m.spend; alcance += m.reach; cliques += m.clicks }
-      }
-      if (usaGoogle && googleAdsPorDia) {
-        const g = googleAdsPorDia.get(chave)
-        if (g) { investimento += g.spend; alcance += g.impressions; cliques += g.clicks }
-      }
-    }
+    if (usaMeta)   { investimento += metaMes.spend;   alcance += metaMes.reach;        cliques += metaMes.clicks }
+    if (usaGoogle) { investimento += googleMes.spend; alcance += googleMes.impressions; cliques += googleMes.clicks }
 
     const views = doMes.filter((e) => e.tipo === 'page_view').length
     const leads = doMes.filter((e) => e.tipo === 'lead').length
-    const checkouts = doMes.filter((e) => e.tipo === 'checkout').length
-    const compras = doMes.filter((e) => e.tipo === 'compra')
-    const faturamento = compras.reduce((s, e) => s + (e.valor ?? 0), 0)
+    const checkoutsSite = doMes.filter((e) => e.tipo === 'checkout').length
+    const comprasSite = doMes.filter((e) => e.tipo === 'compra')
+    const faturamentoSite = comprasSite.reduce((s, e) => s + (e.valor ?? 0), 0)
 
-    const realizado: Record<string, number> = funil === 'ecommerce'
-      ? {
-          investimento, alcance,
-          sessoes: views,
-          checkout: checkouts,
-          purchase: compras.length,
-          faturamento,
-          roas: investimento > 0 ? faturamento / investimento : 0,
-          cps: views > 0 ? investimento / views : 0,
-        }
-      : {
-          investimento, alcance, clique: cliques,
-          leads,
-          vendas: compras.length,
-          faturamento,
-          roas: investimento > 0 ? faturamento / investimento : 0,
-          cpl: leads > 0 ? investimento / leads : 0,
-        }
+    let realizado: Record<string, number>
+    let estimativaAds = false
+
+    if (funil === 'ecommerce') {
+      let sessoes: number, addToCart: number, checkout: number, purchase: number, faturamento: number
+      if (canal === 'meta') {
+        sessoes = metaMes.sessoes; addToCart = metaMes.addToCart; checkout = metaMes.checkout
+        purchase = metaMes.purchase; faturamento = metaMes.faturamento
+      } else if (canal === 'google') {
+        sessoes = googleMes.clicks // Google não tem um equivalente validado a landing_page_view — cliques é a aproximação disponível
+        addToCart = googleMes.addToCart; checkout = googleMes.checkout
+        purchase = googleMes.purchase; faturamento = googleMes.faturamento
+      } else {
+        // 'geral' — maior valor entre site/Meta/Google por métrica, nunca soma
+        sessoes = Math.max(views, metaMes.sessoes, googleMes.clicks)
+        addToCart = Math.max(metaMes.addToCart, googleMes.addToCart)
+        checkout = Math.max(checkoutsSite, metaMes.checkout, googleMes.checkout)
+        purchase = Math.max(comprasSite.length, metaMes.purchase, googleMes.purchase)
+        faturamento = Math.max(faturamentoSite, metaMes.faturamento, googleMes.faturamento)
+        estimativaAds = sessoes > views || checkout > checkoutsSite || purchase > comprasSite.length || faturamento > faturamentoSite
+      }
+      realizado = {
+        investimento, alcance,
+        sessoes, addToCart, checkout, purchase, faturamento,
+        roas: investimento > 0 ? faturamento / investimento : 0,
+        cps: sessoes > 0 ? investimento / sessoes : 0,
+      }
+    } else {
+      // Leads/Mensagens: mantém só o que já vinha do site — ainda não
+      // validamos um equivalente confiável de lead/venda direto do Meta ou
+      // Google pra evitar inventar número sem checar antes.
+      realizado = {
+        investimento, alcance, clique: cliques,
+        leads,
+        vendas: comprasSite.length,
+        faturamento: faturamentoSite,
+        roas: investimento > 0 ? faturamentoSite / investimento : 0,
+        cpl: leads > 0 ? investimento / leads : 0,
+      }
+    }
 
     linhas.push({
       mes: `${ano}-${String(mes + 1).padStart(2, '0')}`,
       label: MESES_PT_LONGO[mes],
       realizado,
+      estimativaAds,
     })
   }
   return linhas

@@ -20,7 +20,7 @@ export const COLUNAS_ECOMMERCE: GrowthPackColuna[] = [
   { key: 'investimento', label: 'Investimento', fonte: 'auto',   formato: 'moeda' },
   { key: 'alcance',      label: 'Alcance',       fonte: 'auto',   formato: 'numero' },
   { key: 'sessoes',      label: 'Sessões',       fonte: 'auto',   formato: 'numero' },
-  { key: 'addToCart',    label: 'Add to Cart',   fonte: 'manual', formato: 'numero' },
+  { key: 'addToCart',    label: 'Add to Cart',   fonte: 'auto',   formato: 'numero' },
   { key: 'checkout',     label: 'Checkout',      fonte: 'auto',   formato: 'numero' },
   { key: 'purchase',     label: 'Purchase',      fonte: 'auto',   formato: 'numero' },
   { key: 'faturamento',  label: 'Faturamento',   fonte: 'auto',   formato: 'moeda' },

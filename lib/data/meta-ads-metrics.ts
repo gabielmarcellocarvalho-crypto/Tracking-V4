@@ -2,13 +2,20 @@
 
 // ─── GASTO REAL DO META ADS (por cliente + período) ──────────────────────────
 // Chama /api/meta/ads-insights/{clienteId}, que resolve o token (próprio do
-// cliente ou compartilhado da BM) e busca o gasto diário na Marketing API.
+// cliente ou compartilhado da BM) e busca o gasto + funil diário na Marketing API.
 
 import { useCallback, useEffect, useState } from 'react'
 import { auth } from '@/lib/firebase'
 import type { DateRange } from '@/components/tracking/DateRangePicker'
 
-export interface MetricasAdsDia { spend: number; reach: number; clicks: number }
+export interface MetricasAdsDia {
+  spend: number; reach: number; clicks: number
+  sessoes: number; addToCart: number; checkout: number; purchase: number; faturamento: number
+}
+
+const DIA_ZERADO: Omit<MetricasAdsDia, never> = {
+  spend: 0, reach: 0, clicks: 0, sessoes: 0, addToCart: 0, checkout: 0, purchase: 0, faturamento: 0,
+}
 
 export interface GastoMetaAds {
   porData: Map<string, MetricasAdsDia> // 'YYYY-MM-DD' → métricas do dia
@@ -18,7 +25,7 @@ export interface GastoMetaAds {
 interface RespostaApi {
   ok: boolean
   configurado?: boolean
-  gastoPorDia?: { data: string; spend: number; reach: number; clicks: number }[]
+  gastoPorDia?: ({ data: string } & MetricasAdsDia)[]
   erro?: string
 }
 
@@ -53,11 +60,14 @@ export function useMetaAdsGasto(clienteId: string | undefined, periodo: DateRang
           return
         }
         const porData = new Map<string, MetricasAdsDia>()
-        const total: MetricasAdsDia = { spend: 0, reach: 0, clicks: 0 }
+        const total: MetricasAdsDia = { ...DIA_ZERADO }
         for (const l of json.gastoPorDia ?? []) {
-          const dia: MetricasAdsDia = { spend: l.spend, reach: l.reach, clicks: l.clicks }
+          const dia: MetricasAdsDia = {
+            spend: l.spend, reach: l.reach, clicks: l.clicks, sessoes: l.sessoes,
+            addToCart: l.addToCart, checkout: l.checkout, purchase: l.purchase, faturamento: l.faturamento,
+          }
           porData.set(l.data, dia)
-          total.spend += dia.spend; total.reach += dia.reach; total.clicks += dia.clicks
+          for (const k of Object.keys(total) as (keyof MetricasAdsDia)[]) total[k] += dia[k]
         }
         setGasto({ porData, total })
         setErro(null)
