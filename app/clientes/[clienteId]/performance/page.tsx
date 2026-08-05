@@ -253,6 +253,11 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
   const [canal, setCanal]               = useState<CanalPerformance>('geral')
   const [loading, setLoading]           = useState(true)
   const [personBlocks, setPersonBlocks] = useState<string[]>(DEFAULT_PERSONALIZADO_BLOCKS)
+  // Independente de qual template está ativo agora — existe um layout
+  // Personalizado salvo pra esse cliente? Trocar de template no dropdown só
+  // muda QUAL está ativo, nunca apaga esse layout; isso avisa que ele ainda
+  // existe mesmo quando não é o que está na tela.
+  const [temPersonalizadoSalvo, setTemPersonalizadoSalvo] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -265,6 +270,7 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
           if (Array.isArray(data.blocos_personalizados) && data.blocos_personalizados.length > 0) {
             const sorted = [...data.blocos_personalizados].sort((a, b) => a.posicao - b.posicao)
             setPersonBlocks(sorted.map((b: { id: string; posicao: number }) => b.id))
+            setTemPersonalizadoSalvo(true)
           }
         }
       } catch { /* silent */ }
@@ -346,7 +352,25 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
           </div>
 
           {/* Right: animated select */}
-          <TemplateSelect value={template} onChange={handleTemplateChange} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {temPersonalizadoSalvo && template !== 'personalizado' && (
+              <button
+                onClick={() => handleTemplateChange('personalizado')}
+                title="Você tem um layout Personalizado salvo pra este cliente"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8,
+                  fontSize: 11.5, fontWeight: 600, cursor: 'pointer',
+                  background: 'rgba(245,158,11,.1)', border: '1px solid rgba(245,158,11,.3)', color: '#F59E0B',
+                }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" width={12} height={12}>
+                  <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                </svg>
+                Ver layout Personalizado salvo
+              </button>
+            )}
+            <TemplateSelect value={template} onChange={handleTemplateChange} />
+          </div>
         </div>
 
         {template === 'ecommerce' && (
@@ -450,6 +474,7 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
                   initialBlocks={personBlocks}
                   dados={agregado ?? undefined}
                   real={!usarDemo}
+                  onSaved={() => setTemPersonalizadoSalvo(true)}
                 />
               )}
             </motion.div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { doc, setDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import {
@@ -10,7 +10,7 @@ import {
 import PerfMetricCard from './PerfMetricCard'
 import {
   AVAILABLE_BLOCKS, DEFAULT_PERSONALIZADO_BLOCKS,
-  perfEcData, perfLeadsData, perfMsgData,
+  perfEcData, perfLeadsData,
 } from '@/lib/demo-data-performance'
 import type { agregarPerformance } from '@/lib/data/agregacoes'
 
@@ -54,7 +54,6 @@ function SemDados({ texto }: { texto: string }) {
 function renderBlock(blockId: string, dados: PerformanceAggregate | undefined, real: boolean) {
   const d = perfEcData
   const l = perfLeadsData
-  const m = perfMsgData
   const p = dados
 
   if (real) {
@@ -62,7 +61,7 @@ function renderBlock(blockId: string, dados: PerformanceAggregate | undefined, r
     const cardsReal: Record<string, React.ReactNode> = {
       'card-investimento':  <PerfMetricCard label="Investimento"       value={`R$${(k?.investimento ?? 0).toLocaleString('pt-BR')}`} color="#C8102E" icon={<Ico d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />} />,
       'card-receita':       <PerfMetricCard label="Receita"            value={`R$${(k?.receita ?? 0).toLocaleString('pt-BR')}`}      color="#10B981" icon={<Ico d="M23 6l-9.5 9.5-5-5L1 18M17 6h6v6" />} />,
-      'card-roas':          <PerfMetricCard label="ROAS"               value={`${k?.roas ?? 0}x`}                                     color="#3B82F6" icon={<Ico d="M18 20V10M12 20V4M6 20v-6" />} />,
+      'card-roas':          <PerfMetricCard label="ROAS"               value={`${(k?.roas ?? 0).toFixed(2)}x`}                        color="#3B82F6" icon={<Ico d="M18 20V10M12 20V4M6 20v-6" />} />,
       'card-cpl':           <PerfMetricCard label="CPL"                value={`R$${k?.cpl ?? 0}`}                                     color="#8B5CF6" icon={<Ico d="M22 12h-4l-3 9L9 3l-3 9H2" />} />,
       'card-cpa':           <PerfMetricCard label="CPA"                value="—"                                                       color="#F59E0B" icon={<Ico d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm0 6v4l3 3" />} />,
       'card-ticket':        <PerfMetricCard label="Ticket Médio"       value={`R$${k?.ticketMedio ?? 0}`}                             color="#10B981" icon={<Ico d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18" />} />,
@@ -114,7 +113,7 @@ function renderBlock(blockId: string, dados: PerformanceAggregate | undefined, r
             <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
             <XAxis dataKey="dia" {...ax} />
             <YAxis {...ax} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
-            <Tooltip {...tt} formatter={(v: any, n: any) => [`R$${v.toLocaleString('pt-BR')}`, n === 'receita' ? 'Receita' : 'Investimento']} />
+            <Tooltip {...tt} formatter={(v, n) => [`R$${Number(v).toLocaleString('pt-BR')}`, n === 'receita' ? 'Receita' : 'Investimento']} />
             <Bar dataKey="receita" name="Receita" fill="#10B981" radius={[3, 3, 0, 0]} />
             <Bar dataKey="investimento" name="Investimento" fill="#C8102E" radius={[3, 3, 0, 0]} opacity={0.75} />
           </BarChart>
@@ -131,7 +130,7 @@ function renderBlock(blockId: string, dados: PerformanceAggregate | undefined, r
             <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
             <XAxis dataKey="dia" {...ax} />
             <YAxis {...ax} />
-            <Tooltip {...tt} formatter={(v: any) => [v, 'Leads']} />
+            <Tooltip {...tt} formatter={(v) => [v, 'Leads']} />
             <Bar dataKey="leads" fill="#8B5CF6" radius={[3, 3, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
@@ -147,7 +146,7 @@ function renderBlock(blockId: string, dados: PerformanceAggregate | undefined, r
             <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
             <XAxis dataKey="dia" {...ax} />
             <YAxis {...ax} tickFormatter={(v) => `${v}x`} />
-            <Tooltip {...tt} formatter={(v: any) => [`${v}x`, 'ROAS']} />
+            <Tooltip {...tt} formatter={(v) => [`${Number(v).toFixed(2)}x`, 'ROAS']} />
             <Line type="monotone" dataKey="roas" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6', r: 3 }} />
           </LineChart>
         </ResponsiveContainer>
@@ -163,7 +162,7 @@ function renderBlock(blockId: string, dados: PerformanceAggregate | undefined, r
             <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
             <XAxis dataKey="dia" {...ax} />
             <YAxis {...ax} tickFormatter={(v) => `R$${v}`} />
-            <Tooltip {...tt} formatter={(v: any) => [`R$${v.toFixed(2)}`, 'CPL']} />
+            <Tooltip {...tt} formatter={(v) => [`R$${Number(v).toFixed(2)}`, 'CPL']} />
             <Line type="monotone" dataKey="cpl" stroke="#F59E0B" strokeWidth={2} dot={{ fill: '#F59E0B', r: 3 }} />
           </LineChart>
         </ResponsiveContainer>
@@ -386,16 +385,16 @@ interface Props {
   initialBlocks?: string[]
   dados?: PerformanceAggregate
   real?: boolean
+  onSaved?: () => void
 }
 
-export default function PersonalizadoTemplate({ clienteId, initialBlocks, dados, real }: Props) {
+export default function PersonalizadoTemplate({ clienteId, initialBlocks, dados, real, onSaved }: Props) {
   const [blocks, setBlocks] = useState<string[]>(initialBlocks ?? DEFAULT_PERSONALIZADO_BLOCKS)
   const [panelOpen, setPanelOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [dragOver, setDragOver] = useState<number | null>(null)
-  const dragNode = useRef<HTMLDivElement | null>(null)
 
   const cats = Array.from(new Set(AVAILABLE_BLOCKS.map((b) => b.cat)))
 
@@ -408,6 +407,7 @@ export default function PersonalizadoTemplate({ clienteId, initialBlocks, dados,
         { merge: true }
       )
       setSaved(true)
+      onSaved?.()
       setTimeout(() => setSaved(false), 2500)
     } catch { /* Firestore não configurado ainda */ }
     finally { setSaving(false) }
@@ -462,7 +462,7 @@ export default function PersonalizadoTemplate({ clienteId, initialBlocks, dados,
       {/* ── Metric cards ── */}
       {cardBlocks.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
-          {cardBlocks.map((id, i) => {
+          {cardBlocks.map((id) => {
             const globalIdx = blocks.indexOf(id)
             return (
               <div
@@ -521,7 +521,7 @@ export default function PersonalizadoTemplate({ clienteId, initialBlocks, dados,
         <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--t3)' }}>
           <Ico d="M12 5v14M5 12h14" size={28} />
           <p style={{ marginTop: 12, fontSize: 14 }}>Nenhum bloco adicionado ainda</p>
-          <p style={{ fontSize: 12, marginTop: 4 }}>Clique em "Adicionar bloco" para começar a montar seu dashboard</p>
+          <p style={{ fontSize: 12, marginTop: 4 }}>Clique em &ldquo;Adicionar bloco&rdquo; para começar a montar seu dashboard</p>
         </div>
       )}
 

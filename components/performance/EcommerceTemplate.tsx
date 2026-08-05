@@ -47,7 +47,7 @@ export default function EcommerceTemplate({ dados, real }: { dados?: typeof perf
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
         <PerfMetricCard label="Investimento"     value={`R$${kpis.investimento.toLocaleString('pt-BR')}`} trend={real ? undefined : "↑ +12,4% vs mês ant."} trendUp color="#C8102E" icon={<Ico d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />} />
         <PerfMetricCard label="Receita Atribuída" value={`R$${kpis.receita.toLocaleString('pt-BR')}`}    trend={real ? undefined : "↑ +28,1% vs mês ant."} trendUp color="#10B981" icon={<Ico d="M23 6l-9.5 9.5-5-5L1 18M17 6h6v6" />} />
-        <PerfMetricCard label="ROAS Geral"        value={`${kpis.roas}x`}                                trend={real ? undefined : "↑ +0,7x vs mês ant."}  trendUp color="#3B82F6" icon={<Ico d="M18 20V10M12 20V4M6 20v-6" />} />
+        <PerfMetricCard label="ROAS Geral"        value={`${kpis.roas.toFixed(2)}x`}                      trend={real ? undefined : "↑ +0,7x vs mês ant."}  trendUp color="#3B82F6" icon={<Ico d="M18 20V10M12 20V4M6 20v-6" />} />
         <PerfMetricCard label="Ticket Médio"      value={`R$${kpis.ticketMedio}`}                        trend={real ? undefined : "↑ +4,2% vs mês ant."}  trendUp color="#8B5CF6" icon={<Ico d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0" />} />
         <PerfMetricCard label="Total de Compras"  value={kpis.totalCompras.toString()}                   trend={real ? undefined : "↑ +6,8% vs mês ant."}  trendUp color="#F59E0B" icon={<Ico d="M5 12h14M12 5l7 7-7 7" />} />
         <PerfMetricCard label="Abandono de Carrinho" value={`${kpis.taxaAbandono}%`} sub="Checkout vs Compra" trend={real ? undefined : "↓ -3% vs mês ant."} trendUp={false} color="#EF4444" icon={<Ico d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-8 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4z" />} />
@@ -75,8 +75,8 @@ export default function EcommerceTemplate({ dados, real }: { dados?: typeof perf
             <LineChart data={diario}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
               <XAxis dataKey="dia" {...ax} />
-              <YAxis {...ax} domain={[4, 5.5]} tickFormatter={(v) => `${v}x`} />
-              <Tooltip {...tt} formatter={(v) => [`${v}x`, 'ROAS']} />
+              <YAxis {...ax} domain={real ? [0, 'auto'] : [4, 5.5]} tickFormatter={(v) => `${v}x`} />
+              <Tooltip {...tt} formatter={(v) => [`${Number(v).toFixed(2)}x`, 'ROAS']} />
               <Line type="monotone" dataKey="roas" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6', r: 3 }} activeDot={{ r: 5 }} />
             </LineChart>
           </ResponsiveContainer>
