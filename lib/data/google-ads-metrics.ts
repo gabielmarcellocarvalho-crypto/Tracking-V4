@@ -1,31 +1,31 @@
 'use client'
 
-// ─── GASTO REAL DO META ADS (por cliente + período) ──────────────────────────
-// Chama /api/meta/ads-insights/{clienteId}, que resolve o token (próprio do
-// cliente ou compartilhado da BM) e busca o gasto diário na Marketing API.
+// ─── GASTO REAL DO GOOGLE ADS (por cliente + período) ────────────────────────
+// Chama /api/google-ads/ads-insights/{clienteId}, que usa as credenciais
+// compartilhadas da MCC (env) e busca o gasto diário na Google Ads API.
 
 import { useCallback, useEffect, useState } from 'react'
 import { auth } from '@/lib/firebase'
 import type { DateRange } from '@/components/tracking/DateRangePicker'
 
-export interface MetricasAdsDia { spend: number; reach: number; clicks: number }
+export interface MetricasAdsDiaGoogle { spend: number; impressions: number; clicks: number }
 
-export interface GastoMetaAds {
-  porData: Map<string, MetricasAdsDia> // 'YYYY-MM-DD' → métricas do dia
-  total: MetricasAdsDia
+export interface GastoGoogleAds {
+  porData: Map<string, MetricasAdsDiaGoogle>
+  total: MetricasAdsDiaGoogle
 }
 
 interface RespostaApi {
   ok: boolean
   configurado?: boolean
-  gastoPorDia?: { data: string; spend: number; reach: number; clicks: number }[]
+  gastoPorDia?: { data: string; spend: number; impressions: number; clicks: number }[]
   erro?: string
 }
 
 function toYMD(d: Date) { return d.toISOString().slice(0, 10) }
 
-export function useMetaAdsGasto(clienteId: string | undefined, periodo: DateRange) {
-  const [gasto, setGasto] = useState<GastoMetaAds | null>(null)
+export function useGoogleAdsGasto(clienteId: string | undefined, periodo: DateRange) {
+  const [gasto, setGasto] = useState<GastoGoogleAds | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [ultimaAtualizacao, setUltimaAtualizacao] = useState<Date | null>(null)
@@ -41,7 +41,7 @@ export function useMetaAdsGasto(clienteId: string | undefined, periodo: DateRang
         const idToken = await auth.currentUser?.getIdToken()
         if (!idToken) return
         const qs = new URLSearchParams({ start: toYMD(periodo.start), end: toYMD(periodo.end) })
-        const res = await fetch(`/api/meta/ads-insights/${clienteId}?${qs.toString()}`, {
+        const res = await fetch(`/api/google-ads/ads-insights/${clienteId}?${qs.toString()}`, {
           headers: { Authorization: `Bearer ${idToken}` },
         })
         const json: RespostaApi = await res.json()
@@ -49,21 +49,21 @@ export function useMetaAdsGasto(clienteId: string | undefined, periodo: DateRang
 
         if (!json.ok) {
           setGasto(null)
-          setErro(json.configurado ? (json.erro ?? 'falha ao buscar gasto do Meta Ads') : null)
+          setErro(json.configurado ? (json.erro ?? 'falha ao buscar gasto do Google Ads') : null)
           return
         }
-        const porData = new Map<string, MetricasAdsDia>()
-        const total: MetricasAdsDia = { spend: 0, reach: 0, clicks: 0 }
+        const porData = new Map<string, MetricasAdsDiaGoogle>()
+        const total: MetricasAdsDiaGoogle = { spend: 0, impressions: 0, clicks: 0 }
         for (const l of json.gastoPorDia ?? []) {
-          const dia: MetricasAdsDia = { spend: l.spend, reach: l.reach, clicks: l.clicks }
+          const dia: MetricasAdsDiaGoogle = { spend: l.spend, impressions: l.impressions, clicks: l.clicks }
           porData.set(l.data, dia)
-          total.spend += dia.spend; total.reach += dia.reach; total.clicks += dia.clicks
+          total.spend += dia.spend; total.impressions += dia.impressions; total.clicks += dia.clicks
         }
         setGasto({ porData, total })
         setErro(null)
         setUltimaAtualizacao(new Date())
       } catch {
-        if (!cancelado) { setGasto(null); setErro('falha de rede ao buscar gasto do Meta Ads') }
+        if (!cancelado) { setGasto(null); setErro('falha de rede ao buscar gasto do Google Ads') }
       } finally {
         if (!cancelado) setLoading(false)
       }

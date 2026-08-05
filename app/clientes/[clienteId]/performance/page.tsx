@@ -10,6 +10,7 @@ import TemplateSelect from '@/components/performance/TemplateSelect'
 import { useCliente } from '@/lib/data/partners'
 import { useDateRange } from '@/lib/date-range-context'
 import { useMetaAdsGasto } from '@/lib/data/meta-ads-metrics'
+import { useGoogleAdsGasto } from '@/lib/data/google-ads-metrics'
 import { useEventos } from '@/lib/data/colecoes'
 import { agregarPerformance } from '@/lib/data/agregacoes'
 import type { PerformanceTemplate } from '@/lib/demo-data-performance'
@@ -70,14 +71,22 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
     [usarDemo, eventos, periodo],
   )
 
-  // Gasto real do Meta Ads (Conexões → "Meta Ads (Métricas)"), pro mesmo período
-  const { gasto: metaGasto } = useMetaAdsGasto(usarDemo ? undefined : clienteId, periodo)
+  // Gasto real de Ads (Conexões → "Meta Ads (Métricas)" / "Google Ads (Métricas)"), pro mesmo período
+  const { gasto: metaGasto, loading: loadingMeta, ultimaAtualizacao: ultimaMeta, refetch: refetchMeta } =
+    useMetaAdsGasto(usarDemo ? undefined : clienteId, periodo)
+  const { gasto: googleGasto, loading: loadingGoogle, ultimaAtualizacao: ultimaGoogle, refetch: refetchGoogle } =
+    useGoogleAdsGasto(usarDemo ? undefined : clienteId, periodo)
 
-  // Injeta o gasto real de Ads na agregação de eventos — sem isso,
-  // investimento/ROAS ficam sempre zerados (não vêm do tracking próprio)
+  const carregandoAds = loadingMeta || loadingGoogle
+  const ultimaAtualizacaoAds = [ultimaMeta, ultimaGoogle].filter((d): d is Date => !!d).sort((a, b) => b.getTime() - a.getTime())[0] ?? null
+  const atualizarMetricas = () => { refetchMeta(); refetchGoogle() }
+
+  // Injeta o gasto real de Ads (Meta + Google somados) na agregação de
+  // eventos — sem isso, investimento/ROAS ficam sempre zerados (não vêm do
+  // tracking próprio)
   const agregado = useMemo(() => {
     if (!agregadoBase) return null
-    if (!metaGasto) return agregadoBase
+    if (!metaGasto && !googleGasto) return agregadoBase
 
     const addDays = (d: Date, n: number) => { const r = new Date(d); r.setDate(r.getDate() + n); return r }
     const diario = agregadoBase.diario.map((d) => {
@@ -85,21 +94,22 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
       const inicioBucket = new Date(`${d.dataISO}T00:00:00`)
       for (let i = 0; i < agregadoBase.passoDias; i++) {
         const chave = addDays(inicioBucket, i).toISOString().slice(0, 10)
-        investimento += metaGasto.porData.get(chave)?.spend ?? 0
+        investimento += (metaGasto?.porData.get(chave)?.spend ?? 0) + (googleGasto?.porData.get(chave)?.spend ?? 0)
       }
       return { ...d, investimento, roas: investimento > 0 ? d.receita / investimento : 0 }
     })
 
+    const investimentoTotal = (metaGasto?.total.spend ?? 0) + (googleGasto?.total.spend ?? 0)
     return {
       ...agregadoBase,
       diario,
       kpis: {
         ...agregadoBase.kpis,
-        investimento: metaGasto.total.spend,
-        roas: metaGasto.total.spend > 0 ? agregadoBase.kpis.receita / metaGasto.total.spend : 0,
+        investimento: investimentoTotal,
+        roas: investimentoTotal > 0 ? agregadoBase.kpis.receita / investimentoTotal : 0,
       },
     }
-  }, [agregadoBase, metaGasto])
+  }, [agregadoBase, metaGasto, googleGasto])
 
   // Shapes específicos de cada template, a partir da mesma agregação
   const real = useMemo(() => {
@@ -188,6 +198,7 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
       <style>{`
         @keyframes pulse { 0%,100%{opacity:.5} 50%{opacity:.9} }
         @keyframes slideUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:none} }
+        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
       `}</style>
 
       <DashboardHeader clienteName={cliente?.nome ?? clienteId} clienteTipo={cliente?.tipo} />
@@ -257,7 +268,11 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
           </span>
           <span style={{ width: 1, height: 12, background: 'var(--br)' }} />
           <span style={{ fontSize: 10.5, color: 'var(--t3)', fontWeight: 500 }}>
-            Atualizado: <span style={{ color: 'var(--t2)', fontWeight: 600 }}>hoje às 09:00</span>
+            Métricas de Ads: <span style={{ color: 'var(--t2)', fontWeight: 600 }}>
+              {carregandoAds ? 'atualizando…' : ultimaAtualizacaoAds
+                ? `atualizado às ${ultimaAtualizacaoAds.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+                : 'sem conexão de Ads'}
+            </span>
           </span>
           <span style={{ width: 1, height: 12, background: 'var(--br)' }} />
           <span style={{ fontSize: 10.5, color: 'var(--t3)', fontWeight: 500 }}>
@@ -265,6 +280,25 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
               {usarDemo ? 'Demo — instale o snippet no site' : `Reais — ${eventos.length.toLocaleString('pt-BR')} eventos`}
             </span>
           </span>
+          {!usarDemo && (
+            <button
+              onClick={atualizarMetricas}
+              disabled={carregandoAds}
+              style={{
+                marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6,
+                padding: '5px 12px', borderRadius: 7, fontSize: 11, fontWeight: 600,
+                background: 'var(--bg-c)', border: '1px solid var(--br)', color: 'var(--t2)',
+                cursor: carregandoAds ? 'default' : 'pointer', opacity: carregandoAds ? 0.6 : 1,
+              }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" width={12} height={12}
+                style={{ animation: carregandoAds ? 'spin 1s linear infinite' : 'none' }}>
+                <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+              </svg>
+              Atualizar métricas
+            </button>
+          )}
         </div>
       )}
 

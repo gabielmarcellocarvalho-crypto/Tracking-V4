@@ -431,17 +431,19 @@ export interface GrowthPackLinhaMes {
 
 const MESES_PT_LONGO = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
 
+export interface MetricasAdsMesGoogle { spend: number; impressions: number; clicks: number }
+
 export function agregarGrowthPackAno(
   eventos: Evento[],
   ano: number,
   funil: GrowthPackFunil,
   canal: GrowthPackCanal,
-  // Métricas de Ads por dia (YYYY-MM-DD) — hoje só o Meta tem pull real; pra
-  // canal 'google' isso fica undefined e os campos de ads saem zerados.
   metaAdsPorDia?: Map<string, MetricasAdsMes>,
+  googleAdsPorDia?: Map<string, MetricasAdsMesGoogle>,
 ): GrowthPackLinhaMes[] {
   const doCanal = canal === 'geral' ? eventos : eventos.filter((e) => e.origem === canal)
-  const usaAds = canal === 'geral' || canal === 'meta' // só temos pull real do Meta por enquanto
+  const usaMeta = canal === 'geral' || canal === 'meta'
+  const usaGoogle = canal === 'geral' || canal === 'google'
 
   const linhas: GrowthPackLinhaMes[] = []
   for (let mes = 0; mes < 12; mes++) {
@@ -450,10 +452,15 @@ export function agregarGrowthPackAno(
     const doMes = doCanal.filter((e) => e.ts >= inicioMes.getTime() && e.ts < fimMes.getTime())
 
     let investimento = 0, alcance = 0, cliques = 0
-    if (usaAds && metaAdsPorDia) {
-      for (let d = new Date(inicioMes); d < fimMes; d.setDate(d.getDate() + 1)) {
-        const m = metaAdsPorDia.get(d.toISOString().slice(0, 10))
+    for (let d = new Date(inicioMes); d < fimMes; d.setDate(d.getDate() + 1)) {
+      const chave = d.toISOString().slice(0, 10)
+      if (usaMeta && metaAdsPorDia) {
+        const m = metaAdsPorDia.get(chave)
         if (m) { investimento += m.spend; alcance += m.reach; cliques += m.clicks }
+      }
+      if (usaGoogle && googleAdsPorDia) {
+        const g = googleAdsPorDia.get(chave)
+        if (g) { investimento += g.spend; alcance += g.impressions; cliques += g.clicks }
       }
     }
 

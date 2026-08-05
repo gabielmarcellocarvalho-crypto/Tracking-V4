@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import type { ClienteTipo } from '@/lib/demo-data'
 import { useEventos, useGrowthPack, salvarGrowthPackMes } from '@/lib/data/colecoes'
 import { useMetaAdsGasto } from '@/lib/data/meta-ads-metrics'
+import { useGoogleAdsGasto } from '@/lib/data/google-ads-metrics'
 import { agregarGrowthPackAno, type GrowthPackCanal } from '@/lib/data/agregacoes'
 import { colunasDoFunil, formatarValor, funilDoTipo } from './growthPackColunas'
 
@@ -143,14 +144,21 @@ export default function VisaoGeralGrowthPack({ clienteId, clienteTipo, isDemo }:
     end: new Date(ano, 11, 31),
     label: String(ano),
   }), [ano])
-  const { gasto: metaGasto } = useMetaAdsGasto(isDemo ? undefined : clienteId, periodoAno)
+  const { gasto: metaGasto, loading: loadingMeta, ultimaAtualizacao: ultimaMeta, refetch: refetchMeta } =
+    useMetaAdsGasto(isDemo ? undefined : clienteId, periodoAno)
+  const { gasto: googleGasto, loading: loadingGoogle, ultimaAtualizacao: ultimaGoogle, refetch: refetchGoogle } =
+    useGoogleAdsGasto(isDemo ? undefined : clienteId, periodoAno)
+
+  const carregandoAds = loadingMeta || loadingGoogle
+  const ultimaAtualizacaoAds = [ultimaMeta, ultimaGoogle].filter((d): d is Date => !!d).sort((a, b) => b.getTime() - a.getTime())[0] ?? null
+  const atualizarMetricas = () => { refetchMeta(); refetchGoogle() }
 
   const funil = funilDoTipo(clienteTipo ?? 'ecommerce')
   const colunas = colunasDoFunil(funil)
 
   const linhas = useMemo(
-    () => agregarGrowthPackAno(eventos, ano, funil, canal, metaGasto?.porData),
-    [eventos, ano, funil, canal, metaGasto],
+    () => agregarGrowthPackAno(eventos, ano, funil, canal, metaGasto?.porData, googleGasto?.porData),
+    [eventos, ano, funil, canal, metaGasto, googleGasto],
   )
 
   const mesPorId = useMemo(() => new Map(mesesSalvos.map((m) => [m.mes, m])), [mesesSalvos])
@@ -181,26 +189,54 @@ export default function VisaoGeralGrowthPack({ clienteId, clienteTipo, isDemo }:
           <button onClick={() => setAno((a) => a + 1)} style={{ width: 26, height: 26, borderRadius: 6, border: '1px solid var(--br)', background: 'var(--bg-c)', color: 'var(--t2)', cursor: 'pointer' }}>›</button>
         </div>
 
-        <div style={{ display: 'flex', gap: 4, padding: 3, borderRadius: 9, background: 'var(--bg-c)', border: '1px solid var(--br)' }}>
-          {CANAIS.map((c) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 10.5, color: 'var(--t3)' }}>
+            {carregandoAds ? 'atualizando…' : ultimaAtualizacaoAds
+              ? `Ads atualizado às ${ultimaAtualizacaoAds.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+              : 'sem conexão de Ads'}
+          </span>
+          {!isDemo && (
             <button
-              key={c.key}
-              onClick={() => setCanal(c.key)}
+              onClick={atualizarMetricas}
+              disabled={carregandoAds}
               style={{
-                padding: '6px 14px', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none',
-                background: canal === c.key ? 'var(--red)' : 'transparent',
-                color: canal === c.key ? '#fff' : 'var(--t2)',
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '5px 12px', borderRadius: 7, fontSize: 11, fontWeight: 600,
+                background: 'var(--bg-c)', border: '1px solid var(--br)', color: 'var(--t2)',
+                cursor: carregandoAds ? 'default' : 'pointer', opacity: carregandoAds ? 0.6 : 1,
               }}
             >
-              {c.label}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" width={12} height={12}
+                style={{ animation: carregandoAds ? 'gpSpin 1s linear infinite' : 'none' }}>
+                <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+              </svg>
+              Atualizar métricas
             </button>
-          ))}
+          )}
+
+          <div style={{ display: 'flex', gap: 4, padding: 3, borderRadius: 9, background: 'var(--bg-c)', border: '1px solid var(--br)' }}>
+            {CANAIS.map((c) => (
+              <button
+                key={c.key}
+                onClick={() => setCanal(c.key)}
+                style={{
+                  padding: '6px 14px', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none',
+                  background: canal === c.key ? 'var(--red)' : 'transparent',
+                  color: canal === c.key ? '#fff' : 'var(--t2)',
+                }}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
+      <style>{`@keyframes gpSpin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
 
       {canal === 'google' && (
-        <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(245,158,11,.08)', border: '1px solid rgba(245,158,11,.3)', fontSize: 12, color: 'var(--t2)' }}>
-          Ainda não puxamos gasto/alcance reais do Google Ads — Investimento/Alcance/Clique aparecem zerados nessa visão até essa integração ser construída.
+        <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(59,130,246,.08)', border: '1px solid rgba(59,130,246,.3)', fontSize: 12, color: 'var(--t2)' }}>
+          &ldquo;Alcance&rdquo; do Google usa impressões (não é a mesma métrica de alcance único do Meta) — a Google Ads API exige um relatório separado pra alcance de verdade, ainda não construído.
         </div>
       )}
 
