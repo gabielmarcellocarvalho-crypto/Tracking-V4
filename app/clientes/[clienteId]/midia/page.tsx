@@ -4,34 +4,9 @@ import { use, useState } from 'react'
 import DashboardHeader from '@/components/tracking/DashboardHeader'
 import { useCliente } from '@/lib/data/partners'
 import VisaoGeralGrowthPack from '@/components/midia/VisaoGeralGrowthPack'
+import PlanoMidia from '@/components/midia/PlanoMidia'
 
 type Aba = 'visao-geral' | 'plano-midia'
-
-function PlanoMidiaPlaceholder() {
-  return (
-    <div style={{
-      flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      gap: 14, padding: '60px 24px', textAlign: 'center',
-      background: 'var(--bg-c)', border: '1px solid var(--br)', borderRadius: 14,
-    }}>
-      <span style={{
-        width: 52, height: 52, borderRadius: 14, flexShrink: 0,
-        background: 'linear-gradient(135deg, var(--red), var(--purple))',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" width={24} height={24}>
-          <rect x="3" y="3" width="18" height="18" rx="2" /><line x1="9" y1="3" x2="9" y2="21" /><line x1="3" y1="9" x2="21" y2="9" />
-        </svg>
-      </span>
-      <div style={{ maxWidth: 420 }}>
-        <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--t1)', margin: 0 }}>Em construção</p>
-        <p style={{ fontSize: 12.5, color: 'var(--t3)', margin: '8px 0 0', lineHeight: 1.6 }}>
-          Planejamento de mídia por inserção/campanha (orçamento, forecast de funil) — ainda não implementado.
-        </p>
-      </div>
-    </div>
-  )
-}
 
 export default function MidiaPage({ params }: { params: Promise<{ clienteId: string }> }) {
   const { clienteId } = use(params)
@@ -64,7 +39,7 @@ export default function MidiaPage({ params }: { params: Promise<{ clienteId: str
 
         {aba === 'visao-geral'
           ? <VisaoGeralGrowthPack clienteId={clienteId} clienteTipo={cliente?.tipo} isDemo={isDemo} />
-          : <PlanoMidiaPlaceholder />}
+          : <PlanoMidia clienteId={clienteId} clienteTipo={cliente?.tipo} isDemo={isDemo} />}
       </main>
     </>
   )

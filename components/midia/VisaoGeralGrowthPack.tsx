@@ -14,6 +14,32 @@ const CANAIS: { key: GrowthPackCanal; label: string }[] = [
   { key: 'google', label: 'Google' },
 ]
 
+const COR_KPI = ['#E50914', '#10B981', '#3B82F6', '#8B5CF6']
+
+// Seta de variação (SVG, não emoji) — verde subindo / vermelho descendo.
+function SetaVariacao({ pct }: { pct: number | null }) {
+  if (pct === null) return <span style={{ fontSize: 10.5, color: 'var(--t3)' }}>—</span>
+  if (!isFinite(pct)) return <span style={{ fontSize: 10.5, fontWeight: 700, color: '#10B981' }}>novo</span>
+  const subindo = pct >= 0
+  const cor = pct === 0 ? 'var(--t3)' : subindo ? '#10B981' : '#EF4444'
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10.5, fontWeight: 700, color: cor }}>
+      {pct !== 0 && (
+        <svg viewBox="0 0 10 10" width={8} height={8} style={{ transform: subindo ? 'none' : 'rotate(180deg)' }}>
+          <path d="M5 1 L9 8 L1 8 Z" fill="currentColor" />
+        </svg>
+      )}
+      {Math.abs(pct).toFixed(0)}%
+    </span>
+  )
+}
+
+function calcularVariacao(atual: number, anterior: number | undefined): number | null {
+  if (anterior === undefined) return null
+  if (anterior === 0) return atual === 0 ? null : Infinity
+  return ((atual - anterior) / anterior) * 100
+}
+
 interface Props {
   clienteId: string
   clienteTipo?: ClienteTipo
@@ -163,15 +189,40 @@ export default function VisaoGeralGrowthPack({ clienteId, clienteTipo, isDemo }:
 
   const mesPorId = useMemo(() => new Map(mesesSalvos.map((m) => [m.mes, m])), [mesesSalvos])
 
+  // Totais do ano por coluna — soma direta, exceto ROAS (recalculado a
+  // partir dos totais de faturamento/investimento, já que média de razões
+  // não faz sentido matemático).
+  const totais = useMemo(() => {
+    const t: Record<string, number> = Object.fromEntries(colunas.map((c) => [c.key, 0]))
+    for (const linha of linhas) {
+      for (const c of colunas) {
+        if (c.key === 'roas') continue
+        const v = c.fonte === 'manual' ? (mesPorId.get(linha.mes)?.manual?.[c.key] ?? 0) : linha.realizado[c.key]
+        t[c.key] += v ?? 0
+      }
+    }
+    if ('roas' in t) t.roas = t.investimento > 0 ? t.faturamento / t.investimento : 0
+    return t
+  }, [linhas, colunas, mesPorId])
+
   const thStyle: React.CSSProperties = {
-    padding: '9px 12px', textAlign: 'right', fontSize: '9.5px', fontWeight: 700,
-    textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--t3)',
+    padding: '10px 14px', textAlign: 'right', fontSize: '9.5px', fontWeight: 700,
+    textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--t3)',
     borderBottom: '1px solid var(--br)', whiteSpace: 'nowrap',
+    position: 'sticky', top: 0, background: 'var(--bg-c)', zIndex: 1,
   }
   const tdStyle: React.CSSProperties = {
-    padding: '9px 12px', textAlign: 'right', fontSize: 12, color: 'var(--t2)',
-    borderBottom: '1px solid var(--br-s, var(--br))', fontVariantNumeric: 'tabular-nums',
+    padding: '11px 14px', textAlign: 'right', fontSize: 12.5, color: 'var(--t2)',
+    borderBottom: '1px solid var(--br)', fontVariantNumeric: 'tabular-nums',
   }
+
+  const kpisResumo = [
+    { label: 'Investimento (ano)', valor: formatarValor(totais.investimento, 'moeda') },
+    { label: 'Faturamento (ano)',  valor: formatarValor(totais.faturamento, 'moeda') },
+    { label: 'ROAS médio',         valor: (totais.roas ?? 0).toFixed(2) },
+    { label: colunas.some((c) => c.key === 'purchase') ? 'Purchase (ano)' : 'Vendas (ano)',
+      valor: formatarValor(totais[colunas.some((c) => c.key === 'purchase') ? 'purchase' : 'vendas'], 'numero') },
+  ]
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -234,6 +285,24 @@ export default function VisaoGeralGrowthPack({ clienteId, clienteTipo, isDemo }:
       </div>
       <style>{`@keyframes gpSpin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
 
+      {/* Resumo do ano */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
+        {kpisResumo.map((k, i) => (
+          <div key={k.label} style={{
+            padding: '14px 16px', borderRadius: 12,
+            background: 'var(--bg-c)', border: '1px solid var(--br)',
+            borderTop: `3px solid ${COR_KPI[i % COR_KPI.length]}`,
+          }}>
+            <div style={{ fontSize: '9.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--t3)' }}>
+              {k.label}
+            </div>
+            <div style={{ fontSize: 21, fontWeight: 700, color: 'var(--t1)', marginTop: 5, fontVariantNumeric: 'tabular-nums' }}>
+              {k.valor}
+            </div>
+          </div>
+        ))}
+      </div>
+
       {canal === 'google' && (
         <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(59,130,246,.08)', border: '1px solid rgba(59,130,246,.3)', fontSize: 12, color: 'var(--t2)' }}>
           &ldquo;Alcance&rdquo; do Google usa impressões (não é a mesma métrica de alcance único do Meta) — a Google Ads API exige um relatório separado pra alcance de verdade, ainda não construído.
@@ -241,7 +310,7 @@ export default function VisaoGeralGrowthPack({ clienteId, clienteTipo, isDemo }:
       )}
 
       {/* Tabela */}
-      <div style={{ background: 'var(--bg-c)', border: '1px solid var(--br)', borderRadius: 12, overflow: 'auto' }}>
+      <div style={{ background: 'var(--bg-c)', border: '1px solid var(--br)', borderRadius: 12, overflow: 'auto', maxHeight: 560 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
@@ -255,12 +324,33 @@ export default function VisaoGeralGrowthPack({ clienteId, clienteTipo, isDemo }:
             </tr>
           </thead>
           <tbody>
-            {linhas.map((linha) => {
+            {/* Linha de total do ano — sempre no topo, sem variação/meta */}
+            <tr style={{ background: 'rgba(200,16,46,.06)' }}>
+              <td style={{ ...tdStyle, textAlign: 'left', fontWeight: 700, color: 'var(--t1)', borderBottom: '1px solid var(--br)' }}>
+                Total {ano}
+              </td>
+              {colunas.map((c) => (
+                <td key={c.key} style={{ ...tdStyle, fontWeight: 700, color: 'var(--t1)' }}>
+                  {formatarValor(totais[c.key], c.formato)}
+                </td>
+              ))}
+              <td style={tdStyle}></td>
+            </tr>
+
+            {linhas.map((linha, i) => {
               const salvo = mesPorId.get(linha.mes)
               const manual = salvo?.manual ?? {}
               const projetado = salvo?.projetado ?? {}
+              const anterior = i > 0 ? linhas[i - 1] : null
+              const anteriorSalvo = anterior ? mesPorId.get(anterior.mes) : null
+
               return (
-                <tr key={linha.mes}>
+                <tr
+                  key={linha.mes}
+                  style={{ transition: 'background .12s' }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-s)' }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                >
                   <td style={{ ...tdStyle, textAlign: 'left', fontWeight: 600, color: 'var(--t1)' }}>
                     {linha.label}
                     {linha.estimativaAds && (
@@ -275,9 +365,16 @@ export default function VisaoGeralGrowthPack({ clienteId, clienteTipo, isDemo }:
                   {colunas.map((c) => {
                     const valor = c.fonte === 'manual' ? (manual[c.key] ?? 0) : linha.realizado[c.key]
                     const meta = projetado[c.key]
+                    const valorAnterior = anterior
+                      ? (c.fonte === 'manual' ? (anteriorSalvo?.manual?.[c.key] ?? 0) : anterior.realizado[c.key])
+                      : undefined
+                    const variacao = c.key === 'roas' ? null : calcularVariacao(valor, valorAnterior)
                     return (
                       <td key={c.key} style={tdStyle}>
-                        {formatarValor(valor, c.formato)}
+                        <div>{formatarValor(valor, c.formato)}</div>
+                        <div style={{ marginTop: 2, display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
+                          <SetaVariacao pct={variacao} />
+                        </div>
                         {!!meta && (
                           <div style={{ fontSize: 9.5, color: 'var(--t3)', marginTop: 1 }}>
                             meta {formatarValor(meta, c.formato)}

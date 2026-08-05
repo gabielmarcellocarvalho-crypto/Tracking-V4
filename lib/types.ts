@@ -223,6 +223,43 @@ export interface GrowthPackMesDoc {
   atualizadoEm?: number
 }
 
+// ── Plano de Mídia (Gestor de Mídia) — doc raiz em partners/{id}/plano_midia/{itemId} ─
+// Cada doc é uma inserção/linha de campanha planejada. Só os campos abaixo são
+// digitados — o resto (impressões, alcance, cliques, funil etc.) é calculado
+// a partir deles em lib/data/plano-midia-calc.ts, nunca gravado no Firestore.
+export type PlanoMidiaVeiculo = 'meta' | 'google'
+
+export interface PlanoMidiaItem {
+  id?: string
+  mes: string // 'AAAA-MM'
+  dataInicio: string // 'AAAA-MM-DD'
+  dataFim: string
+  veiculo: PlanoMidiaVeiculo
+  campanha: string
+  objetivo: string
+  kpiPrimario: string
+  funil: string // ex: 'Aquisição (Topo)', 'Remarketing (Fundo)', 'Receita (Fundo)'
+  orcamento: number
+  frequencia: number
+  cpm: number
+  ctr: number // percentual como decimal, ex: 0.0348 = 3,48%
+  connectRate: number
+  taxaEstagio1: number // Taxa Conv. Cart (e-commerce) ou Leads (funil de leads)
+  taxaEstagio2: number // Checkout ou MQL
+  taxaEstagio3: number // Purchase ou SQL
+  taxaEstagio4?: number // só funil de leads: SQL → Vendas
+  faturamentoProjetado: number
+  atualizadoEm?: number
+}
+
+// Config por mês — parâmetros compartilhados por todas as inserções do mês.
+export interface PlanoMidiaConfigMes {
+  mes: string
+  orcamentoTotal: number
+  ticketMedio: number
+  fatorPosImposto: number // decimal, ex: 0.8718 = deduz 12,82%
+}
+
 // ── Membro de um partner (controle de acesso) ─────────────────────────────────
 export type MemberRole = 'admin' | 'viewer'
 

@@ -3,13 +3,13 @@
 // ─── HOOKS POR SUBCOLEÇÃO + escritas ─────────────────────────────────────────
 
 import {
-  addDoc, collection, doc, setDoc, serverTimestamp,
+  addDoc, collection, deleteDoc, doc, setDoc, serverTimestamp,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useSubcolecao } from './firestore-hooks'
 import type {
   Evento, Identidade, UTMRegistro, Conversao, Integration, IntegrationPlataforma, Insight,
-  GrowthPackMesDoc,
+  GrowthPackMesDoc, PlanoMidiaItem, PlanoMidiaConfigMes,
 } from '@/lib/types'
 
 // ── Eventos ───────────────────────────────────────────────────────────────────
@@ -88,6 +88,34 @@ export async function salvarGrowthPackMes(
     { mes, ...dados, atualizadoEm: Date.now() },
     { merge: true },
   )
+}
+
+// ── Plano de Mídia (Gestor de Mídia) — partners/{id}/plano_midia/{itemId} ──────
+export function usePlanoMidia(clienteId: string | undefined) {
+  const { docs, loading } = useSubcolecao<PlanoMidiaItem & { id: string }>(clienteId, 'plano_midia')
+  return { itens: docs, loading }
+}
+
+export async function salvarPlanoMidiaItem(clienteId: string, item: PlanoMidiaItem & { id?: string }) {
+  const { id, ...dados } = item
+  const ref = id
+    ? doc(db, 'partners', clienteId, 'plano_midia', id)
+    : doc(collection(db, 'partners', clienteId, 'plano_midia'))
+  await setDoc(ref, { ...dados, atualizadoEm: Date.now() }, { merge: true })
+}
+
+export async function excluirPlanoMidiaItem(clienteId: string, itemId: string) {
+  await deleteDoc(doc(db, 'partners', clienteId, 'plano_midia', itemId))
+}
+
+// Config por mês — partners/{id}/plano_midia_config/{AAAA-MM}
+export function usePlanoMidiaConfig(clienteId: string | undefined) {
+  const { docs, loading } = useSubcolecao<PlanoMidiaConfigMes & { id: string }>(clienteId, 'plano_midia_config')
+  return { config: docs, loading }
+}
+
+export async function salvarPlanoMidiaConfigMes(clienteId: string, mes: string, dados: Omit<PlanoMidiaConfigMes, 'mes'>) {
+  await setDoc(doc(db, 'partners', clienteId, 'plano_midia_config', mes), { mes, ...dados }, { merge: true })
 }
 
 // ── Insights ──────────────────────────────────────────────────────────────────
