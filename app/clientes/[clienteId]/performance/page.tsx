@@ -2,6 +2,7 @@
 
 import { use, useState, useEffect, useMemo } from 'react'
 import dynamic from 'next/dynamic'
+import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
@@ -55,6 +56,52 @@ const TEMPLATE_META: Record<PerformanceTemplate, { label: string; color: string;
   leads:        { label: 'Leads',          color: '#8B5CF6', badge: 'CPL · Qualificados · CPA' },
   mensagens:    { label: 'Mensagens',      color: '#25D366', badge: 'WhatsApp · Contatos · CPM' },
   personalizado: { label: 'Personalizado', color: '#F59E0B', badge: 'Dashboard customizado' },
+}
+
+// ── Visão por canal (só template E-commerce por enquanto) ────────────────────
+type CanalPerformance = 'geral' | 'meta' | 'google' | 'ga4'
+
+const CANAIS_PERFORMANCE: { key: CanalPerformance; label: string; disabled?: boolean }[] = [
+  { key: 'geral',  label: 'Geral' },
+  { key: 'meta',   label: 'Meta' },
+  { key: 'google', label: 'Google' },
+  { key: 'ga4',    label: 'GA4', disabled: true },
+]
+
+function construirFunilAds(sessoes: number, addToCart: number, checkout: number, purchase: number) {
+  const pct = (n: number) => (sessoes > 0 ? Math.round((n / sessoes) * 100) : 0)
+  return [
+    { label: 'Sessões',     count: Math.round(sessoes),   pct: 100,             color: '#3B82F6' },
+    { label: 'Add to Cart', count: Math.round(addToCart), pct: pct(addToCart), color: '#F59E0B' },
+    { label: 'Checkout',    count: Math.round(checkout),  pct: pct(checkout),  color: '#8B5CF6' },
+    { label: 'Compra',      count: Math.round(purchase),  pct: pct(purchase),  color: '#10B981' },
+  ]
+}
+
+function fmtDiaChave(chave: string) {
+  const [, m, d] = chave.split('-')
+  return `${d}/${m}`
+}
+
+function ConexaoNecessaria({ plataforma, clienteId }: { plataforma: string; clienteId: string }) {
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      gap: 12, padding: '60px 24px', textAlign: 'center',
+      background: 'var(--bg-c)', border: '1px solid var(--br)', borderRadius: 14,
+    }}>
+      <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)', margin: 0 }}>{plataforma} não conectado</p>
+      <p style={{ fontSize: 12.5, color: 'var(--t3)', margin: 0, maxWidth: 380, lineHeight: 1.6 }}>
+        Conecte o {plataforma} em Conexões pra ver essa visão isolada da plataforma.
+      </p>
+      <Link
+        href={`/clientes/${clienteId}/conexoes`}
+        style={{ marginTop: 4, padding: '8px 18px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, background: 'var(--red)', color: '#fff', textDecoration: 'none' }}
+      >
+        Ir para Conexões
+      </Link>
+    </div>
+  )
 }
 
 export default function PerformancePage({ params }: { params: Promise<{ clienteId: string }> }) {
@@ -111,6 +158,52 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
     }
   }, [agregadoBase, metaGasto, googleGasto])
 
+  // Visão E-commerce isolada por plataforma — usa só o que a própria Meta ou
+  // Google reportam (spend + funil de actions/conversion categories), sem
+  // misturar com o site. "Geral" continua sendo o combinado de sempre.
+  const ecommerceMeta = useMemo(() => {
+    if (!metaGasto) return null
+    const t = metaGasto.total
+    const receita = t.faturamento
+    const roas = t.spend > 0 ? receita / t.spend : 0
+    const ticketMedio = t.purchase > 0 ? Math.round(receita / t.purchase) : 0
+    const taxaAbandono = t.checkout > 0 ? Math.round(((t.checkout - t.purchase) / t.checkout) * 100) : 0
+    const dias = [...metaGasto.porData.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+    return {
+      kpis: { investimento: t.spend, receita, roas, ticketMedio, totalCompras: Math.round(t.purchase), taxaAbandono },
+      diario: dias.map(([chave, d]) => ({
+        dia: fmtDiaChave(chave), investimento: d.spend, receita: d.faturamento,
+        roas: d.spend > 0 ? d.faturamento / d.spend : 0,
+      })),
+      funil: construirFunilAds(t.sessoes, t.addToCart, t.checkout, t.purchase),
+      canais: [{ name: 'Meta Ads', value: 100, color: '#1877F2' }],
+      topProdutos: [] as { nome: string; vendas: number; receita: number }[],
+      recentes: [] as { nome: string; origem: string; campanha: string; valor: number; data: string }[],
+    }
+  }, [metaGasto])
+
+  const ecommerceGoogle = useMemo(() => {
+    if (!googleGasto) return null
+    const t = googleGasto.total
+    const receita = t.faturamento
+    const roas = t.spend > 0 ? receita / t.spend : 0
+    const ticketMedio = t.purchase > 0 ? Math.round(receita / t.purchase) : 0
+    const taxaAbandono = t.checkout > 0 ? Math.round(((t.checkout - t.purchase) / t.checkout) * 100) : 0
+    const dias = [...googleGasto.porData.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+    return {
+      kpis: { investimento: t.spend, receita, roas, ticketMedio, totalCompras: Math.round(t.purchase), taxaAbandono },
+      diario: dias.map(([chave, d]) => ({
+        dia: fmtDiaChave(chave), investimento: d.spend, receita: d.faturamento,
+        roas: d.spend > 0 ? d.faturamento / d.spend : 0,
+      })),
+      // Google não tem um equivalente validado a landing_page_view — cliques é a aproximação disponível pra "sessões"
+      funil: construirFunilAds(t.clicks, t.addToCart, t.checkout, t.purchase),
+      canais: [{ name: 'Google Ads', value: 100, color: '#4285F4' }],
+      topProdutos: [] as { nome: string; vendas: number; receita: number }[],
+      recentes: [] as { nome: string; origem: string; campanha: string; valor: number; data: string }[],
+    }
+  }, [googleGasto])
+
   // Shapes específicos de cada template, a partir da mesma agregação
   const real = useMemo(() => {
     if (!agregado) return null
@@ -157,6 +250,7 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
   const defaultTemplate: PerformanceTemplate = cliente?.tipo ?? 'ecommerce'
 
   const [template, setTemplate]         = useState<PerformanceTemplate>(defaultTemplate)
+  const [canal, setCanal]               = useState<CanalPerformance>('geral')
   const [loading, setLoading]           = useState(true)
   const [personBlocks, setPersonBlocks] = useState<string[]>(DEFAULT_PERSONALIZADO_BLOCKS)
 
@@ -254,6 +348,28 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
           {/* Right: animated select */}
           <TemplateSelect value={template} onChange={handleTemplateChange} />
         </div>
+
+        {template === 'ecommerce' && (
+          <div style={{ display: 'flex', gap: 4, padding: 3, borderRadius: 9, background: 'var(--bg-c)', border: '1px solid var(--br)', width: 'fit-content', marginTop: 12 }}>
+            {CANAIS_PERFORMANCE.map((c) => (
+              <button
+                key={c.key}
+                onClick={() => !c.disabled && setCanal(c.key)}
+                disabled={c.disabled}
+                title={c.disabled ? 'GA4 ainda não conectado' : undefined}
+                style={{
+                  padding: '6px 16px', borderRadius: 7, fontSize: 12, fontWeight: 600, border: 'none',
+                  cursor: c.disabled ? 'not-allowed' : 'pointer',
+                  background: canal === c.key ? 'var(--red)' : 'transparent',
+                  color: c.disabled ? 'var(--t3)' : canal === c.key ? '#fff' : 'var(--t2)',
+                  opacity: c.disabled ? 0.5 : 1,
+                }}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Stats bar */}
@@ -315,7 +431,17 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             >
-              {template === 'ecommerce'     && <EcommerceTemplate dados={real?.ecommerce} real={!usarDemo} />}
+              {template === 'ecommerce' && canal === 'geral' && <EcommerceTemplate dados={real?.ecommerce} real={!usarDemo} />}
+              {template === 'ecommerce' && canal === 'meta' && (
+                ecommerceMeta
+                  ? <EcommerceTemplate dados={ecommerceMeta} real={!usarDemo} />
+                  : <ConexaoNecessaria plataforma="Meta Ads" clienteId={clienteId} />
+              )}
+              {template === 'ecommerce' && canal === 'google' && (
+                ecommerceGoogle
+                  ? <EcommerceTemplate dados={ecommerceGoogle} real={!usarDemo} />
+                  : <ConexaoNecessaria plataforma="Google Ads" clienteId={clienteId} />
+              )}
               {template === 'leads'         && <LeadsTemplate dados={real?.leads} real={!usarDemo} />}
               {template === 'mensagens'     && <MensagensTemplate dados={real?.mensagens} real={!usarDemo} />}
               {template === 'personalizado' && (

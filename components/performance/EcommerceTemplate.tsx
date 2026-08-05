@@ -38,7 +38,7 @@ function Ico({ d }: { d: string }) {
 
 export default function EcommerceTemplate({ dados, real }: { dados?: typeof perfEcData; real?: boolean } = {}) {
   const { kpis, diario, funil, canais, topProdutos, recentes } = dados ?? perfEcData
-  const maxProd = Math.max(...topProdutos.map((p) => p.vendas))
+  const maxProd = topProdutos.length ? Math.max(...topProdutos.map((p) => p.vendas)) : 1
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -62,7 +62,7 @@ export default function EcommerceTemplate({ dados, real }: { dados?: typeof perf
               <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
               <XAxis dataKey="dia" {...ax} />
               <YAxis {...ax} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
-              <Tooltip {...tt} formatter={(v: any, n: any) => [`R$${v.toLocaleString('pt-BR')}`, n === 'receita' ? 'Receita' : 'Investimento']} />
+              <Tooltip {...tt} formatter={(v, n) => [`R$${Number(v).toLocaleString('pt-BR')}`, n === 'receita' ? 'Receita' : 'Investimento']} />
               <Legend iconType="square" iconSize={8} wrapperStyle={{ fontSize: 11, color: '#777', paddingTop: 8 }} />
               <Bar dataKey="receita"      name="Receita"      fill="#10B981" radius={[3, 3, 0, 0]} />
               <Bar dataKey="investimento" name="Investimento" fill="#C8102E" radius={[3, 3, 0, 0]} opacity={0.75} />
@@ -76,7 +76,7 @@ export default function EcommerceTemplate({ dados, real }: { dados?: typeof perf
               <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
               <XAxis dataKey="dia" {...ax} />
               <YAxis {...ax} domain={[4, 5.5]} tickFormatter={(v) => `${v}x`} />
-              <Tooltip {...tt} formatter={(v: any) => [`${v}x`, 'ROAS']} />
+              <Tooltip {...tt} formatter={(v) => [`${v}x`, 'ROAS']} />
               <Line type="monotone" dataKey="roas" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6', r: 3 }} activeDot={{ r: 5 }} />
             </LineChart>
           </ResponsiveContainer>
@@ -116,7 +116,7 @@ export default function EcommerceTemplate({ dados, real }: { dados?: typeof perf
                 <Pie data={canais} dataKey="value" innerRadius={32} outerRadius={52} paddingAngle={3} startAngle={90} endAngle={450}>
                   {canais.map((c, i) => <Cell key={i} fill={c.color} />)}
                 </Pie>
-                <Tooltip {...tt} formatter={(v: any, n: any) => [`${v}%`, n]} />
+                <Tooltip {...tt} formatter={(v, n) => [`${v}%`, n]} />
               </PieChart>
             </ResponsiveContainer>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
