@@ -135,29 +135,29 @@ function ItemFormModal({
           Orçamento e premissas de mídia
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 14 }}>
-          <Field label="Orçamento (R$)"><input type="number" value={form.orcamento} onChange={(e) => set('orcamento', Number(e.target.value))} style={inputStyle} /></Field>
-          <Field label="CPM (R$)"><input type="number" step="0.01" value={form.cpm} onChange={(e) => set('cpm', Number(e.target.value))} style={inputStyle} /></Field>
-          <Field label="Frequência"><input type="number" step="0.1" value={form.frequencia} onChange={(e) => set('frequencia', Number(e.target.value))} style={inputStyle} /></Field>
-          <Field label="CTR (%)"><input type="number" step="0.01" value={(form.ctr * 100).toFixed(2)} onChange={setPct('ctr')} style={inputStyle} /></Field>
-          <Field label="Connect Rate (%)"><input type="number" step="1" value={(form.connectRate * 100).toFixed(0)} onChange={setPct('connectRate')} style={inputStyle} /></Field>
+          <Field label="Orçamento (R$)"><input type="number" value={form.orcamento || ''} onChange={(e) => set('orcamento', Number(e.target.value))} style={inputStyle} /></Field>
+          <Field label="CPM (R$)"><input type="number" step="0.01" value={form.cpm || ''} onChange={(e) => set('cpm', Number(e.target.value))} style={inputStyle} /></Field>
+          <Field label="Frequência"><input type="number" step="0.1" value={form.frequencia || ''} onChange={(e) => set('frequencia', Number(e.target.value))} style={inputStyle} /></Field>
+          <Field label="CTR (%)"><input type="number" step="0.01" value={form.ctr ? (form.ctr * 100).toFixed(2) : ''} onChange={setPct('ctr')} style={inputStyle} /></Field>
+          <Field label="Connect Rate (%)"><input type="number" step="1" value={form.connectRate ? (form.connectRate * 100).toFixed(0) : ''} onChange={setPct('connectRate')} style={inputStyle} /></Field>
         </div>
 
         <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--t3)', margin: '4px 0 8px' }}>
           Funil (taxas de conversão entre estágios)
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 14 }}>
-          <Field label={`Taxa Conv. ${rotulos.estagio1} (%)`}><input type="number" step="0.1" value={(form.taxaEstagio1 * 100).toFixed(1)} onChange={setPct('taxaEstagio1')} style={inputStyle} /></Field>
-          <Field label={`Taxa Conv. ${rotulos.estagio2} (%)`}><input type="number" step="0.1" value={(form.taxaEstagio2 * 100).toFixed(1)} onChange={setPct('taxaEstagio2')} style={inputStyle} /></Field>
-          <Field label={`Taxa Conv. ${rotulos.estagio3} (%)`}><input type="number" step="0.1" value={(form.taxaEstagio3 * 100).toFixed(1)} onChange={setPct('taxaEstagio3')} style={inputStyle} /></Field>
+          <Field label={`Taxa Conv. ${rotulos.estagio1} (%)`}><input type="number" step="0.1" value={form.taxaEstagio1 ? (form.taxaEstagio1 * 100).toFixed(1) : ''} onChange={setPct('taxaEstagio1')} style={inputStyle} /></Field>
+          <Field label={`Taxa Conv. ${rotulos.estagio2} (%)`}><input type="number" step="0.1" value={form.taxaEstagio2 ? (form.taxaEstagio2 * 100).toFixed(1) : ''} onChange={setPct('taxaEstagio2')} style={inputStyle} /></Field>
+          <Field label={`Taxa Conv. ${rotulos.estagio3} (%)`}><input type="number" step="0.1" value={form.taxaEstagio3 ? (form.taxaEstagio3 * 100).toFixed(1) : ''} onChange={setPct('taxaEstagio3')} style={inputStyle} /></Field>
           {rotulos.estagio4 && (
             <Field label={`Taxa Conv. ${rotulos.estagio4} (%)`}>
-              <input type="number" step="0.1" value={((form.taxaEstagio4 ?? 0) * 100).toFixed(1)} onChange={setPct('taxaEstagio4')} style={inputStyle} />
+              <input type="number" step="0.1" value={form.taxaEstagio4 ? (form.taxaEstagio4 * 100).toFixed(1) : ''} onChange={setPct('taxaEstagio4')} style={inputStyle} />
             </Field>
           )}
         </div>
 
         <Field label="Projeção de Faturamento (R$) — digitado, sem fórmula confiável">
-          <input type="number" value={form.faturamentoProjetado} onChange={(e) => set('faturamentoProjetado', Number(e.target.value))} style={{ ...inputStyle, marginBottom: 18 }} />
+          <input type="number" value={form.faturamentoProjetado || ''} onChange={(e) => set('faturamentoProjetado', Number(e.target.value))} style={{ ...inputStyle, marginBottom: 18 }} />
         </Field>
 
         {erro && (
@@ -273,6 +273,11 @@ export default function PlanoMidia({ clienteId, clienteTipo, isDemo }: Props) {
     padding: '9px 12px', textAlign: 'right', fontSize: 12, color: 'var(--t2)',
     borderBottom: '1px solid var(--br)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums',
   }
+  // Tabela tem ~30 colunas e cresce bem além da largura da tela — sem isso,
+  // Campanha (esquerda) e as ações de editar/excluir (direita) somem no meio
+  // do scroll horizontal. Fixa as duas pontas.
+  const colStickyLeft: React.CSSProperties = { position: 'sticky', left: 0, zIndex: 1, background: 'var(--bg-c)' }
+  const colStickyRight: React.CSSProperties = { position: 'sticky', right: 0, zIndex: 1, background: 'var(--bg-c)' }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -350,9 +355,9 @@ export default function PlanoMidia({ clienteId, clienteTipo, isDemo }: Props) {
                 <table style={{ borderCollapse: 'collapse' }}>
                   <thead>
                     <tr>
-                      <th style={{ ...thStyle, textAlign: 'left' }}>Campanha</th>
+                      <th style={{ ...thStyle, textAlign: 'left', ...colStickyLeft }}>Campanha</th>
                       {colunas.map((c) => <th key={c.key} style={thStyle}>{c.label}</th>)}
-                      <th style={thStyle}></th>
+                      <th style={{ ...thStyle, ...colStickyRight }}>Ações</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -361,7 +366,7 @@ export default function PlanoMidia({ clienteId, clienteTipo, isDemo }: Props) {
                         onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-s)' }}
                         onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
                       >
-                        <td style={{ ...tdStyle, textAlign: 'left', fontWeight: 600, color: 'var(--t1)' }}>
+                        <td style={{ ...tdStyle, textAlign: 'left', fontWeight: 600, color: 'var(--t1)', ...colStickyLeft }}>
                           {linha.campanha || '—'}
                           <div style={{ fontSize: 10, color: 'var(--t3)', fontWeight: 400 }}>{linha.veiculo === 'meta' ? 'Meta Ads' : 'Google Ads'}</div>
                         </td>
@@ -370,13 +375,27 @@ export default function PlanoMidia({ clienteId, clienteTipo, isDemo }: Props) {
                             {formatarValorPlanoMidia((linha as unknown as Record<string, number | string>)[c.key], c.formato)}
                           </td>
                         ))}
-                        <td style={{ ...tdStyle, textAlign: 'center' }}>
-                          <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-                            <button onClick={() => setItemEditando(itensDoMes[i] as PlanoMidiaItem & { id?: string })} title="Editar" style={{ background: 'none', border: 'none', color: 'var(--t3)', cursor: 'pointer', fontSize: 13 }}>✎</button>
+                        <td style={{ ...tdStyle, textAlign: 'center', ...colStickyRight }}>
+                          <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
                             <button
-                              onClick={() => { if (itensDoMes[i].id && confirm('Remover essa inserção?')) excluirPlanoMidiaItem(clienteId, itensDoMes[i].id as string) }}
-                              title="Remover" style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', fontSize: 13 }}
-                            >×</button>
+                              onClick={() => setItemEditando(itensDoMes[i] as PlanoMidiaItem & { id?: string })}
+                              title="Editar inserção"
+                              style={{ display: 'flex', background: 'none', border: 'none', color: 'var(--t2)', cursor: 'pointer', padding: 4 }}
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" width={15} height={15}>
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => { if (itensDoMes[i].id && confirm(`Remover a inserção "${linha.campanha || 'sem nome'}"? Essa ação não pode ser desfeita.`)) excluirPlanoMidiaItem(clienteId, itensDoMes[i].id as string) }}
+                              title="Excluir inserção"
+                              style={{ display: 'flex', background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: 4 }}
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" width={15} height={15}>
+                                <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              </svg>
+                            </button>
                           </div>
                         </td>
                       </tr>
