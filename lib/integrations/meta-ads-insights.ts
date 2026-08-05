@@ -8,6 +8,8 @@ const GRAPH_VERSION = 'v21.0'
 export interface GastoDiario {
   data: string // YYYY-MM-DD
   spend: number
+  reach: number
+  clicks: number
 }
 
 export class MetaAdsInsightsError extends Error {
@@ -30,7 +32,7 @@ export async function buscarGastoMetaAds(
   const contaId = adAccountId.startsWith('act_') ? adAccountId : `act_${adAccountId}`
 
   const params = new URLSearchParams({
-    fields: 'spend',
+    fields: 'spend,reach,clicks',
     time_range: JSON.stringify({ since: toYMD(start), until: toYMD(end) }),
     time_increment: '1',
     access_token: accessToken,
@@ -46,6 +48,11 @@ export async function buscarGastoMetaAds(
     throw new MetaAdsInsightsError(msg, res.status || 502)
   }
 
-  const linhas = (json.data ?? []) as { date_start: string; spend?: string }[]
-  return linhas.map((l) => ({ data: l.date_start, spend: Number(l.spend ?? 0) }))
+  const linhas = (json.data ?? []) as { date_start: string; spend?: string; reach?: string; clicks?: string }[]
+  return linhas.map((l) => ({
+    data: l.date_start,
+    spend: Number(l.spend ?? 0),
+    reach: Number(l.reach ?? 0),
+    clicks: Number(l.clicks ?? 0),
+  }))
 }

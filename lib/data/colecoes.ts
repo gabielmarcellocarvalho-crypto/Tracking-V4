@@ -9,6 +9,7 @@ import { db } from '@/lib/firebase'
 import { useSubcolecao } from './firestore-hooks'
 import type {
   Evento, Identidade, UTMRegistro, Conversao, Integration, IntegrationPlataforma, Insight,
+  GrowthPackMesDoc,
 } from '@/lib/types'
 
 // ── Eventos ───────────────────────────────────────────────────────────────────
@@ -69,6 +70,24 @@ export async function salvarConexao(
     atualizadoEm: Date.now(),
   }
   await setDoc(doc(db, 'partners', clienteId, 'integrations', plataforma), conexao)
+}
+
+// ── Growth Pack (Gestor de Mídia) — partners/{id}/growth_pack/{AAAA-MM} ────────
+export function useGrowthPack(clienteId: string | undefined) {
+  const { docs, loading } = useSubcolecao<GrowthPackMesDoc & { id: string }>(clienteId, 'growth_pack')
+  return { meses: docs, loading }
+}
+
+export async function salvarGrowthPackMes(
+  clienteId: string,
+  mes: string,
+  dados: { projetado?: Record<string, number>; manual?: Record<string, number> },
+) {
+  await setDoc(
+    doc(db, 'partners', clienteId, 'growth_pack', mes),
+    { mes, ...dados, atualizadoEm: Date.now() },
+    { merge: true },
+  )
 }
 
 // ── Insights ──────────────────────────────────────────────────────────────────

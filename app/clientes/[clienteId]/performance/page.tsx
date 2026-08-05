@@ -85,7 +85,7 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
       const inicioBucket = new Date(`${d.dataISO}T00:00:00`)
       for (let i = 0; i < agregadoBase.passoDias; i++) {
         const chave = addDays(inicioBucket, i).toISOString().slice(0, 10)
-        investimento += metaGasto.porData.get(chave) ?? 0
+        investimento += metaGasto.porData.get(chave)?.spend ?? 0
       }
       return { ...d, investimento, roas: investimento > 0 ? d.receita / investimento : 0 }
     })
@@ -95,8 +95,8 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
       diario,
       kpis: {
         ...agregadoBase.kpis,
-        investimento: metaGasto.total,
-        roas: metaGasto.total > 0 ? agregadoBase.kpis.receita / metaGasto.total : 0,
+        investimento: metaGasto.total.spend,
+        roas: metaGasto.total.spend > 0 ? agregadoBase.kpis.receita / metaGasto.total.spend : 0,
       },
     }
   }, [agregadoBase, metaGasto])

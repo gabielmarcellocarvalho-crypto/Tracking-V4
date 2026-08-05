@@ -212,6 +212,17 @@ export interface Integration {
   atualizadoEm?: number
 }
 
+// ── Growth Pack (Gestor de Mídia) — doc raiz em partners/{id}/growth_pack/{AAAA-MM} ─
+// `projetado` são as metas do mês (nível conta, não por canal — a planilha
+// original também não distinguia). `manual` cobre campos sem fonte automática
+// ainda (ex: MQL/SQL/Vendas de clientes tipo leads/mensagens).
+export interface GrowthPackMesDoc {
+  mes: string // 'AAAA-MM'
+  projetado: Record<string, number>
+  manual: Record<string, number>
+  atualizadoEm?: number
+}
+
 // ── Membro de um partner (controle de acesso) ─────────────────────────────────
 export type MemberRole = 'admin' | 'viewer'
 

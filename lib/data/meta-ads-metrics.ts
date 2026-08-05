@@ -8,15 +8,17 @@ import { useEffect, useState } from 'react'
 import { auth } from '@/lib/firebase'
 import type { DateRange } from '@/components/tracking/DateRangePicker'
 
+export interface MetricasAdsDia { spend: number; reach: number; clicks: number }
+
 export interface GastoMetaAds {
-  porData: Map<string, number> // 'YYYY-MM-DD' → spend
-  total: number
+  porData: Map<string, MetricasAdsDia> // 'YYYY-MM-DD' → métricas do dia
+  total: MetricasAdsDia
 }
 
 interface RespostaApi {
   ok: boolean
   configurado?: boolean
-  gastoPorDia?: { data: string; spend: number }[]
+  gastoPorDia?: { data: string; spend: number; reach: number; clicks: number }[]
   erro?: string
 }
 
@@ -48,9 +50,13 @@ export function useMetaAdsGasto(clienteId: string | undefined, periodo: DateRang
           setErro(json.configurado ? (json.erro ?? 'falha ao buscar gasto do Meta Ads') : null)
           return
         }
-        const porData = new Map<string, number>()
-        let total = 0
-        for (const l of json.gastoPorDia ?? []) { porData.set(l.data, l.spend); total += l.spend }
+        const porData = new Map<string, MetricasAdsDia>()
+        const total: MetricasAdsDia = { spend: 0, reach: 0, clicks: 0 }
+        for (const l of json.gastoPorDia ?? []) {
+          const dia: MetricasAdsDia = { spend: l.spend, reach: l.reach, clicks: l.clicks }
+          porData.set(l.data, dia)
+          total.spend += dia.spend; total.reach += dia.reach; total.clicks += dia.clicks
+        }
         setGasto({ porData, total })
         setErro(null)
       } catch {
