@@ -122,32 +122,15 @@ export default function Sidebar({ clienteId }: { clienteId?: string }) {
         <NavItem label="Clientes" href="/clientes" icon={icons.clientes} active={pathname === '/clientes'} />
 
         {clienteId && (<>
-          {/* Seletor de modo — Tracking ou Gestor de Mídia */}
-          <div style={{ display: 'flex', gap: 4, padding: '10px 16px 6px' }}>
-            <Link href={`${base}/tracking`} style={{
-              flex: 1, textAlign: 'center', padding: '6px 8px', borderRadius: 7, fontSize: 11.5, fontWeight: 600,
-              background: modo === 'tracking' ? 'var(--red)' : 'var(--bg-c)',
-              color: modo === 'tracking' ? '#fff' : 'var(--t2)',
-              border: '1px solid ' + (modo === 'tracking' ? 'var(--red)' : 'var(--br)'),
-            }}>
-              Tracking
-            </Link>
-            <Link href={`${base}/performance`} style={{
-              flex: 1, textAlign: 'center', padding: '6px 8px', borderRadius: 7, fontSize: 11.5, fontWeight: 600,
-              background: modo === 'midia' ? 'var(--red)' : 'var(--bg-c)',
-              color: modo === 'midia' ? '#fff' : 'var(--t2)',
-              border: '1px solid ' + (modo === 'midia' ? 'var(--red)' : 'var(--br)'),
-            }}>
-              Gestor de Mídia
-            </Link>
-          </div>
-
+          {/* Sem seletor de modo aqui de propósito — a escolha entre Tracking
+              e Gestor de Mídia acontece só na lista de Clientes (os dois
+              botões do card). Dentro do cliente, a sidebar só mostra os itens
+              do modo em que você já está (decidido pela rota atual). */}
           {modo === 'tracking' ? (
             <>
               <SectionLabel>Tracking</SectionLabel>
               <NavItem label="Eventos"    href={`${base}/tracking`}   icon={icons.tracking}   active={isActive(`${base}/tracking`)} />
               <NavItem label="UTMs"       href={`${base}/utms`}       icon={icons.utms}       active={isActive(`${base}/utms`)} />
-              <NavItem label="Conexões"   href={`${base}/conexoes`}   icon={icons.conexoes}   active={isActive(`${base}/conexoes`)} />
               <NavItem label="Conversões" href={`${base}/conversoes`} icon={icons.conversoes} active={isActive(`${base}/conversoes`)} />
               <NavItem label="Leads"      href={`${base}/mapa`}       icon={icons.mapa}       active={isActive(`${base}/mapa`)} />
               <NavItem label="Jornada do Usuário" href={`${base}/jornada`} icon={icons.jornada} active={isActive(`${base}/jornada`)} />
@@ -162,6 +145,11 @@ export default function Sidebar({ clienteId }: { clienteId?: string }) {
               <NavItem label="Forecasting"               href={`${base}/forecasting`} icon={icons.forecasting} active={isActive(`${base}/forecasting`)} />
             </>
           )}
+
+          {/* Universal — vale tanto pro Tracking quanto pro Gestor de Mídia
+              deste cliente (conexões de métricas/server-to-server). */}
+          <SectionLabel>Conexões</SectionLabel>
+          <NavItem label="Conexões" href={`${base}/conexoes`} icon={icons.conexoes} active={isActive(`${base}/conexoes`)} />
         </>)}
       </nav>
 
