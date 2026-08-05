@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useLayoutEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 
@@ -26,6 +27,9 @@ const icons = {
 // Rotas que pertencem ao modo "Gestor de Mídia" — tudo que não estiver aqui
 // (e não for /clientes) é considerado modo "Tracking".
 const ROTAS_MIDIA = ['performance', 'midia', 'copies', 'forecasting']
+// Rotas sem modo próprio (servem os dois) — a sidebar mantém o modo em que
+// o usuário já estava em vez de cair pra Tracking por padrão.
+const ROTAS_UNIVERSAIS = ['conexoes']
 
 // ── NavItem ───────────────────────────────────────────────────────────────────
 function NavItem({ label, href, icon, badge, active }: {
@@ -89,7 +93,27 @@ export default function Sidebar({ clienteId }: { clienteId?: string }) {
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
 
   const segmentoAtual = clienteId ? pathname.slice(base.length + 1).split('/')[0] : ''
-  const modo: 'tracking' | 'midia' = ROTAS_MIDIA.includes(segmentoAtual) ? 'midia' : 'tracking'
+  const modoDaRota: 'tracking' | 'midia' | null = ROTAS_MIDIA.includes(segmentoAtual)
+    ? 'midia'
+    : ROTAS_UNIVERSAIS.includes(segmentoAtual) ? null : 'tracking'
+
+  // Em rota universal (ex: Conexões), mantém o modo em que o usuário já
+  // estava — sem isso, entrar em Conexões vindo do Gestor de Mídia trocava
+  // a sidebar pra Tracking sem motivo.
+  const [modoLembrado, setModoLembrado] = useState<'tracking' | 'midia'>('tracking')
+  useLayoutEffect(() => {
+    if (!clienteId) return
+    const chave = `modo-sidebar-${clienteId}`
+    if (modoDaRota) {
+      sessionStorage.setItem(chave, modoDaRota)
+      setModoLembrado(modoDaRota)
+    } else {
+      const salvo = sessionStorage.getItem(chave)
+      if (salvo === 'tracking' || salvo === 'midia') setModoLembrado(salvo)
+    }
+  }, [clienteId, modoDaRota])
+
+  const modo: 'tracking' | 'midia' = modoDaRota ?? modoLembrado
 
   const initials = user?.displayName
     ? user.displayName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
