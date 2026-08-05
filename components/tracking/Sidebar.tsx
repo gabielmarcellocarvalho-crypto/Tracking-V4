@@ -15,11 +15,17 @@ const icons = {
   agente:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px] shrink-0"><path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-8a3 3 0 0 1 3-3h1V6a4 4 0 0 1 4-4z"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/></svg>,
   conexoes:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px] shrink-0"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><line x1="8" y1="12" x2="16" y2="12"/></svg>,
   midia:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px] shrink-0"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>,
+  copies:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px] shrink-0"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/></svg>,
+  forecasting: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px] shrink-0"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>,
   meta:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px] shrink-0"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>,
   google:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px] shrink-0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
   ga4:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px] shrink-0"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
   logout:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[14px] h-[14px] shrink-0"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
 }
+
+// Rotas que pertencem ao modo "Gestor de Mídia" — tudo que não estiver aqui
+// (e não for /clientes) é considerado modo "Tracking".
+const ROTAS_MIDIA = ['performance', 'midia', 'copies', 'forecasting']
 
 // ── NavItem ───────────────────────────────────────────────────────────────────
 function NavItem({ label, href, icon, badge, active }: {
@@ -82,6 +88,9 @@ export default function Sidebar({ clienteId }: { clienteId?: string }) {
   const base = clienteId ? `/clientes/${clienteId}` : ''
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
 
+  const segmentoAtual = clienteId ? pathname.slice(base.length + 1).split('/')[0] : ''
+  const modo: 'tracking' | 'midia' = ROTAS_MIDIA.includes(segmentoAtual) ? 'midia' : 'tracking'
+
   const initials = user?.displayName
     ? user.displayName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
     : user?.email?.[0]?.toUpperCase() ?? 'G'
@@ -113,22 +122,46 @@ export default function Sidebar({ clienteId }: { clienteId?: string }) {
         <NavItem label="Clientes" href="/clientes" icon={icons.clientes} active={pathname === '/clientes'} />
 
         {clienteId && (<>
-          <SectionLabel>Análise</SectionLabel>
-          <NavItem label="Performance"      href={`${base}/performance`} icon={icons.performance} active={isActive(`${base}/performance`)} />
-          <NavItem label="Jornada do Usuário" href={`${base}/jornada`}  icon={icons.jornada}     active={isActive(`${base}/jornada`)} />
-          <NavItem label="Agente IA"        href={`${base}/agente`}     icon={icons.agente}      active={isActive(`${base}/agente`)} />
+          {/* Seletor de modo — Tracking ou Gestor de Mídia */}
+          <div style={{ display: 'flex', gap: 4, padding: '10px 16px 6px' }}>
+            <Link href={`${base}/tracking`} style={{
+              flex: 1, textAlign: 'center', padding: '6px 8px', borderRadius: 7, fontSize: 11.5, fontWeight: 600,
+              background: modo === 'tracking' ? 'var(--red)' : 'var(--bg-c)',
+              color: modo === 'tracking' ? '#fff' : 'var(--t2)',
+              border: '1px solid ' + (modo === 'tracking' ? 'var(--red)' : 'var(--br)'),
+            }}>
+              Tracking
+            </Link>
+            <Link href={`${base}/performance`} style={{
+              flex: 1, textAlign: 'center', padding: '6px 8px', borderRadius: 7, fontSize: 11.5, fontWeight: 600,
+              background: modo === 'midia' ? 'var(--red)' : 'var(--bg-c)',
+              color: modo === 'midia' ? '#fff' : 'var(--t2)',
+              border: '1px solid ' + (modo === 'midia' ? 'var(--red)' : 'var(--br)'),
+            }}>
+              Gestor de Mídia
+            </Link>
+          </div>
 
-          <SectionLabel>Tracking</SectionLabel>
-          <NavItem label="Leads"      href={`${base}/mapa`}       icon={icons.mapa}       active={isActive(`${base}/mapa`)} />
-          <NavItem label="Eventos"    href={`${base}/tracking`}   icon={icons.tracking}   active={isActive(`${base}/tracking`)} />
-          <NavItem label="UTMs"       href={`${base}/utms`}       icon={icons.utms}       active={isActive(`${base}/utms`)} />
-          <NavItem label="Conversões" href={`${base}/conversoes`} icon={icons.conversoes} active={isActive(`${base}/conversoes`)} />
-
-          <SectionLabel>Gestor de Mídia</SectionLabel>
-          <NavItem label="Gestor de Mídia" href={`${base}/midia`} icon={icons.midia} active={isActive(`${base}/midia`)} />
-
-          <SectionLabel>Configuração</SectionLabel>
-          <NavItem label="Conexões" href={`${base}/conexoes`} icon={icons.conexoes} active={isActive(`${base}/conexoes`)} />
+          {modo === 'tracking' ? (
+            <>
+              <SectionLabel>Tracking</SectionLabel>
+              <NavItem label="Eventos"    href={`${base}/tracking`}   icon={icons.tracking}   active={isActive(`${base}/tracking`)} />
+              <NavItem label="UTMs"       href={`${base}/utms`}       icon={icons.utms}       active={isActive(`${base}/utms`)} />
+              <NavItem label="Conexões"   href={`${base}/conexoes`}   icon={icons.conexoes}   active={isActive(`${base}/conexoes`)} />
+              <NavItem label="Conversões" href={`${base}/conversoes`} icon={icons.conversoes} active={isActive(`${base}/conversoes`)} />
+              <NavItem label="Leads"      href={`${base}/mapa`}       icon={icons.mapa}       active={isActive(`${base}/mapa`)} />
+              <NavItem label="Jornada do Usuário" href={`${base}/jornada`} icon={icons.jornada} active={isActive(`${base}/jornada`)} />
+              <NavItem label="Agente IA"  href={`${base}/agente`}     icon={icons.agente}     active={isActive(`${base}/agente`)} />
+            </>
+          ) : (
+            <>
+              <SectionLabel>Gestor de Mídia</SectionLabel>
+              <NavItem label="Performance"              href={`${base}/performance`} icon={icons.performance} active={isActive(`${base}/performance`)} />
+              <NavItem label="Growthpack / Plano de Mídia" href={`${base}/midia`}     icon={icons.midia}       active={isActive(`${base}/midia`)} />
+              <NavItem label="Copies"                   href={`${base}/copies`}      icon={icons.copies}      active={isActive(`${base}/copies`)} />
+              <NavItem label="Forecasting"               href={`${base}/forecasting`} icon={icons.forecasting} active={isActive(`${base}/forecasting`)} />
+            </>
+          )}
         </>)}
       </nav>
 

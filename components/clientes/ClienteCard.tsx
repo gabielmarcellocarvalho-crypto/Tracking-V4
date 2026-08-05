@@ -172,22 +172,39 @@ export default function ClienteCard({ cliente, index = 0 }: { cliente: Partner; 
           </div>
         </div>
       ) : (
-        <motion.button
-          onClick={() => router.push(`/clientes/${cliente.id}/tracking`)}
-          whileHover={shouldReduce ? {} : { scale: 1.02 }}
-          whileTap={shouldReduce ? {} : { scale: 0.97 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-          style={{
-            width: '100%', padding: '10px 0', borderRadius: 8,
-            fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer',
-            background: 'var(--red)', border: 'none',
-            boxShadow: '0 3px 10px rgba(200,16,46,.3)',
-          }}
-          onMouseEnter={(e) => { const el = e.currentTarget; el.style.background = 'var(--red-h)'; el.style.boxShadow = '0 6px 20px rgba(200,16,46,.45)' }}
-          onMouseLeave={(e) => { const el = e.currentTarget; el.style.background = 'var(--red)'; el.style.boxShadow = '0 3px 10px rgba(200,16,46,.3)' }}
-        >
-          Ver Dashboard
-        </motion.button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <motion.button
+            onClick={() => router.push(`/clientes/${cliente.id}/tracking`)}
+            whileHover={shouldReduce ? {} : { scale: 1.02 }}
+            whileTap={shouldReduce ? {} : { scale: 0.97 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+            style={{
+              flex: 1, padding: '10px 0', borderRadius: 8,
+              fontSize: 12.5, fontWeight: 600, color: '#fff', cursor: 'pointer',
+              background: 'var(--red)', border: 'none',
+              boxShadow: '0 3px 10px rgba(200,16,46,.3)',
+            }}
+            onMouseEnter={(e) => { const el = e.currentTarget; el.style.background = 'var(--red-h)'; el.style.boxShadow = '0 6px 20px rgba(200,16,46,.45)' }}
+            onMouseLeave={(e) => { const el = e.currentTarget; el.style.background = 'var(--red)'; el.style.boxShadow = '0 3px 10px rgba(200,16,46,.3)' }}
+          >
+            Tracking
+          </motion.button>
+          <motion.button
+            onClick={() => router.push(`/clientes/${cliente.id}/performance`)}
+            whileHover={shouldReduce ? {} : { scale: 1.02 }}
+            whileTap={shouldReduce ? {} : { scale: 0.97 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+            style={{
+              flex: 1, padding: '10px 0', borderRadius: 8,
+              fontSize: 12.5, fontWeight: 600, color: 'var(--t1)', cursor: 'pointer',
+              background: 'transparent', border: '1px solid var(--br)',
+            }}
+            onMouseEnter={(e) => { const el = e.currentTarget; el.style.borderColor = 'var(--red)'; el.style.color = 'var(--red)' }}
+            onMouseLeave={(e) => { const el = e.currentTarget; el.style.borderColor = 'var(--br)'; el.style.color = 'var(--t1)' }}
+          >
+            Gestor de Mídia
+          </motion.button>
+        </div>
       )}
     </motion.div>
   )
