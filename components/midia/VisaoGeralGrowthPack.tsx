@@ -1,11 +1,12 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ClienteTipo } from '@/lib/demo-data'
+import { useDateRange } from '@/lib/date-range-context'
 import { useEventos, useGrowthPack, salvarGrowthPackMes } from '@/lib/data/colecoes'
 import { useMetaAdsGasto } from '@/lib/data/meta-ads-metrics'
 import { useGoogleAdsGasto } from '@/lib/data/google-ads-metrics'
-import { agregarGrowthPackAno, type GrowthPackCanal } from '@/lib/data/agregacoes'
+import { agregarGrowthPackAno, agregarGrowthPackTotalAno, type GrowthPackCanal } from '@/lib/data/agregacoes'
 import { colunasDoFunil, formatarValor, funilDoTipo } from './growthPackColunas'
 
 const CANAIS: { key: GrowthPackCanal; label: string }[] = [
@@ -158,9 +159,15 @@ function EditarMesModal({
 }
 
 export default function VisaoGeralGrowthPack({ clienteId, clienteTipo, isDemo }: Props) {
+  const { range: periodoUniversal } = useDateRange()
   const [ano, setAno] = useState(() => new Date().getFullYear())
   const [canal, setCanal] = useState<GrowthPackCanal>('geral')
   const [editando, setEditando] = useState<{ mes: string; label: string } | null>(null)
+
+  // O período universal (topo de Performance/Eventos) também filtra o
+  // Growth Pack — ao trocar o período, pula pro ano correspondente pra não
+  // mostrar um ano em branco enquanto o filtro aponta pra outro.
+  useEffect(() => { setAno(periodoUniversal.end.getFullYear()) }, [periodoUniversal])
 
   const { eventos } = useEventos(isDemo ? undefined : clienteId)
   const { meses: mesesSalvos } = useGrowthPack(isDemo ? undefined : clienteId)
@@ -183,8 +190,8 @@ export default function VisaoGeralGrowthPack({ clienteId, clienteTipo, isDemo }:
   const colunas = colunasDoFunil(funil)
 
   const linhas = useMemo(
-    () => agregarGrowthPackAno(eventos, ano, funil, canal, metaGasto?.porData, googleGasto?.porData),
-    [eventos, ano, funil, canal, metaGasto, googleGasto],
+    () => agregarGrowthPackAno(eventos, ano, funil, canal, metaGasto?.porData, googleGasto?.porData, periodoUniversal),
+    [eventos, ano, funil, canal, metaGasto, googleGasto, periodoUniversal],
   )
 
   const mesPorId = useMemo(() => new Map(mesesSalvos.map((m) => [m.mes, m])), [mesesSalvos])
@@ -192,18 +199,27 @@ export default function VisaoGeralGrowthPack({ clienteId, clienteTipo, isDemo }:
   // Totais do ano por coluna — soma direta, exceto ROAS (recalculado a
   // partir dos totais de faturamento/investimento, já que média de razões
   // não faz sentido matemático).
+  // Total do ano: colunas automáticas vêm de UMA agregação anual (não da
+  // soma das 12 linhas mensais) — somar 12 "maiores valores" mensais já
+  // deduplicados pode passar do total anual de qualquer canal isolado
+  // (ex: Meta ganha em Jan, Google ganha em Fev, a soma dos dois vencedores
+  // mensais supera o total anual de cada um sozinho). Só colunas manuais
+  // (sem dedup, cada mês é um valor independente digitado) somam por mês.
+  const totalAnoAuto = useMemo(
+    () => agregarGrowthPackTotalAno(eventos, ano, funil, canal, metaGasto?.porData, googleGasto?.porData, periodoUniversal),
+    [eventos, ano, funil, canal, metaGasto, googleGasto, periodoUniversal],
+  )
   const totais = useMemo(() => {
-    const t: Record<string, number> = Object.fromEntries(colunas.map((c) => [c.key, 0]))
-    for (const linha of linhas) {
-      for (const c of colunas) {
-        if (c.key === 'roas') continue
-        const v = c.fonte === 'manual' ? (mesPorId.get(linha.mes)?.manual?.[c.key] ?? 0) : linha.realizado[c.key]
-        t[c.key] += v ?? 0
+    const t: Record<string, number> = {}
+    for (const c of colunas) {
+      if (c.fonte === 'manual') {
+        t[c.key] = linhas.reduce((s, linha) => s + (mesPorId.get(linha.mes)?.manual?.[c.key] ?? 0), 0)
+      } else {
+        t[c.key] = totalAnoAuto[c.key] ?? 0
       }
     }
-    if ('roas' in t) t.roas = t.investimento > 0 ? t.faturamento / t.investimento : 0
     return t
-  }, [linhas, colunas, mesPorId])
+  }, [linhas, colunas, mesPorId, totalAnoAuto])
 
   const thStyle: React.CSSProperties = {
     padding: '10px 14px', textAlign: 'right', fontSize: '9.5px', fontWeight: 700,
@@ -217,10 +233,10 @@ export default function VisaoGeralGrowthPack({ clienteId, clienteTipo, isDemo }:
   }
 
   const kpisResumo = [
-    { label: 'Investimento (ano)', valor: formatarValor(totais.investimento, 'moeda') },
-    { label: 'Faturamento (ano)',  valor: formatarValor(totais.faturamento, 'moeda') },
+    { label: `Investimento (${periodoUniversal.label})`, valor: formatarValor(totais.investimento, 'moeda') },
+    { label: `Faturamento (${periodoUniversal.label})`,  valor: formatarValor(totais.faturamento, 'moeda') },
     { label: 'ROAS médio',         valor: (totais.roas ?? 0).toFixed(2) },
-    { label: colunas.some((c) => c.key === 'purchase') ? 'Purchase (ano)' : 'Vendas (ano)',
+    { label: colunas.some((c) => c.key === 'purchase') ? `Purchase (${periodoUniversal.label})` : `Vendas (${periodoUniversal.label})`,
       valor: formatarValor(totais[colunas.some((c) => c.key === 'purchase') ? 'purchase' : 'vendas'], 'numero') },
   ]
 
@@ -327,7 +343,7 @@ export default function VisaoGeralGrowthPack({ clienteId, clienteTipo, isDemo }:
             {/* Linha de total do ano — sempre no topo, sem variação/meta */}
             <tr style={{ background: 'rgba(200,16,46,.06)' }}>
               <td style={{ ...tdStyle, textAlign: 'left', fontWeight: 700, color: 'var(--t1)', borderBottom: '1px solid var(--br)' }}>
-                Total {ano}
+                Total ({periodoUniversal.label})
               </td>
               {colunas.map((c) => (
                 <td key={c.key} style={{ ...tdStyle, fontWeight: 700, color: 'var(--t1)' }}>

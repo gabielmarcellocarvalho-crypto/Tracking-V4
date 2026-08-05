@@ -459,6 +459,99 @@ function somarMes<T extends object>(porDia: Map<string, T> | undefined, inicioMe
   return total as unknown as T
 }
 
+// Calcula uma linha (Geral/Meta/Google, funil por tipo) pra um intervalo de
+// datas arbitrário — usado tanto por mês (12 chamadas) quanto pro total do
+// ano (1 chamada). É importante ser UMA chamada por total, e não a soma de
+// 12 chamadas mensais: como 'geral' usa o MAIOR valor entre fontes (não
+// soma, pra não duplicar conversão contada por Meta e Google ao mesmo
+// tempo), somar 12 máximos mensais pode passar do máximo anual de qualquer
+// canal isolado (ex: Meta vence em Jan, Google vence em Fev — a soma dos
+// dois "vencedores" mensais pode superar o total anual de cada um).
+// Interseção entre dois intervalos [start, endExclusive) — usada pra recortar
+// cada mês do Growth Pack pelo período universal compartilhado (7/30/90
+// dias, personalizado). Se não houver sobreposição, retorna um intervalo de
+// largura zero (produz dado zerado, não quebra a conta).
+function intersecaoIntervalos(aStart: Date, aEnd: Date, filtro?: JanelaPeriodo): [Date, Date] {
+  if (!filtro) return [aStart, aEnd]
+  const fStart = new Date(filtro.start).setHours(0, 0, 0, 0)
+  const fEnd = new Date(filtro.end).setHours(23, 59, 59, 999) + 1 // exclusivo
+  const start = Math.max(aStart.getTime(), fStart)
+  const end = Math.min(aEnd.getTime(), fEnd)
+  return end > start ? [new Date(start), new Date(end)] : [new Date(start), new Date(start)]
+}
+
+function calcularLinhaGrowthPack(
+  doCanal: Evento[],
+  inicio: Date,
+  fim: Date,
+  funil: GrowthPackFunil,
+  canal: GrowthPackCanal,
+  metaAdsPorDia: Map<string, MetricasAdsMes> | undefined,
+  googleAdsPorDia: Map<string, MetricasAdsMesGoogle> | undefined,
+): { realizado: Record<string, number>; estimativaAds: boolean } {
+  const usaMeta = canal === 'geral' || canal === 'meta'
+  const usaGoogle = canal === 'geral' || canal === 'google'
+
+  const doPeriodo = doCanal.filter((e) => e.ts >= inicio.getTime() && e.ts < fim.getTime())
+  const metaTotal = somarMes(metaAdsPorDia, inicio, fim, ADS_MES_ZERADO)
+  const googleTotal = somarMes(googleAdsPorDia, inicio, fim, ADS_MES_ZERADO_GOOGLE)
+
+  // Investimento/alcance/cliques são aditivos de verdade (gasto no Meta e
+  // no Google são reais e distintos) — soma sem risco de duplicar.
+  let investimento = 0, alcance = 0, cliques = 0
+  if (usaMeta)   { investimento += metaTotal.spend;   alcance += metaTotal.reach;        cliques += metaTotal.clicks }
+  if (usaGoogle) { investimento += googleTotal.spend; alcance += googleTotal.impressions; cliques += googleTotal.clicks }
+
+  const views = doPeriodo.filter((e) => e.tipo === 'page_view').length
+  const leads = doPeriodo.filter((e) => e.tipo === 'lead').length
+  const checkoutsSite = doPeriodo.filter((e) => e.tipo === 'checkout').length
+  const comprasSite = doPeriodo.filter((e) => e.tipo === 'compra')
+  const faturamentoSite = comprasSite.reduce((s, e) => s + (e.valor ?? 0), 0)
+
+  let realizado: Record<string, number>
+  let estimativaAds = false
+
+  if (funil === 'ecommerce') {
+    let sessoes: number, addToCart: number, checkout: number, purchase: number, faturamento: number
+    if (canal === 'meta') {
+      sessoes = metaTotal.sessoes; addToCart = metaTotal.addToCart; checkout = metaTotal.checkout
+      purchase = metaTotal.purchase; faturamento = metaTotal.faturamento
+    } else if (canal === 'google') {
+      sessoes = googleTotal.clicks // Google não tem um equivalente validado a landing_page_view — cliques é a aproximação disponível
+      addToCart = googleTotal.addToCart; checkout = googleTotal.checkout
+      purchase = googleTotal.purchase; faturamento = googleTotal.faturamento
+    } else {
+      // 'geral' — maior valor entre site/Meta/Google por métrica, nunca soma
+      sessoes = Math.max(views, metaTotal.sessoes, googleTotal.clicks)
+      addToCart = Math.max(metaTotal.addToCart, googleTotal.addToCart)
+      checkout = Math.max(checkoutsSite, metaTotal.checkout, googleTotal.checkout)
+      purchase = Math.max(comprasSite.length, metaTotal.purchase, googleTotal.purchase)
+      faturamento = Math.max(faturamentoSite, metaTotal.faturamento, googleTotal.faturamento)
+      estimativaAds = sessoes > views || checkout > checkoutsSite || purchase > comprasSite.length || faturamento > faturamentoSite
+    }
+    realizado = {
+      investimento, alcance,
+      sessoes, addToCart, checkout, purchase, faturamento,
+      roas: investimento > 0 ? faturamento / investimento : 0,
+      cps: sessoes > 0 ? investimento / sessoes : 0,
+    }
+  } else {
+    // Leads/Mensagens: mantém só o que já vinha do site — ainda não
+    // validamos um equivalente confiável de lead/venda direto do Meta ou
+    // Google pra evitar inventar número sem checar antes.
+    realizado = {
+      investimento, alcance, clique: cliques,
+      leads,
+      vendas: comprasSite.length,
+      faturamento: faturamentoSite,
+      roas: investimento > 0 ? faturamentoSite / investimento : 0,
+      cpl: leads > 0 ? investimento / leads : 0,
+    }
+  }
+
+  return { realizado, estimativaAds }
+}
+
 export function agregarGrowthPackAno(
   eventos: Evento[],
   ano: number,
@@ -466,72 +559,18 @@ export function agregarGrowthPackAno(
   canal: GrowthPackCanal,
   metaAdsPorDia?: Map<string, MetricasAdsMes>,
   googleAdsPorDia?: Map<string, MetricasAdsMesGoogle>,
+  // Período universal compartilhado (o mesmo seletor de Performance/Eventos)
+  // — cada mês é recortado pela interseção com esse período, então "Últimos
+  // 7 dias" zera todos os meses fora da janela em vez de mostrar o ano
+  // inteiro sem filtro nenhum.
+  filtro?: JanelaPeriodo,
 ): GrowthPackLinhaMes[] {
   const doCanal = canal === 'geral' ? eventos : eventos.filter((e) => e.origem === canal)
-  const usaMeta = canal === 'geral' || canal === 'meta'
-  const usaGoogle = canal === 'geral' || canal === 'google'
 
   const linhas: GrowthPackLinhaMes[] = []
   for (let mes = 0; mes < 12; mes++) {
-    const inicioMes = new Date(ano, mes, 1)
-    const fimMes = new Date(ano, mes + 1, 1)
-    const doMes = doCanal.filter((e) => e.ts >= inicioMes.getTime() && e.ts < fimMes.getTime())
-
-    const metaMes = somarMes(metaAdsPorDia, inicioMes, fimMes, ADS_MES_ZERADO)
-    const googleMes = somarMes(googleAdsPorDia, inicioMes, fimMes, ADS_MES_ZERADO_GOOGLE)
-
-    // Investimento/alcance/cliques são aditivos de verdade (gasto no Meta e
-    // no Google são reais e distintos) — soma sem risco de duplicar.
-    let investimento = 0, alcance = 0, cliques = 0
-    if (usaMeta)   { investimento += metaMes.spend;   alcance += metaMes.reach;        cliques += metaMes.clicks }
-    if (usaGoogle) { investimento += googleMes.spend; alcance += googleMes.impressions; cliques += googleMes.clicks }
-
-    const views = doMes.filter((e) => e.tipo === 'page_view').length
-    const leads = doMes.filter((e) => e.tipo === 'lead').length
-    const checkoutsSite = doMes.filter((e) => e.tipo === 'checkout').length
-    const comprasSite = doMes.filter((e) => e.tipo === 'compra')
-    const faturamentoSite = comprasSite.reduce((s, e) => s + (e.valor ?? 0), 0)
-
-    let realizado: Record<string, number>
-    let estimativaAds = false
-
-    if (funil === 'ecommerce') {
-      let sessoes: number, addToCart: number, checkout: number, purchase: number, faturamento: number
-      if (canal === 'meta') {
-        sessoes = metaMes.sessoes; addToCart = metaMes.addToCart; checkout = metaMes.checkout
-        purchase = metaMes.purchase; faturamento = metaMes.faturamento
-      } else if (canal === 'google') {
-        sessoes = googleMes.clicks // Google não tem um equivalente validado a landing_page_view — cliques é a aproximação disponível
-        addToCart = googleMes.addToCart; checkout = googleMes.checkout
-        purchase = googleMes.purchase; faturamento = googleMes.faturamento
-      } else {
-        // 'geral' — maior valor entre site/Meta/Google por métrica, nunca soma
-        sessoes = Math.max(views, metaMes.sessoes, googleMes.clicks)
-        addToCart = Math.max(metaMes.addToCart, googleMes.addToCart)
-        checkout = Math.max(checkoutsSite, metaMes.checkout, googleMes.checkout)
-        purchase = Math.max(comprasSite.length, metaMes.purchase, googleMes.purchase)
-        faturamento = Math.max(faturamentoSite, metaMes.faturamento, googleMes.faturamento)
-        estimativaAds = sessoes > views || checkout > checkoutsSite || purchase > comprasSite.length || faturamento > faturamentoSite
-      }
-      realizado = {
-        investimento, alcance,
-        sessoes, addToCart, checkout, purchase, faturamento,
-        roas: investimento > 0 ? faturamento / investimento : 0,
-        cps: sessoes > 0 ? investimento / sessoes : 0,
-      }
-    } else {
-      // Leads/Mensagens: mantém só o que já vinha do site — ainda não
-      // validamos um equivalente confiável de lead/venda direto do Meta ou
-      // Google pra evitar inventar número sem checar antes.
-      realizado = {
-        investimento, alcance, clique: cliques,
-        leads,
-        vendas: comprasSite.length,
-        faturamento: faturamentoSite,
-        roas: investimento > 0 ? faturamentoSite / investimento : 0,
-        cpl: leads > 0 ? investimento / leads : 0,
-      }
-    }
+    const [inicioMes, fimMes] = intersecaoIntervalos(new Date(ano, mes, 1), new Date(ano, mes + 1, 1), filtro)
+    const { realizado, estimativaAds } = calcularLinhaGrowthPack(doCanal, inicioMes, fimMes, funil, canal, metaAdsPorDia, googleAdsPorDia)
 
     linhas.push({
       mes: `${ano}-${String(mes + 1).padStart(2, '0')}`,
@@ -541,4 +580,22 @@ export function agregarGrowthPackAno(
     })
   }
   return linhas
+}
+
+/** Total do ano calculado de uma vez (não é a soma das 12 linhas mensais) —
+ * essencial pro canal 'geral', onde somar 12 máximos mensais já-deduplicados
+ * pode estourar o máximo anual de qualquer canal isolado. Também recortado
+ * pelo período universal compartilhado, igual às linhas mensais. */
+export function agregarGrowthPackTotalAno(
+  eventos: Evento[],
+  ano: number,
+  funil: GrowthPackFunil,
+  canal: GrowthPackCanal,
+  metaAdsPorDia?: Map<string, MetricasAdsMes>,
+  googleAdsPorDia?: Map<string, MetricasAdsMesGoogle>,
+  filtro?: JanelaPeriodo,
+): Record<string, number> {
+  const doCanal = canal === 'geral' ? eventos : eventos.filter((e) => e.origem === canal)
+  const [inicio, fim] = intersecaoIntervalos(new Date(ano, 0, 1), new Date(ano + 1, 0, 1), filtro)
+  return calcularLinhaGrowthPack(doCanal, inicio, fim, funil, canal, metaAdsPorDia, googleAdsPorDia).realizado
 }

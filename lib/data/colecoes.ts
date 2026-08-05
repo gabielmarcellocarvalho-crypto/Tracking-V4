@@ -98,10 +98,14 @@ export function usePlanoMidia(clienteId: string | undefined) {
 
 export async function salvarPlanoMidiaItem(clienteId: string, item: PlanoMidiaItem & { id?: string }) {
   const { id, ...dados } = item
+  // Firestore rejeita setDoc com qualquer campo `undefined` (erro silencioso
+  // pra quem chama sem .catch) — remove essas chaves antes de gravar, em vez
+  // de depender de todo caller nunca passar um campo opcional vazio.
+  const limpo = Object.fromEntries(Object.entries(dados).filter(([, v]) => v !== undefined))
   const ref = id
     ? doc(db, 'partners', clienteId, 'plano_midia', id)
     : doc(collection(db, 'partners', clienteId, 'plano_midia'))
-  await setDoc(ref, { ...dados, atualizadoEm: Date.now() }, { merge: true })
+  await setDoc(ref, { ...limpo, atualizadoEm: Date.now() }, { merge: true })
 }
 
 export async function excluirPlanoMidiaItem(clienteId: string, itemId: string) {

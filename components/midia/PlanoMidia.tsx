@@ -41,9 +41,10 @@ function ItemFormModal({
 }) {
   const rotulos = rotulosFunilPlanoMidia(funil)
   const [form, setForm] = useState<Omit<PlanoMidiaItem, 'mes'> & { id?: string }>(
-    itemAtual ?? { ...ITEM_VAZIO, taxaEstagio4: funil === 'leadsFunil' ? 0.1 : undefined },
+    itemAtual ?? (funil === 'leadsFunil' ? { ...ITEM_VAZIO, taxaEstagio4: 0.1 } : ITEM_VAZIO),
   )
   const [salvando, setSalvando] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
 
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm((f) => ({ ...f, [key]: value }))
   type CampoNumerico = 'ctr' | 'connectRate' | 'taxaEstagio1' | 'taxaEstagio2' | 'taxaEstagio3' | 'taxaEstagio4'
@@ -52,10 +53,14 @@ function ItemFormModal({
   const handleSalvar = async () => {
     if (!form.dataInicio) return
     setSalvando(true)
+    setErro(null)
     try {
       const mes = form.dataInicio.slice(0, 7)
       await salvarPlanoMidiaItem(clienteId, { ...form, mes, id: form.id })
       onClose()
+    } catch (e) {
+      console.error('[PlanoMidia] falha ao salvar inserção:', e)
+      setErro(e instanceof Error ? e.message : 'falha ao salvar — tente de novo')
     } finally {
       setSalvando(false)
     }
@@ -141,6 +146,12 @@ function ItemFormModal({
         <Field label="Projeção de Faturamento (R$) — digitado, sem fórmula confiável">
           <input type="number" value={form.faturamentoProjetado} onChange={(e) => set('faturamentoProjetado', Number(e.target.value))} style={{ ...inputStyle, marginBottom: 18 }} />
         </Field>
+
+        {erro && (
+          <div style={{ padding: '10px 12px', borderRadius: 8, marginBottom: 12, background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.3)', fontSize: 12, color: '#EF4444' }}>
+            {erro}
+          </div>
+        )}
 
         <button
           onClick={handleSalvar}
