@@ -36,8 +36,21 @@ function Ico({ d }: { d: string }) {
   )
 }
 
-export default function EcommerceTemplate({ dados, real }: { dados?: typeof perfEcData; real?: boolean } = {}) {
-  const { kpis, diario, funil, canais, topProdutos, recentes } = dados ?? perfEcData
+// Alcance/Impressões/Cliques/CPM/CPC só existem nas visões por plataforma
+// (Meta/Google) — a visão Geral não preenche esses campos.
+type DadosEcommerce = typeof perfEcData & {
+  kpis: typeof perfEcData['kpis'] & {
+    alcance?: number
+    impressoes?: number
+    cliques?: number
+    cpm?: number
+    cpc?: number
+  }
+}
+
+export default function EcommerceTemplate({ dados, real }: { dados?: DadosEcommerce; real?: boolean } = {}) {
+  const { kpis, diario, funil, canais, topProdutos, recentes } = (dados ?? perfEcData) as DadosEcommerce
+  const temMetricasDeMidia = kpis.impressoes !== undefined
   const maxProd = topProdutos.length ? Math.max(...topProdutos.map((p) => p.vendas)) : 1
 
   return (
@@ -52,6 +65,19 @@ export default function EcommerceTemplate({ dados, real }: { dados?: typeof perf
         <PerfMetricCard label="Total de Compras"  value={kpis.totalCompras.toString()}                   trend={real ? undefined : "↑ +6,8% vs mês ant."}  trendUp color="#F59E0B" icon={<Ico d="M5 12h14M12 5l7 7-7 7" />} />
         <PerfMetricCard label="Abandono de Carrinho" value={`${kpis.taxaAbandono}%`} sub="Checkout vs Compra" trend={real ? undefined : "↓ -3% vs mês ant."} trendUp={false} color="#EF4444" icon={<Ico d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-8 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4z" />} />
       </div>
+
+      {/* ── Métricas de mídia (só nas visões Meta/Google) ── */}
+      {temMetricasDeMidia && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
+          {kpis.alcance !== undefined && (
+            <PerfMetricCard label="Alcance" value={kpis.alcance.toLocaleString('pt-BR')} color="#3B82F6" icon={<Ico d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />} />
+          )}
+          <PerfMetricCard label="Impressões" value={(kpis.impressoes ?? 0).toLocaleString('pt-BR')} color="#8B5CF6" icon={<Ico d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />} />
+          <PerfMetricCard label="Cliques"    value={(kpis.cliques ?? 0).toLocaleString('pt-BR')}    color="#F59E0B" icon={<Ico d="M9 9l6 6m0-6l-6 6" />} />
+          <PerfMetricCard label="CPM"        value={`R$${(kpis.cpm ?? 0).toFixed(2)}`}               color="#10B981" icon={<Ico d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />} />
+          <PerfMetricCard label="CPC"        value={`R$${(kpis.cpc ?? 0).toFixed(2)}`}               color="#C8102E" icon={<Ico d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />} />
+        </div>
+      )}
 
       {/* ── Charts row 1 ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>

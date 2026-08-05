@@ -9,12 +9,12 @@ import { auth } from '@/lib/firebase'
 import type { DateRange } from '@/components/tracking/DateRangePicker'
 
 export interface MetricasAdsDia {
-  spend: number; reach: number; clicks: number
+  spend: number; reach: number; impressions: number; clicks: number
   sessoes: number; addToCart: number; checkout: number; purchase: number; faturamento: number
 }
 
 const DIA_ZERADO: Omit<MetricasAdsDia, never> = {
-  spend: 0, reach: 0, clicks: 0, sessoes: 0, addToCart: 0, checkout: 0, purchase: 0, faturamento: 0,
+  spend: 0, reach: 0, impressions: 0, clicks: 0, sessoes: 0, addToCart: 0, checkout: 0, purchase: 0, faturamento: 0,
 }
 
 export interface GastoMetaAds {
@@ -63,7 +63,7 @@ export function useMetaAdsGasto(clienteId: string | undefined, periodo: DateRang
         const total: MetricasAdsDia = { ...DIA_ZERADO }
         for (const l of json.gastoPorDia ?? []) {
           const dia: MetricasAdsDia = {
-            spend: l.spend, reach: l.reach, clicks: l.clicks, sessoes: l.sessoes,
+            spend: l.spend, reach: l.reach, impressions: l.impressions, clicks: l.clicks, sessoes: l.sessoes,
             addToCart: l.addToCart, checkout: l.checkout, purchase: l.purchase, faturamento: l.faturamento,
           }
           porData.set(l.data, dia)

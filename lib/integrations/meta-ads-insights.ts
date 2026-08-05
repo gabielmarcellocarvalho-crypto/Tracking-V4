@@ -17,6 +17,7 @@ export interface GastoDiario {
   data: string // YYYY-MM-DD
   spend: number
   reach: number
+  impressions: number
   clicks: number
   sessoes: number
   addToCart: number
@@ -49,7 +50,7 @@ export async function buscarGastoMetaAds(
   const contaId = adAccountId.startsWith('act_') ? adAccountId : `act_${adAccountId}`
 
   const params = new URLSearchParams({
-    fields: 'spend,reach,clicks,actions,action_values',
+    fields: 'spend,reach,impressions,clicks,actions,action_values',
     time_range: JSON.stringify({ since: toYMD(start), until: toYMD(end) }),
     time_increment: '1',
     access_token: accessToken,
@@ -69,6 +70,7 @@ export async function buscarGastoMetaAds(
     date_start: string
     spend?: string
     reach?: string
+    impressions?: string
     clicks?: string
     actions?: { action_type: string; value: string }[]
     action_values?: { action_type: string; value: string }[]
@@ -78,6 +80,7 @@ export async function buscarGastoMetaAds(
     data: l.date_start,
     spend: Number(l.spend ?? 0),
     reach: Number(l.reach ?? 0),
+    impressions: Number(l.impressions ?? 0),
     clicks: Number(l.clicks ?? 0),
     sessoes: valorDaAcao(l.actions, ACTION_SESSAO),
     addToCart: valorDaAcao(l.actions, ACTION_ADD_TO_CART),

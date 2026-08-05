@@ -170,7 +170,12 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
     const taxaAbandono = t.checkout > 0 ? Math.round(((t.checkout - t.purchase) / t.checkout) * 100) : 0
     const dias = [...metaGasto.porData.entries()].sort((a, b) => a[0].localeCompare(b[0]))
     return {
-      kpis: { investimento: t.spend, receita, roas, ticketMedio, totalCompras: Math.round(t.purchase), taxaAbandono },
+      kpis: {
+        investimento: t.spend, receita, roas, ticketMedio, totalCompras: Math.round(t.purchase), taxaAbandono,
+        alcance: Math.round(t.reach), impressoes: Math.round(t.impressions), cliques: Math.round(t.clicks),
+        cpm: t.impressions > 0 ? (t.spend / t.impressions) * 1000 : 0,
+        cpc: t.clicks > 0 ? t.spend / t.clicks : 0,
+      },
       diario: dias.map(([chave, d]) => ({
         dia: fmtDiaChave(chave), investimento: d.spend, receita: d.faturamento,
         roas: d.spend > 0 ? d.faturamento / d.spend : 0,
@@ -191,7 +196,13 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
     const taxaAbandono = t.checkout > 0 ? Math.round(((t.checkout - t.purchase) / t.checkout) * 100) : 0
     const dias = [...googleGasto.porData.entries()].sort((a, b) => a[0].localeCompare(b[0]))
     return {
-      kpis: { investimento: t.spend, receita, roas, ticketMedio, totalCompras: Math.round(t.purchase), taxaAbandono },
+      kpis: {
+        investimento: t.spend, receita, roas, ticketMedio, totalCompras: Math.round(t.purchase), taxaAbandono,
+        // Google não expõe "alcance" (contas únicas) no relatório básico — impressões é o que temos.
+        impressoes: Math.round(t.impressions), cliques: Math.round(t.clicks),
+        cpm: t.impressions > 0 ? (t.spend / t.impressions) * 1000 : 0,
+        cpc: t.clicks > 0 ? t.spend / t.clicks : 0,
+      },
       diario: dias.map(([chave, d]) => ({
         dia: fmtDiaChave(chave), investimento: d.spend, receita: d.faturamento,
         roas: d.spend > 0 ? d.faturamento / d.spend : 0,
