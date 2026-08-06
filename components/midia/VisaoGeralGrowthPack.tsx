@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ClienteTipo } from '@/lib/demo-data'
 import { useDateRange } from '@/lib/date-range-context'
-import { useEventos, useGrowthPack, salvarGrowthPackMes } from '@/lib/data/colecoes'
+import { useEventos } from '@/lib/data/colecoes'
 import { useMetaAdsGasto } from '@/lib/data/meta-ads-metrics'
 import { useGoogleAdsGasto } from '@/lib/data/google-ads-metrics'
 import { agregarGrowthPackAno, agregarGrowthPackTotalAno, type GrowthPackCanal } from '@/lib/data/agregacoes'
@@ -47,122 +47,10 @@ interface Props {
   isDemo: boolean
 }
 
-function EditarMesModal({
-  clienteId, mes, label, colunas, projetadoAtual, manualAtual, onClose,
-}: {
-  clienteId: string
-  mes: string
-  label: string
-  colunas: ReturnType<typeof colunasDoFunil>
-  projetadoAtual: Record<string, number>
-  manualAtual: Record<string, number>
-  onClose: () => void
-}) {
-  const [projetado, setProjetado] = useState<Record<string, string>>(
-    Object.fromEntries(colunas.map((c) => [c.key, projetadoAtual[c.key] != null ? String(projetadoAtual[c.key]) : ''])),
-  )
-  const colunasManuais = colunas.filter((c) => c.fonte === 'manual')
-  const [manual, setManual] = useState<Record<string, string>>(
-    Object.fromEntries(colunasManuais.map((c) => [c.key, manualAtual[c.key] != null ? String(manualAtual[c.key]) : ''])),
-  )
-  const [salvando, setSalvando] = useState(false)
-
-  const toNum = (v: Record<string, string>) =>
-    Object.fromEntries(Object.entries(v).map(([k, s]) => [k, Number(s.replace(',', '.')) || 0]))
-
-  const handleSalvar = async () => {
-    setSalvando(true)
-    try {
-      await salvarGrowthPackMes(clienteId, mes, { projetado: toNum(projetado), manual: toNum(manual) })
-      onClose()
-    } finally {
-      setSalvando(false)
-    }
-  }
-
-  const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '8px 10px', borderRadius: 7, fontSize: 12.5,
-    background: 'var(--bg-base)', border: '1px solid var(--border)', color: 'var(--t1)', outline: 'none',
-  }
-
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', zIndex: 300,
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
-    }} onClick={onClose}>
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          width: 520, maxHeight: '85vh', overflowY: 'auto', borderRadius: 14,
-          background: 'var(--bg-c)', border: '1px solid var(--br)', padding: 22,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--t1)', margin: 0 }}>{label} — metas e manuais</h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--t3)', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
-        </div>
-
-        <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--t3)', margin: '0 0 8px' }}>
-          Metas do mês (Projetado)
-        </p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 18 }}>
-          {colunas.map((c) => (
-            <div key={c.key}>
-              <label style={{ fontSize: 10.5, color: 'var(--t2)', display: 'block', marginBottom: 4 }}>{c.label}</label>
-              <input
-                inputMode="decimal"
-                value={projetado[c.key]}
-                onChange={(e) => setProjetado((p) => ({ ...p, [c.key]: e.target.value }))}
-                placeholder="0"
-                style={inputStyle}
-              />
-            </div>
-          ))}
-        </div>
-
-        {colunasManuais.length > 0 && (
-          <>
-            <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--t3)', margin: '0 0 8px' }}>
-              Preenchimento manual (sem rastreio automático ainda)
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 18 }}>
-              {colunasManuais.map((c) => (
-                <div key={c.key}>
-                  <label style={{ fontSize: 10.5, color: 'var(--t2)', display: 'block', marginBottom: 4 }}>{c.label}</label>
-                  <input
-                    inputMode="decimal"
-                    value={manual[c.key]}
-                    onChange={(e) => setManual((p) => ({ ...p, [c.key]: e.target.value }))}
-                    placeholder="0"
-                    style={inputStyle}
-                  />
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        <button
-          onClick={handleSalvar}
-          disabled={salvando}
-          style={{
-            width: '100%', padding: '10px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-            background: 'var(--red)', border: 'none', color: '#fff', cursor: salvando ? 'default' : 'pointer',
-            opacity: salvando ? 0.6 : 1,
-          }}
-        >
-          {salvando ? 'Salvando…' : 'Salvar'}
-        </button>
-      </div>
-    </div>
-  )
-}
-
 export default function VisaoGeralGrowthPack({ clienteId, clienteTipo, isDemo }: Props) {
   const { range: periodoUniversal } = useDateRange()
   const [ano, setAno] = useState(() => new Date().getFullYear())
   const [canal, setCanal] = useState<GrowthPackCanal>('geral')
-  const [editando, setEditando] = useState<{ mes: string; label: string } | null>(null)
 
   // O período universal (topo de Performance/Eventos) também filtra o
   // Growth Pack — ao trocar o período, pula pro ano correspondente pra não
@@ -170,7 +58,6 @@ export default function VisaoGeralGrowthPack({ clienteId, clienteTipo, isDemo }:
   useEffect(() => { setAno(periodoUniversal.end.getFullYear()) }, [periodoUniversal])
 
   const { eventos } = useEventos(isDemo ? undefined : clienteId)
-  const { meses: mesesSalvos } = useGrowthPack(isDemo ? undefined : clienteId)
 
   const periodoAno = useMemo(() => ({
     start: new Date(ano, 0, 1),
@@ -194,32 +81,22 @@ export default function VisaoGeralGrowthPack({ clienteId, clienteTipo, isDemo }:
     [eventos, ano, funil, canal, metaGasto, googleGasto, periodoUniversal],
   )
 
-  const mesPorId = useMemo(() => new Map(mesesSalvos.map((m) => [m.mes, m])), [mesesSalvos])
-
-  // Totais do ano por coluna — soma direta, exceto ROAS (recalculado a
-  // partir dos totais de faturamento/investimento, já que média de razões
-  // não faz sentido matemático).
-  // Total do ano: colunas automáticas vêm de UMA agregação anual (não da
-  // soma das 12 linhas mensais) — somar 12 "maiores valores" mensais já
-  // deduplicados pode passar do total anual de qualquer canal isolado
-  // (ex: Meta ganha em Jan, Google ganha em Fev, a soma dos dois vencedores
-  // mensais supera o total anual de cada um sozinho). Só colunas manuais
-  // (sem dedup, cada mês é um valor independente digitado) somam por mês.
+  // Total do ano calculado numa única agregação anual (não é a soma das 12
+  // linhas mensais) — somar 12 "maiores valores" mensais já deduplicados
+  // pode passar do total anual de qualquer canal isolado (ex: Meta ganha em
+  // Jan, Google ganha em Fev, a soma dos dois vencedores mensais supera o
+  // total anual de cada um sozinho).
   const totalAnoAuto = useMemo(
     () => agregarGrowthPackTotalAno(eventos, ano, funil, canal, metaGasto?.porData, googleGasto?.porData, periodoUniversal),
     [eventos, ano, funil, canal, metaGasto, googleGasto, periodoUniversal],
   )
+  // Colunas 'manual' (MQL/SQL) não têm fonte de dado nenhuma ainda — ficam
+  // sempre zeradas até termos um jeito automático de preenchê-las.
   const totais = useMemo(() => {
     const t: Record<string, number> = {}
-    for (const c of colunas) {
-      if (c.fonte === 'manual') {
-        t[c.key] = linhas.reduce((s, linha) => s + (mesPorId.get(linha.mes)?.manual?.[c.key] ?? 0), 0)
-      } else {
-        t[c.key] = totalAnoAuto[c.key] ?? 0
-      }
-    }
+    for (const c of colunas) t[c.key] = c.fonte === 'manual' ? 0 : (totalAnoAuto[c.key] ?? 0)
     return t
-  }, [linhas, colunas, mesPorId, totalAnoAuto])
+  }, [colunas, totalAnoAuto])
 
   const thStyle: React.CSSProperties = {
     padding: '10px 14px', textAlign: 'right', fontSize: '9.5px', fontWeight: 700,
@@ -340,7 +217,7 @@ export default function VisaoGeralGrowthPack({ clienteId, clienteTipo, isDemo }:
             </tr>
           </thead>
           <tbody>
-            {/* Linha de total do ano — sempre no topo, sem variação/meta */}
+            {/* Linha de total do ano — sempre no topo, sem variação */}
             <tr style={{ background: 'rgba(200,16,46,.06)' }}>
               <td style={{ ...tdStyle, textAlign: 'left', fontWeight: 700, color: 'var(--t1)', borderBottom: '1px solid var(--br)' }}>
                 Total ({periodoUniversal.label})
@@ -350,15 +227,10 @@ export default function VisaoGeralGrowthPack({ clienteId, clienteTipo, isDemo }:
                   {formatarValor(totais[c.key], c.formato)}
                 </td>
               ))}
-              <td style={tdStyle}></td>
             </tr>
 
             {linhas.map((linha, i) => {
-              const salvo = mesPorId.get(linha.mes)
-              const manual = salvo?.manual ?? {}
-              const projetado = salvo?.projetado ?? {}
               const anterior = i > 0 ? linhas[i - 1] : null
-              const anteriorSalvo = anterior ? mesPorId.get(anterior.mes) : null
 
               return (
                 <tr
@@ -379,10 +251,9 @@ export default function VisaoGeralGrowthPack({ clienteId, clienteTipo, isDemo }:
                     )}
                   </td>
                   {colunas.map((c) => {
-                    const valor = c.fonte === 'manual' ? (manual[c.key] ?? 0) : linha.realizado[c.key]
-                    const meta = projetado[c.key]
+                    const valor = c.fonte === 'manual' ? 0 : linha.realizado[c.key]
                     const valorAnterior = anterior
-                      ? (c.fonte === 'manual' ? (anteriorSalvo?.manual?.[c.key] ?? 0) : anterior.realizado[c.key])
+                      ? (c.fonte === 'manual' ? 0 : anterior.realizado[c.key])
                       : undefined
                     const variacao = c.key === 'roas' ? null : calcularVariacao(valor, valorAnterior)
                     return (
@@ -391,41 +262,15 @@ export default function VisaoGeralGrowthPack({ clienteId, clienteTipo, isDemo }:
                         <div style={{ marginTop: 2, display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
                           <SetaVariacao pct={variacao} />
                         </div>
-                        {!!meta && (
-                          <div style={{ fontSize: 9.5, color: 'var(--t3)', marginTop: 1 }}>
-                            meta {formatarValor(meta, c.formato)}
-                          </div>
-                        )}
                       </td>
                     )
                   })}
-                  <td style={{ ...tdStyle, textAlign: 'center' }}>
-                    <button
-                      onClick={() => setEditando({ mes: linha.mes, label: `${linha.label} de ${ano}` })}
-                      title="Editar metas e manuais"
-                      style={{ background: 'none', border: 'none', color: 'var(--t3)', cursor: 'pointer', fontSize: 13 }}
-                    >
-                      ✎
-                    </button>
-                  </td>
                 </tr>
               )
             })}
           </tbody>
         </table>
       </div>
-
-      {editando && (
-        <EditarMesModal
-          clienteId={clienteId}
-          mes={editando.mes}
-          label={editando.label}
-          colunas={colunas}
-          projetadoAtual={mesPorId.get(editando.mes)?.projetado ?? {}}
-          manualAtual={mesPorId.get(editando.mes)?.manual ?? {}}
-          onClose={() => setEditando(null)}
-        />
-      )}
     </div>
   )
 }

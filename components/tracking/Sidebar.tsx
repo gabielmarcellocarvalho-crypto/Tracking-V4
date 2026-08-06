@@ -140,11 +140,25 @@ export default function Sidebar({ clienteId }: { clienteId?: string }) {
         </div>
       </div>
 
+      {/* Sair — volta pros cards de Clientes. Fica fora do fluxo de abas de
+          propósito: não é uma seção do dashboard do cliente, é a saída dele. */}
+      <Link href="/clientes" style={{
+        display: 'flex', alignItems: 'center', gap: 8, margin: '12px 16px',
+        padding: '8px 12px', borderRadius: 8, fontSize: 12.5, fontWeight: 600,
+        color: 'var(--t3)', border: '1px solid var(--br)', textDecoration: 'none',
+        transition: 'all .15s', flexShrink: 0,
+      }}
+        onMouseEnter={(e) => { const el = e.currentTarget; el.style.color = 'var(--red)'; el.style.borderColor = 'var(--red)' }}
+        onMouseLeave={(e) => { const el = e.currentTarget; el.style.color = 'var(--t3)'; el.style.borderColor = 'var(--br)' }}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" width={14} height={14}>
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
+        </svg>
+        Sair
+      </Link>
+
       {/* Nav */}
       <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
-        <SectionLabel>Principal</SectionLabel>
-        <NavItem label="Clientes" href="/clientes" icon={icons.clientes} active={pathname === '/clientes'} />
-
         {clienteId && (<>
           {/* Sem seletor de modo aqui de propósito — a escolha entre Tracking
               e Gestor de Mídia acontece só na lista de Clientes (os dois

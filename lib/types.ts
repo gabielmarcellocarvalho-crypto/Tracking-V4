@@ -212,17 +212,6 @@ export interface Integration {
   atualizadoEm?: number
 }
 
-// ── Growth Pack (Gestor de Mídia) — doc raiz em partners/{id}/growth_pack/{AAAA-MM} ─
-// `projetado` são as metas do mês (nível conta, não por canal — a planilha
-// original também não distinguia). `manual` cobre campos sem fonte automática
-// ainda (ex: MQL/SQL/Vendas de clientes tipo leads/mensagens).
-export interface GrowthPackMesDoc {
-  mes: string // 'AAAA-MM'
-  projetado: Record<string, number>
-  manual: Record<string, number>
-  atualizadoEm?: number
-}
-
 // ── Plano de Mídia (Gestor de Mídia) — doc raiz em partners/{id}/plano_midia/{itemId} ─
 // Cada doc é uma inserção/linha de campanha planejada. Só os campos abaixo são
 // digitados — o resto (impressões, alcance, cliques, funil etc.) é calculado
