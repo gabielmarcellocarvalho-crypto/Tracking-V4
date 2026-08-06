@@ -196,12 +196,6 @@ export default function VisaoGeralGrowthPack({ clienteId, clienteTipo, isDemo }:
         ))}
       </div>
 
-      {canal === 'google' && (
-        <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(59,130,246,.08)', border: '1px solid rgba(59,130,246,.3)', fontSize: 12, color: 'var(--t2)' }}>
-          &ldquo;Alcance&rdquo; do Google usa impressões (não é a mesma métrica de alcance único do Meta) — a Google Ads API exige um relatório separado pra alcance de verdade, ainda não construído.
-        </div>
-      )}
-
       {/* Tabela */}
       <div style={{ background: 'var(--bg-c)', border: '1px solid var(--br)', borderRadius: 12, overflow: 'auto', maxHeight: 560 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>

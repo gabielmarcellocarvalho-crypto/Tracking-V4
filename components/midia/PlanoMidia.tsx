@@ -156,7 +156,7 @@ function ItemFormModal({
           )}
         </div>
 
-        <Field label="Projeção de Faturamento (R$) — digitado, sem fórmula confiável">
+        <Field label="Projeção de Faturamento (R$)">
           <input type="number" value={form.faturamentoProjetado || ''} onChange={(e) => set('faturamentoProjetado', Number(e.target.value))} style={{ ...inputStyle, marginBottom: 18 }} />
         </Field>
 

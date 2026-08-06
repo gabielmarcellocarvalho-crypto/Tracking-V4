@@ -226,7 +226,8 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
           ticketMedio: p.kpis.ticketMedio, totalCompras: p.kpis.totalCompras, taxaAbandono: p.kpis.taxaAbandono,
         },
         diario: p.diario.map((d) => ({ dia: d.dia, investimento: d.investimento, receita: d.receita, roas: d.roas })),
-        funil: p.funil,
+        // E-commerce não tem etapa de "Lead" no funil — só existe pra clientes leads/mensagens
+        funil: p.funil.filter((f) => f.label !== 'Lead'),
         canais: p.canais,
         topProdutos: p.topProdutos,
         recentes: p.recentes.map((r) => ({ nome: r.nome, origem: r.origem, campanha: r.campanha, valor: r.valor ?? 0, data: r.data })),
