@@ -1,13 +1,12 @@
 // ─── AGENTE IA — POST /api/agent ─────────────────────────────────────────────
 // Analisa os dados do cliente (eventos, identidades, UTMs, conversões) com a
-// Gemini API. Requer GEMINI_API_KEY no .env.local.
+// Groq API (endpoint compatível com OpenAI). Requer GROQ_API_KEY no .env.local.
 //
 // Body: { clienteId, pergunta?, acao?: 'analise-geral'|'auditar-utms'|'cross-check'|'sugerir-dashboard' }
 
 import { NextRequest, NextResponse } from 'next/server'
-import { GoogleGenAI } from '@google/genai'
-import { collection, doc, getDoc, getDocs, limit, orderBy, query } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
+import { getDbAdmin } from '@/lib/firebase-admin'
+import { emailDoToken, ehMembroDoPartner } from '@/lib/server/auth-helpers'
 import {
   agregarSaudeEventos, agregarVolume7Dias, agregarPorOrigem, agregarPaginas,
   agregarPerformance, gerarAlertas,
@@ -41,14 +40,15 @@ const ACOES: Record<string, string> = {
 }
 
 async function montarContexto(clienteId: string): Promise<string | null> {
-  const clienteSnap = await getDoc(doc(db, 'partners', clienteId))
-  if (!clienteSnap.exists()) return null
+  const db = getDbAdmin()
+  const clienteSnap = await db.collection('partners').doc(clienteId).get()
+  if (!clienteSnap.exists) return null
   const cliente = clienteSnap.data() as Partner
 
   const [eventosSnap, identidadesSnap, conversoesSnap] = await Promise.all([
-    getDocs(query(collection(db, 'partners', clienteId, 'eventos'), orderBy('ts', 'desc'), limit(1500))),
-    getDocs(query(collection(db, 'partners', clienteId, 'identidades'), orderBy('atualizadoEm', 'desc'), limit(300))),
-    getDocs(query(collection(db, 'partners', clienteId, 'conversoes'), orderBy('ts', 'desc'), limit(300))),
+    db.collection('partners').doc(clienteId).collection('eventos').orderBy('ts', 'desc').limit(1500).get(),
+    db.collection('partners').doc(clienteId).collection('identidades').orderBy('atualizadoEm', 'desc').limit(300).get(),
+    db.collection('partners').doc(clienteId).collection('conversoes').orderBy('ts', 'desc').limit(300).get(),
   ])
 
   const eventos = eventosSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Evento)
@@ -116,11 +116,13 @@ async function montarContexto(clienteId: string): Promise<string | null> {
   }, null, 1)
 }
 
+const GROQ_MODEL = 'openai/gpt-oss-120b'
+
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.GEMINI_API_KEY
+  const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) {
     return NextResponse.json(
-      { ok: false, configurado: false, erro: 'GEMINI_API_KEY não configurada no .env.local' },
+      { ok: false, configurado: false, erro: 'GROQ_API_KEY não configurada no .env.local' },
       { status: 503 },
     )
   }
@@ -137,6 +139,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, erro: 'clienteId e (pergunta ou acao) são obrigatórios' }, { status: 400 })
   }
 
+  const email = await emailDoToken(req)
+  if (!email) {
+    return NextResponse.json({ ok: false, erro: 'sessão inválida — faça login novamente' }, { status: 401 })
+  }
+  if (!(await ehMembroDoPartner(email, clienteId))) {
+    return NextResponse.json({ ok: false, erro: 'sem permissão para ver este cliente' }, { status: 403 })
+  }
+
   const contexto = await montarContexto(clienteId)
   if (!contexto) {
     return NextResponse.json({ ok: false, erro: 'cliente não encontrado (clientes demo não têm dados reais)' }, { status: 404 })
@@ -144,42 +154,53 @@ export async function POST(req: NextRequest) {
 
   const instrucao = acao ? ACOES[acao] ?? pergunta : pergunta
 
-  const client = new GoogleGenAI({ apiKey })
   try {
-    const response = await client.models.generateContent({
-      model: 'gemini-2.5-pro',
-      config: {
-        systemInstruction: SYSTEM_PROMPT,
-        // gemini-2.5-pro reserva parte do budget para "thinking" antes de
-        // gerar a resposta final — 4096 deixava respostas longas cortadas.
-        maxOutputTokens: 8192,
+    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
       },
-      contents: [
-        {
-          role: 'user',
-          parts: [{ text: `Dados do cliente (JSON):\n\`\`\`json\n${contexto}\n\`\`\`\n\nSolicitação: ${instrucao}` }],
-        },
-      ],
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        // O tier gratuito da Groq pro gpt-oss-120b limita a 8000 tokens/min
+        // (prompt + max_completion_tokens contam juntos pra essa reserva) —
+        // 8192 sozinho já estourava o limite mesmo com prompt pequeno.
+        max_completion_tokens: 3000,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: `Dados do cliente (JSON):\n\`\`\`json\n${contexto}\n\`\`\`\n\nSolicitação: ${instrucao}` },
+        ],
+      }),
     })
 
-    const texto = response.text ?? ''
+    if (!groqRes.ok) {
+      if (groqRes.status === 401 || groqRes.status === 403) {
+        return NextResponse.json({ ok: false, configurado: false, erro: 'GROQ_API_KEY inválida' }, { status: 503 })
+      }
+      if (groqRes.status === 429) {
+        return NextResponse.json({ ok: false, erro: 'Limite de requisições da Groq API atingido — tente em instantes' }, { status: 429 })
+      }
+      const corpoErro = await groqRes.text().catch(() => '')
+      console.error('[agent] erro Groq:', groqRes.status, corpoErro)
+      return NextResponse.json({ ok: false, erro: 'falha ao consultar o agente' }, { status: 500 })
+    }
+
+    const data = await groqRes.json() as {
+      choices?: { message?: { content?: string } }[]
+      usage?: { prompt_tokens?: number; completion_tokens?: number }
+    }
+    const texto = data.choices?.[0]?.message?.content ?? ''
 
     return NextResponse.json({
       ok: true,
       resposta: texto,
       uso: {
-        entrada: response.usageMetadata?.promptTokenCount ?? 0,
-        saida: response.usageMetadata?.candidatesTokenCount ?? 0,
+        entrada: data.usage?.prompt_tokens ?? 0,
+        saida: data.usage?.completion_tokens ?? 0,
       },
     })
   } catch (err) {
-    const status = (err as { status?: number })?.status
-    if (status === 401 || status === 403) {
-      return NextResponse.json({ ok: false, configurado: false, erro: 'GEMINI_API_KEY inválida' }, { status: 503 })
-    }
-    if (status === 429) {
-      return NextResponse.json({ ok: false, erro: 'Limite de requisições da Gemini API atingido — tente em instantes' }, { status: 429 })
-    }
     console.error('[agent] erro:', err)
     return NextResponse.json({ ok: false, erro: 'falha ao consultar o agente' }, { status: 500 })
   }
