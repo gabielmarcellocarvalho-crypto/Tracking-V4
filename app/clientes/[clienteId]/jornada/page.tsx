@@ -242,7 +242,7 @@ export default function JornadaPage({ params }: { params: Promise<{ clienteId: s
   if (!usuario) {
     return (
       <>
-        <DashboardHeader clienteName={cliente?.nome ?? clienteId} clienteTipo={cliente?.tipo} />
+        <DashboardHeader clienteName={cliente?.nome ?? clienteId} clienteTipo={cliente?.tipo} clienteId={isDemo ? undefined : clienteId} />
         <main className="flex-1 overflow-y-auto p-6" style={{ background: 'var(--bg-base)' }}>
           <h2 className="text-[18px] font-bold text-[--text-1]">Jornada do Usuário</h2>
           <p className="text-[12.5px] text-[--text-3] mt-4">
@@ -259,7 +259,7 @@ export default function JornadaPage({ params }: { params: Promise<{ clienteId: s
 
   return (
     <>
-      <DashboardHeader clienteName={cliente?.nome ?? clienteId} clienteTipo={cliente?.tipo} />
+      <DashboardHeader clienteName={cliente?.nome ?? clienteId} clienteTipo={cliente?.tipo} clienteId={isDemo ? undefined : clienteId} />
 
       <main className="flex-1 overflow-y-auto p-6" style={{ background: 'var(--bg-base)' }}>
         {/* Section header */}

@@ -1,8 +1,12 @@
 'use client'
 
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ClienteTipo } from '@/lib/demo-data'
 import { useDateRange } from '@/lib/date-range-context'
+import { useEventos, useInsights } from '@/lib/data/colecoes'
+import { gerarAlertas } from '@/lib/data/agregacoes'
 import DateRangePicker from './DateRangePicker'
+import Markdown from './Markdown'
 
 const tipoConfig: Record<ClienteTipo, { label: string; bg: string; color: string }> = {
   ecommerce: { label: 'E-COMMERCE', bg: 'rgba(200,16,46,.1)',  color: '#C8102E' },
@@ -19,11 +23,29 @@ const BellIcon = () => (
 export interface DashboardHeaderProps {
   clienteName: string
   clienteTipo?: ClienteTipo
+  /** Omitido (ou undefined) para clientes demo — sem isso o sino não busca nada. */
+  clienteId?: string
 }
 
-export default function DashboardHeader({ clienteName, clienteTipo = 'leads' }: DashboardHeaderProps) {
+export default function DashboardHeader({ clienteName, clienteTipo = 'leads', clienteId }: DashboardHeaderProps) {
   const tipo = tipoConfig[clienteTipo]
   const { range: dateRange, setRange: setDateRange } = useDateRange()
+
+  const { eventos } = useEventos(clienteId)
+  const { insights } = useInsights(clienteId)
+  const alertas = useMemo(() => gerarAlertas(eventos), [eventos])
+
+  const [notifAberta, setNotifAberta] = useState(false)
+  const notifRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!notifAberta) return
+    const handler = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifAberta(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [notifAberta])
 
   const btnBase: React.CSSProperties = {
     display: 'flex', alignItems: 'center', gap: 7,
@@ -56,15 +78,84 @@ export default function DashboardHeader({ clienteName, clienteTipo = 'leads' }: 
       {/* Date range picker (replaces old period dropdown) */}
       <DateRangePicker value={dateRange} onChange={setDateRange} />
 
-      {/* Bell */}
-      <button
-        title="Notificações"
-        style={{ ...btnBase, padding: 0, width: 36, height: 36, justifyContent: 'center', color: 'var(--t2)' }}
-        onMouseEnter={(e) => { const el = e.currentTarget; el.style.borderColor = 'var(--red)'; el.style.color = 'var(--red)'; el.style.boxShadow = '0 0 0 3px var(--red-gl),0 4px 12px rgba(200,16,46,.2)'; el.style.transform = 'translateY(-1px)' }}
-        onMouseLeave={(e) => { const el = e.currentTarget; el.style.borderColor = 'var(--br)'; el.style.color = 'var(--t2)'; el.style.boxShadow = 'none'; el.style.transform = 'none' }}
-      >
-        <BellIcon />
-      </button>
+      {/* Bell — alertas automáticos + insights salvos deste cliente */}
+      <div ref={notifRef} style={{ position: 'relative' }}>
+        <button
+          title="Notificações"
+          onClick={() => setNotifAberta((v) => !v)}
+          style={{
+            ...btnBase, padding: 0, width: 36, height: 36, justifyContent: 'center',
+            position: 'relative',
+            color: notifAberta ? 'var(--red)' : 'var(--t2)',
+            borderColor: notifAberta ? 'var(--red)' : 'var(--br)',
+          }}
+          onMouseEnter={(e) => { const el = e.currentTarget; el.style.borderColor = 'var(--red)'; el.style.color = 'var(--red)'; el.style.boxShadow = '0 0 0 3px var(--red-gl),0 4px 12px rgba(200,16,46,.2)'; el.style.transform = 'translateY(-1px)' }}
+          onMouseLeave={(e) => { const el = e.currentTarget; el.style.borderColor = notifAberta ? 'var(--red)' : 'var(--br)'; el.style.color = notifAberta ? 'var(--red)' : 'var(--t2)'; el.style.boxShadow = 'none'; el.style.transform = 'none' }}
+        >
+          <BellIcon />
+          {alertas.length > 0 && (
+            <span style={{
+              position: 'absolute', top: -4, right: -4, minWidth: 16, height: 16, padding: '0 4px',
+              borderRadius: 999, background: 'var(--red)', color: '#fff', fontSize: 9.5, fontWeight: 700,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+              boxShadow: '0 0 0 2px var(--bg-s)',
+            }}>
+              {alertas.length}
+            </span>
+          )}
+        </button>
+
+        {notifAberta && (
+          <div style={{
+            position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 340, maxHeight: 460,
+            background: 'var(--bg-c)', border: '1px solid var(--br)', borderRadius: 12,
+            zIndex: 200, boxShadow: '0 20px 60px rgba(0,0,0,.65)',
+            overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 16,
+          }}>
+            <div>
+              <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--t3)', margin: '0 0 10px' }}>
+                Alertas automáticos
+              </p>
+              {alertas.length === 0 && (
+                <p style={{ fontSize: 11.5, color: 'var(--t3)' }}>Nenhum alerta — tudo saudável ou sem dados suficientes.</p>
+              )}
+              {alertas.map((a) => (
+                <div key={a.tipo} style={{
+                  padding: '10px 12px', borderRadius: 9, marginBottom: 8,
+                  background: a.severidade === 'critico' ? 'rgba(239,68,68,.07)' : 'rgba(245,158,11,.06)',
+                  border: `1px solid ${a.severidade === 'critico' ? 'rgba(239,68,68,.3)' : 'rgba(245,158,11,.25)'}`,
+                }}>
+                  <p style={{ fontSize: 11.5, fontWeight: 700, color: a.severidade === 'critico' ? '#EF4444' : '#F59E0B', margin: 0 }}>{a.titulo}</p>
+                  <p style={{ fontSize: 10.5, color: 'var(--t2)', margin: '4px 0 0', lineHeight: 1.5 }}>{a.corpo}</p>
+                </div>
+              ))}
+            </div>
+
+            <div>
+              <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--t3)', margin: '0 0 10px' }}>
+                Insights salvos
+              </p>
+              {insights.length === 0 && (
+                <p style={{ fontSize: 11.5, color: 'var(--t3)' }}>As ações rápidas do Agente IA ficam salvas aqui.</p>
+              )}
+              {insights.slice(0, 10).map((ins) => (
+                <details key={ins.id} style={{
+                  padding: '10px 12px', borderRadius: 9, marginBottom: 8,
+                  background: 'var(--bg-base)', border: '1px solid var(--br)',
+                }}>
+                  <summary style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--t1)', cursor: 'pointer' }}>
+                    {ins.titulo}
+                    <span style={{ fontSize: 9.5, color: 'var(--t3)', marginLeft: 6 }}>
+                      {new Date(ins.criadoEm).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                    </span>
+                  </summary>
+                  <div style={{ marginTop: 8 }}><Markdown texto={ins.corpo} /></div>
+                </details>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Export */}
       <button

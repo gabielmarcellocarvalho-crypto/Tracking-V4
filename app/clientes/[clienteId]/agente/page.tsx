@@ -1,12 +1,12 @@
 'use client'
 
-import { use, useMemo, useRef, useState } from 'react'
+import { use, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import DashboardHeader from '@/components/tracking/DashboardHeader'
+import Markdown from '@/components/tracking/Markdown'
 import { auth } from '@/lib/firebase'
 import { useCliente } from '@/lib/data/partners'
-import { useEventos, useInsights, salvarInsight } from '@/lib/data/colecoes'
-import { gerarAlertas } from '@/lib/data/agregacoes'
+import { salvarInsight } from '@/lib/data/colecoes'
 
 interface Mensagem {
   papel: 'usuario' | 'agente' | 'erro'
@@ -19,36 +19,6 @@ const ACOES = [
   { id: 'cross-check',       label: 'Cross-check atribuição', desc: 'Dados próprios vs Meta/Google',         color: '#F59E0B' },
   { id: 'sugerir-dashboard', label: 'Sugerir dashboard',      desc: 'KPIs ideais para este cliente',         color: '#8B5CF6' },
 ]
-
-// Renderizador markdown minimalista (títulos, negrito, bullets)
-function Markdown({ texto }: { texto: string }) {
-  const linhas = texto.split('\n')
-  const render = (s: string) => {
-    const partes = s.split(/(\*\*[^*]+\*\*)/g)
-    return partes.map((p, i) =>
-      p.startsWith('**') && p.endsWith('**')
-        ? <strong key={i} style={{ color: 'var(--t1)' }}>{p.slice(2, -2)}</strong>
-        : <span key={i}>{p}</span>
-    )
-  }
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      {linhas.map((l, i) => {
-        if (l.startsWith('### ')) return <h4 key={i} style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--t1)', margin: '8px 0 0' }}>{l.slice(4)}</h4>
-        if (l.startsWith('## '))  return <h3 key={i} style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--t1)', margin: '10px 0 0' }}>{l.slice(3)}</h3>
-        if (l.startsWith('# '))   return <h3 key={i} style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)', margin: '10px 0 0' }}>{l.slice(2)}</h3>
-        if (/^\s*[-•*] /.test(l)) return (
-          <div key={i} style={{ display: 'flex', gap: 8, paddingLeft: 4 }}>
-            <span style={{ color: 'var(--red)', flexShrink: 0 }}>·</span>
-            <span style={{ fontSize: 12.5, color: 'var(--t2)', lineHeight: 1.55 }}>{render(l.replace(/^\s*[-•*] /, ''))}</span>
-          </div>
-        )
-        if (!l.trim()) return null
-        return <p key={i} style={{ fontSize: 12.5, color: 'var(--t2)', lineHeight: 1.55, margin: 0 }}>{render(l)}</p>
-      })}
-    </div>
-  )
-}
 
 // Três pontinhos pulsando em loop — usado no indicador "Analisando os dados".
 function TypingDots() {
@@ -70,8 +40,6 @@ function TypingDots() {
 export default function AgentePage({ params }: { params: Promise<{ clienteId: string }> }) {
   const { clienteId } = use(params)
   const { cliente, isDemo } = useCliente(clienteId)
-  const { eventos } = useEventos(isDemo ? undefined : clienteId)
-  const { insights } = useInsights(isDemo ? undefined : clienteId)
 
   const [mensagens, setMensagens] = useState<Mensagem[]>([])
   const [pergunta, setPergunta]   = useState('')
@@ -79,8 +47,6 @@ export default function AgentePage({ params }: { params: Promise<{ clienteId: st
   const [semKey, setSemKey]       = useState(false)
   const [inputFocado, setInputFocado] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
-
-  const alertas = useMemo(() => gerarAlertas(eventos), [eventos])
 
   const consultar = async (payload: { pergunta?: string; acao?: string }, rotulo: string) => {
     if (carregando) return
@@ -133,7 +99,7 @@ export default function AgentePage({ params }: { params: Promise<{ clienteId: st
 
   return (
     <>
-      <DashboardHeader clienteName={cliente?.nome ?? clienteId} clienteTipo={cliente?.tipo} />
+      <DashboardHeader clienteName={cliente?.nome ?? clienteId} clienteTipo={cliente?.tipo} clienteId={isDemo ? undefined : clienteId} />
 
       <main className="flex-1 overflow-hidden flex" style={{ background: 'var(--bg-base)' }}>
         {/* Coluna principal — chat */}
@@ -321,51 +287,6 @@ export default function AgentePage({ params }: { params: Promise<{ clienteId: st
             </motion.div>
           </div>
         </div>
-
-        {/* Coluna lateral — alertas + insights salvos */}
-        <aside style={{ width: 290, flexShrink: 0, borderLeft: '1px solid var(--br)', overflowY: 'auto', padding: 18, display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div>
-            <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--t3)', margin: '0 0 10px' }}>
-              Alertas automáticos
-            </p>
-            {alertas.length === 0 && (
-              <p style={{ fontSize: 11.5, color: 'var(--t3)' }}>Nenhum alerta — tudo saudável ou sem dados suficientes.</p>
-            )}
-            {alertas.map((a) => (
-              <div key={a.tipo} style={{
-                padding: '10px 12px', borderRadius: 9, marginBottom: 8,
-                background: a.severidade === 'critico' ? 'rgba(239,68,68,.07)' : 'rgba(245,158,11,.06)',
-                border: `1px solid ${a.severidade === 'critico' ? 'rgba(239,68,68,.3)' : 'rgba(245,158,11,.25)'}`,
-              }}>
-                <p style={{ fontSize: 11.5, fontWeight: 700, color: a.severidade === 'critico' ? '#EF4444' : '#F59E0B', margin: 0 }}>{a.titulo}</p>
-                <p style={{ fontSize: 10.5, color: 'var(--t2)', margin: '4px 0 0', lineHeight: 1.5 }}>{a.corpo}</p>
-              </div>
-            ))}
-          </div>
-
-          <div>
-            <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--t3)', margin: '0 0 10px' }}>
-              Insights salvos
-            </p>
-            {insights.length === 0 && (
-              <p style={{ fontSize: 11.5, color: 'var(--t3)' }}>As ações rápidas ficam salvas aqui.</p>
-            )}
-            {insights.slice(0, 10).map((ins) => (
-              <details key={ins.id} style={{
-                padding: '10px 12px', borderRadius: 9, marginBottom: 8,
-                background: 'var(--bg-c)', border: '1px solid var(--br)',
-              }}>
-                <summary style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--t1)', cursor: 'pointer' }}>
-                  {ins.titulo}
-                  <span style={{ fontSize: 9.5, color: 'var(--t3)', marginLeft: 6 }}>
-                    {new Date(ins.criadoEm).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
-                  </span>
-                </summary>
-                <div style={{ marginTop: 8 }}><Markdown texto={ins.corpo} /></div>
-              </details>
-            ))}
-          </div>
-        </aside>
       </main>
     </>
   )

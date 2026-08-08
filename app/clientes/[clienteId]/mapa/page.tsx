@@ -59,7 +59,7 @@ export default function MapaPage({ params }: { params: Promise<{ clienteId: stri
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
-      <DashboardHeader clienteName={cliente?.nome ?? clienteId} clienteTipo={cliente?.tipo} />
+      <DashboardHeader clienteName={cliente?.nome ?? clienteId} clienteTipo={cliente?.tipo} clienteId={isDemo ? undefined : clienteId} />
 
       {/* Page title bar */}
       <div style={{ padding: '12px 24px', borderBottom: '1px solid var(--br)', background: 'var(--bg-s)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, flexWrap: 'wrap', gap: 12 }}>

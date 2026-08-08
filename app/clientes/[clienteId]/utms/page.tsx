@@ -180,7 +180,7 @@ export default function UTMsPage({ params }: { params: Promise<{ clienteId: stri
 
   return (
     <>
-      <DashboardHeader clienteName={cliente?.nome ?? clienteId} clienteTipo={cliente?.tipo} />
+      <DashboardHeader clienteName={cliente?.nome ?? clienteId} clienteTipo={cliente?.tipo} clienteId={isDemo ? undefined : clienteId} />
 
       <main className="flex-1 overflow-y-auto p-6" style={{ background: 'var(--bg-base)' }}>
         {/* Section header */}

@@ -29,7 +29,7 @@ const icons = {
 const ROTAS_MIDIA = ['performance', 'midia', 'copies', 'forecasting']
 // Rotas sem modo próprio (servem os dois) — a sidebar mantém o modo em que
 // o usuário já estava em vez de cair pra Tracking por padrão.
-const ROTAS_UNIVERSAIS = ['conexoes']
+const ROTAS_UNIVERSAIS = ['conexoes', 'agente']
 
 // ── NavItem ───────────────────────────────────────────────────────────────────
 function NavItem({ label, href, icon, badge, active }: {
@@ -172,7 +172,6 @@ export default function Sidebar({ clienteId }: { clienteId?: string }) {
               <NavItem label="Conversões" href={`${base}/conversoes`} icon={icons.conversoes} active={isActive(`${base}/conversoes`)} />
               <NavItem label="Leads"      href={`${base}/mapa`}       icon={icons.mapa}       active={isActive(`${base}/mapa`)} />
               <NavItem label="Jornada do Usuário" href={`${base}/jornada`} icon={icons.jornada} active={isActive(`${base}/jornada`)} />
-              <NavItem label="Agente IA"  href={`${base}/agente`}     icon={icons.agente}     active={isActive(`${base}/agente`)} />
             </>
           ) : (
             <>
@@ -185,9 +184,32 @@ export default function Sidebar({ clienteId }: { clienteId?: string }) {
           )}
 
           {/* Universal — vale tanto pro Tracking quanto pro Gestor de Mídia
-              deste cliente (conexões de métricas/server-to-server). */}
+              deste cliente (conexões de métricas/server-to-server + o mesmo
+              Agente IA, com o mesmo contexto do cliente nos dois modos). */}
           <SectionLabel>Conexões</SectionLabel>
           <NavItem label="Conexões" href={`${base}/conexoes`} icon={icons.conexoes} active={isActive(`${base}/conexoes`)} />
+          <NavItem label="Agente IA" href={`${base}/agente`} icon={icons.agente} active={isActive(`${base}/agente`)} />
+
+          {/* Troca de modo — vai direto pro outro lado (Tracking ⇄ Gestor de
+              Mídia) deste mesmo cliente, sem precisar voltar pra Clientes.
+              Mesmo estilo do link "Clientes" (fora do fluxo de abas). */}
+          <Link
+            href={modo === 'tracking' ? `${base}/performance` : `${base}/tracking`}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8, margin: '12px 16px 4px',
+              padding: '8px 12px', borderRadius: 8, fontSize: 12.5, fontWeight: 600,
+              color: 'var(--t3)', border: '1px solid var(--br)', textDecoration: 'none',
+              transition: 'all .15s',
+            }}
+            onMouseEnter={(e) => { const el = e.currentTarget; el.style.color = 'var(--red)'; el.style.borderColor = 'var(--red)' }}
+            onMouseLeave={(e) => { const el = e.currentTarget; el.style.color = 'var(--t3)'; el.style.borderColor = 'var(--br)' }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" width={14} height={14}>
+              <polyline points="17 1 21 5 17 9" /><path d="M3 11V9a4 4 0 0 1 4-4h14" />
+              <polyline points="7 23 3 19 7 15" /><path d="M21 13v2a4 4 0 0 1-4 4H3" />
+            </svg>
+            {modo === 'tracking' ? 'Ir para Gestor de Mídia' : 'Ir para Tracking'}
+          </Link>
         </>)}
       </nav>
 

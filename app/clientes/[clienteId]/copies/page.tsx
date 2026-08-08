@@ -7,11 +7,11 @@ import { useCliente } from '@/lib/data/partners'
 
 export default function CopiesPage({ params }: { params: Promise<{ clienteId: string }> }) {
   const { clienteId } = use(params)
-  const { cliente } = useCliente(clienteId)
+  const { cliente, isDemo } = useCliente(clienteId)
 
   return (
     <>
-      <DashboardHeader clienteName={cliente?.nome ?? clienteId} clienteTipo={cliente?.tipo} />
+      <DashboardHeader clienteName={cliente?.nome ?? clienteId} clienteTipo={cliente?.tipo} clienteId={isDemo ? undefined : clienteId} />
 
       <main className="flex-1 overflow-y-auto p-6" style={{ background: 'var(--bg-base)', display: 'flex', flexDirection: 'column', gap: 20 }}>
         <div>

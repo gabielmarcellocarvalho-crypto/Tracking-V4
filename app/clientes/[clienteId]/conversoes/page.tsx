@@ -61,7 +61,7 @@ export default function ConversoesPage({ params }: { params: Promise<{ clienteId
 
   return (
     <>
-      <DashboardHeader clienteName={cliente?.nome ?? clienteId} clienteTipo={cliente?.tipo} />
+      <DashboardHeader clienteName={cliente?.nome ?? clienteId} clienteTipo={cliente?.tipo} clienteId={isDemo ? undefined : clienteId} />
 
       <main className="flex-1 overflow-y-auto p-6" style={{ background: 'var(--bg-base)' }}>
         <div className="mb-5">

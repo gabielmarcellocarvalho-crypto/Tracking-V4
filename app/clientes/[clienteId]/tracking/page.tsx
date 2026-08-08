@@ -193,7 +193,7 @@ export default function TrackingPage({ params }: { params: Promise<{ clienteId: 
         }
       `}</style>
 
-      <DashboardHeader clienteName={cliente?.nome ?? clienteId} clienteTipo={cliente?.tipo} />
+      <DashboardHeader clienteName={cliente?.nome ?? clienteId} clienteTipo={cliente?.tipo} clienteId={isDemo ? undefined : clienteId} />
 
       <main style={{ flex: 1, overflowY: 'auto', padding: 24, background: 'var(--bg-base)', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
