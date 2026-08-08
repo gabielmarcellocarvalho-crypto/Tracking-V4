@@ -12,6 +12,8 @@ import {
   agregarPerformance, gerarAlertas,
 } from '@/lib/data/agregacoes'
 import { validateUTM } from '@/lib/utm/engine'
+import { buscarGastoMetaAds } from '@/lib/integrations/meta-ads-insights'
+import { buscarGastoGoogleAds } from '@/lib/integrations/google-ads-insights'
 import type { Partner, Evento, Identidade, Conversao } from '@/lib/types'
 
 export const maxDuration = 60
@@ -25,6 +27,7 @@ Contexto técnico que você domina:
 - A resolução de identidade unifica o usuário além das janelas de atribuição (Meta 7d, Google 90d) — a plataforma enxerga conversões que Meta/Google "esqueceram".
 - Padrão de UTM V4 (cumulativo): utm_campaign = office_região_funil_objetivo_cliente_tipo_detalhe; utm_term herda a campanha + posicionamento_segmentação; utm_content herda o conjunto + formato_detalhe. UTMs fora do padrão quebram a análise por nível.
 - Os dados primários servem para corrigir a % de erro das plataformas e alimentar Meta CAPI / Google Enhanced Conversions com match quality alto (email/telefone hasheados + click ids).
+- O campo "midiaPaga" do contexto vem direto da Meta Marketing API / Google Ads API (gasto, funil, ROAS dos últimos 30 dias) — é a fonte mais confiável de investimento e resultado de mídia paga, mesmo quando o site ainda não manda eventos próprios. "kpis"/"funil" fora desse campo vêm do tracking do site (eventos) e podem estar zerados se o snippet ainda não foi instalado — nesse caso, use "midiaPaga" como base da análise em vez de dizer que não há dados.
 
 Regras de resposta:
 - Responda em português brasileiro, direto e prático, como um analista sênior falando com gestor de tráfego.
@@ -39,16 +42,78 @@ const ACOES: Record<string, string> = {
   'sugerir-dashboard': 'Com base no tipo deste cliente e nos dados disponíveis, sugira a configuração ideal de dashboard: quais KPIs acompanhar diariamente, quais blocos montar no template personalizado e quais metas definir.',
 }
 
+// Busca gasto+funil real do Meta Ads pra esse cliente, se estiver conectado
+// (Conexões → "Meta Ads (Métricas)"). Nunca deixa o agente inteiro falhar por
+// causa disso — sem conexão ou erro na API vira `null` no contexto.
+async function buscarMidiaPagaMeta(clienteId: string, start: Date, end: Date) {
+  const db = getDbAdmin()
+  const integSnap = await db.collection('partners').doc(clienteId).collection('integrations').doc('meta-ads').get()
+  const campos = (integSnap.data()?.campos ?? {}) as Record<string, string>
+  const adAccountId = campos.adAccountId?.trim()
+  if (!adAccountId) return null
+
+  const accessToken = campos.accessToken?.trim() || process.env.META_BM_SYSTEM_USER_TOKEN
+  if (!accessToken) return null
+
+  try {
+    const dias = await buscarGastoMetaAds(adAccountId, accessToken, start, end)
+    const t = dias.reduce((acc, d) => ({
+      spend: acc.spend + d.spend, reach: acc.reach + d.reach, impressions: acc.impressions + d.impressions,
+      clicks: acc.clicks + d.clicks, sessoes: acc.sessoes + d.sessoes, addToCart: acc.addToCart + d.addToCart,
+      checkout: acc.checkout + d.checkout, purchase: acc.purchase + d.purchase, faturamento: acc.faturamento + d.faturamento,
+    }), { spend: 0, reach: 0, impressions: 0, clicks: 0, sessoes: 0, addToCart: 0, checkout: 0, purchase: 0, faturamento: 0 })
+    return { ...t, roas: t.spend > 0 ? Number((t.faturamento / t.spend).toFixed(2)) : 0 }
+  } catch (err) {
+    console.error('[agent] falha ao buscar Meta Ads:', err)
+    return null
+  }
+}
+
+// Idem para o Google Ads, usando as credenciais compartilhadas da MCC.
+async function buscarMidiaPagaGoogle(clienteId: string, start: Date, end: Date) {
+  const db = getDbAdmin()
+  const integSnap = await db.collection('partners').doc(clienteId).collection('integrations').doc('google-ads').get()
+  const campos = (integSnap.data()?.campos ?? {}) as Record<string, string>
+  const customerId = campos.customerId?.trim()
+  if (!customerId) return null
+
+  const mccId = process.env.GADS_MCC_ID
+  const developerToken = process.env.GADS_DEVELOPER_TOKEN
+  const clientId = process.env.GADS_OAUTH_CLIENT_ID
+  const clientSecret = process.env.GADS_OAUTH_CLIENT_SECRET
+  const refreshToken = process.env.GADS_REFRESH_TOKEN
+  if (!mccId || !developerToken || !clientId || !clientSecret || !refreshToken) return null
+
+  try {
+    const dias = await buscarGastoGoogleAds(customerId, mccId, developerToken, clientId, clientSecret, refreshToken, start, end)
+    const t = dias.reduce((acc, d) => ({
+      spend: acc.spend + d.spend, impressions: acc.impressions + d.impressions, clicks: acc.clicks + d.clicks,
+      addToCart: acc.addToCart + d.addToCart, checkout: acc.checkout + d.checkout,
+      purchase: acc.purchase + d.purchase, faturamento: acc.faturamento + d.faturamento,
+    }), { spend: 0, impressions: 0, clicks: 0, addToCart: 0, checkout: 0, purchase: 0, faturamento: 0 })
+    return { ...t, roas: t.spend > 0 ? Number((t.faturamento / t.spend).toFixed(2)) : 0 }
+  } catch (err) {
+    console.error('[agent] falha ao buscar Google Ads:', err)
+    return null
+  }
+}
+
 async function montarContexto(clienteId: string): Promise<string | null> {
   const db = getDbAdmin()
   const clienteSnap = await db.collection('partners').doc(clienteId).get()
   if (!clienteSnap.exists) return null
   const cliente = clienteSnap.data() as Partner
 
-  const [eventosSnap, identidadesSnap, conversoesSnap] = await Promise.all([
+  const fimPeriodo = new Date()
+  const inicioPeriodo = new Date(fimPeriodo)
+  inicioPeriodo.setDate(inicioPeriodo.getDate() - 29)
+
+  const [eventosSnap, identidadesSnap, conversoesSnap, metaAds, googleAds] = await Promise.all([
     db.collection('partners').doc(clienteId).collection('eventos').orderBy('ts', 'desc').limit(1500).get(),
     db.collection('partners').doc(clienteId).collection('identidades').orderBy('atualizadoEm', 'desc').limit(300).get(),
     db.collection('partners').doc(clienteId).collection('conversoes').orderBy('ts', 'desc').limit(300).get(),
+    buscarMidiaPagaMeta(clienteId, inicioPeriodo, fimPeriodo),
+    buscarMidiaPagaGoogle(clienteId, inicioPeriodo, fimPeriodo),
   ])
 
   const eventos = eventosSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Evento)
@@ -111,6 +176,13 @@ async function montarContexto(clienteId: string): Promise<string | null> {
         acc[c.status] = (acc[c.status] ?? 0) + 1
         return acc
       }, {}),
+    },
+    // Métricas puxadas direto das plataformas de anúncio (Meta Marketing API /
+    // Google Ads API), independente do que o site já rastreou sozinho — `null`
+    // quando a conexão em Conexões não existe ou a chamada à API falhou.
+    midiaPaga: {
+      meta: metaAds,
+      google: googleAds,
     },
     alertasAutomaticos: alertas,
   }, null, 1)

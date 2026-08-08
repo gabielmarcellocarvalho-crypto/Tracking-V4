@@ -3,6 +3,7 @@
 import { use } from 'react'
 import AuthGuard from '@/components/auth/AuthGuard'
 import Sidebar from '@/components/tracking/Sidebar'
+import AgenteBubble from '@/components/tracking/AgenteBubble'
 import { DateRangeProvider } from '@/lib/date-range-context'
 
 export default function ClienteLayout({
@@ -22,6 +23,7 @@ export default function ClienteLayout({
           <div className="flex flex-col flex-1 overflow-hidden" style={{ marginLeft: 256 }}>
             {children}
           </div>
+          <AgenteBubble clienteId={clienteId} />
         </div>
       </DateRangeProvider>
     </AuthGuard>

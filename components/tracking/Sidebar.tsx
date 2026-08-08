@@ -29,7 +29,7 @@ const icons = {
 const ROTAS_MIDIA = ['performance', 'midia', 'copies', 'forecasting']
 // Rotas sem modo próprio (servem os dois) — a sidebar mantém o modo em que
 // o usuário já estava em vez de cair pra Tracking por padrão.
-const ROTAS_UNIVERSAIS = ['conexoes', 'agente']
+const ROTAS_UNIVERSAIS = ['conexoes']
 
 // ── NavItem ───────────────────────────────────────────────────────────────────
 function NavItem({ label, href, icon, badge, active }: {
@@ -184,11 +184,11 @@ export default function Sidebar({ clienteId }: { clienteId?: string }) {
           )}
 
           {/* Universal — vale tanto pro Tracking quanto pro Gestor de Mídia
-              deste cliente (conexões de métricas/server-to-server + o mesmo
-              Agente IA, com o mesmo contexto do cliente nos dois modos). */}
+              deste cliente (conexões de métricas/server-to-server). O Agente
+              IA virou a bolinha flutuante (AgenteBubble, montada no layout)
+              — não tem mais item de menu próprio. */}
           <SectionLabel>Conexões</SectionLabel>
           <NavItem label="Conexões" href={`${base}/conexoes`} icon={icons.conexoes} active={isActive(`${base}/conexoes`)} />
-          <NavItem label="Agente IA" href={`${base}/agente`} icon={icons.agente} active={isActive(`${base}/agente`)} />
 
           {/* Troca de modo — vai direto pro outro lado (Tracking ⇄ Gestor de
               Mídia) deste mesmo cliente, sem precisar voltar pra Clientes.
