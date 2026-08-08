@@ -119,7 +119,11 @@ function CalMonth({
 // ── Main component ────────────────────────────────────────────────────────────
 export default function DateRangePicker({ value, onChange }: Props) {
   const [open, setOpen]             = useState(false)
-  const [activeKey, setActiveKey]   = useState('30d')
+  // Deriva do `value` (contexto compartilhado) em vez de sempre começar em
+  // '30d' — esse componente é remontado do zero a cada navegação de página
+  // (fica dentro do DashboardHeader de cada rota), então sem isso o rótulo
+  // exibido "esquecia" o período real ao trocar de aba/modo.
+  const [activeKey, setActiveKey]   = useState(() => PRESETS.find((p) => p.label === value.label)?.key ?? 'custom')
   const [showCal, setShowCal]       = useState(false)
   const [selectStart, setSelectStart] = useState<Date | null>(null)
   const [selectEnd,   setSelectEnd]   = useState<Date | null>(null)

@@ -114,8 +114,8 @@ export default function AgenteBubble({ clienteId }: { clienteId?: string }) {
             exit={{ opacity: 0, y: 16, scale: 0.96 }}
             transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
             style={{
-              position: 'absolute', bottom: 68, right: 0,
-              width: 'min(380px, calc(100vw - 48px))', height: 'min(560px, calc(100vh - 140px))',
+              position: 'absolute', bottom: 76, right: 0,
+              width: 'min(440px, calc(100vw - 48px))', height: 'min(640px, calc(100vh - 120px))',
               display: 'flex', flexDirection: 'column', overflow: 'hidden',
               borderRadius: 18, border: '1px solid var(--br)',
               background: 'var(--bg-c)', boxShadow: '0 24px 64px -12px rgba(0,0,0,.6)',
@@ -291,7 +291,7 @@ export default function AgenteBubble({ clienteId }: { clienteId?: string }) {
         aria-label="Agente IA"
         title="Agente IA"
         style={{
-          width: 56, height: 56, borderRadius: '50%', border: 'none', cursor: 'pointer',
+          width: 64, height: 64, borderRadius: '50%', border: 'none', cursor: 'pointer',
           background: 'linear-gradient(135deg, var(--red), var(--purple))',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: '0 8px 24px -4px rgba(200,16,46,.55)',
@@ -300,14 +300,14 @@ export default function AgenteBubble({ clienteId }: { clienteId?: string }) {
         <AnimatePresence mode="wait" initial={false}>
           {aberto ? (
             <motion.svg
-              key="close" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" width={20} height={20}
+              key="close" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" width={23} height={23}
               initial={{ opacity: 0, rotate: -45 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: 45 }} transition={{ duration: 0.15 }}
             >
               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
             </motion.svg>
           ) : (
             <motion.span key="sparkle" initial={{ opacity: 0, rotate: 45 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: -45 }} transition={{ duration: 0.15 }}>
-              <SparkleIcon size={22} />
+              <SparkleIcon size={26} />
             </motion.span>
           )}
         </AnimatePresence>
