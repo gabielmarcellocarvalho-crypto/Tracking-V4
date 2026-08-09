@@ -249,6 +249,41 @@ export interface PlanoMidiaConfigMes {
   fatorPosImposto: number // decimal, ex: 0.8718 = deduz 12,82%
 }
 
+// ── Metas de KPI (Gestor de Mídia) — doc raiz em partners/{id}/kpi_metas/config ─
+// Um mapa por canal (geral/meta/google) → por KPI → se está sendo monitorado
+// e qual o valor aceitável. `direcao` do KPI (min/max) decide o que "abaixo
+// do aceitável" significa (ver KPIS_ECOMMERCE/KPIS_LEADS em lib/data/kpis.ts).
+export interface KpiMetaConfig {
+  ativo: boolean
+  valor: number
+}
+export interface KpiMetasDoc {
+  geral?: Record<string, KpiMetaConfig>
+  meta?: Record<string, KpiMetaConfig>
+  google?: Record<string, KpiMetaConfig>
+  atualizadoEm?: number
+}
+
+// ── Status de KPI (Gestor de Mídia) — doc raiz em partners/{id}/kpi_status/atual ─
+// Recalculado sempre que o gestor abre Gestor de Mídia (não em toda página, pra
+// não gerar chamada às APIs de Ads em rotas que não precisam disso) — o sino de
+// notificações só LÊ este doc, nunca recalcula.
+export interface KpiViolacao {
+  key: string
+  label: string
+  valorAtual: number
+  meta: number
+  direcao: 'min' | 'max'
+  formato: 'moeda' | 'percentual' | 'razao' | 'numero'
+}
+export interface KpiStatusDoc {
+  geral?: KpiViolacao[]
+  meta?: KpiViolacao[]
+  google?: KpiViolacao[]
+  periodoLabel?: string
+  atualizadoEm?: number
+}
+
 // ── Membro de um partner (controle de acesso) ─────────────────────────────────
 export type MemberRole = 'admin' | 'viewer'
 

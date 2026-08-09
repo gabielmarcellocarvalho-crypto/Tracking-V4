@@ -5,8 +5,9 @@ import DashboardHeader from '@/components/tracking/DashboardHeader'
 import { useCliente } from '@/lib/data/partners'
 import VisaoGeralGrowthPack from '@/components/midia/VisaoGeralGrowthPack'
 import PlanoMidia from '@/components/midia/PlanoMidia'
+import MetasAlertas from '@/components/midia/MetasAlertas'
 
-type Aba = 'visao-geral' | 'plano-midia'
+type Aba = 'visao-geral' | 'plano-midia' | 'metas-alertas'
 
 export default function MidiaPage({ params }: { params: Promise<{ clienteId: string }> }) {
   const { clienteId } = use(params)
@@ -34,12 +35,13 @@ export default function MidiaPage({ params }: { params: Promise<{ clienteId: str
           <div style={{ display: 'flex', gap: 4, padding: 3, borderRadius: 9, background: 'var(--bg-c)', border: '1px solid var(--br)' }}>
             <button onClick={() => setAba('visao-geral')} style={abaBtn('visao-geral')}>Visão Geral</button>
             <button onClick={() => setAba('plano-midia')} style={abaBtn('plano-midia')}>Plano de Mídia</button>
+            <button onClick={() => setAba('metas-alertas')} style={abaBtn('metas-alertas')}>Metas & Alertas</button>
           </div>
         </div>
 
-        {aba === 'visao-geral'
-          ? <VisaoGeralGrowthPack clienteId={clienteId} clienteTipo={cliente?.tipo} isDemo={isDemo} />
-          : <PlanoMidia clienteId={clienteId} clienteTipo={cliente?.tipo} isDemo={isDemo} />}
+        {aba === 'visao-geral' && <VisaoGeralGrowthPack clienteId={clienteId} clienteTipo={cliente?.tipo} isDemo={isDemo} />}
+        {aba === 'plano-midia' && <PlanoMidia clienteId={clienteId} clienteTipo={cliente?.tipo} isDemo={isDemo} />}
+        {aba === 'metas-alertas' && <MetasAlertas clienteId={clienteId} clienteTipo={cliente?.tipo} isDemo={isDemo} />}
       </main>
     </>
   )

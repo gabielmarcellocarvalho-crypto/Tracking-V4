@@ -3,14 +3,16 @@
 // ─── HOOKS POR SUBCOLEÇÃO + escritas ─────────────────────────────────────────
 
 import {
-  addDoc, collection, deleteDoc, doc, setDoc, serverTimestamp,
+  addDoc, collection, deleteDoc, doc, onSnapshot, setDoc, serverTimestamp,
 } from 'firebase/firestore'
+import { useEffect, useState } from 'react'
 import { db } from '@/lib/firebase'
 import { useSubcolecao } from './firestore-hooks'
 import type {
   Evento, Identidade, UTMRegistro, Conversao, Integration, IntegrationPlataforma, Insight,
-  PlanoMidiaItem, PlanoMidiaConfigMes,
+  PlanoMidiaItem, PlanoMidiaConfigMes, KpiMetasDoc, KpiMetaConfig, KpiStatusDoc, KpiViolacao,
 } from '@/lib/types'
+import type { GrowthPackCanal } from './agregacoes'
 
 // ── Eventos ───────────────────────────────────────────────────────────────────
 export function useEventos(clienteId: string | undefined, limite = 2000) {
@@ -102,6 +104,54 @@ export function usePlanoMidiaConfig(clienteId: string | undefined) {
 
 export async function salvarPlanoMidiaConfigMes(clienteId: string, mes: string, dados: Omit<PlanoMidiaConfigMes, 'mes'>) {
   await setDoc(doc(db, 'partners', clienteId, 'plano_midia_config', mes), { mes, ...dados }, { merge: true })
+}
+
+// ── Metas de KPI (Gestor de Mídia) — doc único partners/{id}/kpi_metas/config ──
+export function useKpiMetas(clienteId: string | undefined) {
+  const [metas, setMetas] = useState<KpiMetasDoc | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!clienteId) { setMetas(null); setLoading(false); return }
+    const unsub = onSnapshot(
+      doc(db, 'partners', clienteId, 'kpi_metas', 'config'),
+      (snap) => { setMetas(snap.exists() ? (snap.data() as KpiMetasDoc) : null); setLoading(false) },
+      () => { setMetas(null); setLoading(false) },
+    )
+    return unsub
+  }, [clienteId])
+
+  return { metas, loading }
+}
+
+export async function salvarKpiMetas(clienteId: string, canal: GrowthPackCanal, metas: Record<string, KpiMetaConfig>) {
+  await setDoc(doc(db, 'partners', clienteId, 'kpi_metas', 'config'), { [canal]: metas, atualizadoEm: Date.now() }, { merge: true })
+}
+
+// ── Status de KPI (Gestor de Mídia) — doc único partners/{id}/kpi_status/atual ─
+// Só é ESCRITO quando o gestor abre a aba "Metas & Alertas" (não em toda
+// página) — o sino de notificações só lê este doc.
+export function useKpiStatus(clienteId: string | undefined) {
+  const [status, setStatus] = useState<KpiStatusDoc | null>(null)
+
+  useEffect(() => {
+    if (!clienteId) { setStatus(null); return }
+    const unsub = onSnapshot(
+      doc(db, 'partners', clienteId, 'kpi_status', 'atual'),
+      (snap) => setStatus(snap.exists() ? (snap.data() as KpiStatusDoc) : null),
+      () => setStatus(null),
+    )
+    return unsub
+  }, [clienteId])
+
+  return { status }
+}
+
+export async function salvarKpiStatus(
+  clienteId: string,
+  dados: { geral: KpiViolacao[]; meta: KpiViolacao[]; google: KpiViolacao[]; periodoLabel: string },
+) {
+  await setDoc(doc(db, 'partners', clienteId, 'kpi_status', 'atual'), { ...dados, atualizadoEm: Date.now() }, { merge: true })
 }
 
 // ── Insights ──────────────────────────────────────────────────────────────────

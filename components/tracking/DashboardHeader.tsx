@@ -3,10 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ClienteTipo } from '@/lib/demo-data'
 import { useDateRange } from '@/lib/date-range-context'
-import { useEventos, useInsights } from '@/lib/data/colecoes'
+import { useEventos, useInsights, useKpiStatus } from '@/lib/data/colecoes'
 import { gerarAlertas } from '@/lib/data/agregacoes'
+import { formatarKpi } from '@/lib/data/kpis'
+import type { KpiViolacao } from '@/lib/types'
 import DateRangePicker from './DateRangePicker'
 import Markdown from './Markdown'
+
+const CANAL_LABEL: Record<string, string> = { geral: 'Geral', meta: 'Meta', google: 'Google' }
 
 const tipoConfig: Record<ClienteTipo, { label: string; bg: string; color: string }> = {
   ecommerce: { label: 'E-COMMERCE', bg: 'rgba(200,16,46,.1)',  color: '#C8102E' },
@@ -33,7 +37,13 @@ export default function DashboardHeader({ clienteName, clienteTipo = 'leads', cl
 
   const { eventos } = useEventos(clienteId)
   const { insights } = useInsights(clienteId)
+  const { status: kpiStatus } = useKpiStatus(clienteId)
   const alertas = useMemo(() => gerarAlertas(eventos), [eventos])
+  const kpiViolacoes = useMemo(() => {
+    if (!kpiStatus) return [] as (KpiViolacao & { canal: string })[]
+    const canais: (keyof typeof CANAL_LABEL)[] = ['geral', 'meta', 'google']
+    return canais.flatMap((c) => (kpiStatus[c as 'geral' | 'meta' | 'google'] ?? []).map((v) => ({ ...v, canal: c })))
+  }, [kpiStatus])
 
   const [notifAberta, setNotifAberta] = useState(false)
   const notifRef = useRef<HTMLDivElement>(null)
@@ -93,14 +103,14 @@ export default function DashboardHeader({ clienteName, clienteTipo = 'leads', cl
           onMouseLeave={(e) => { const el = e.currentTarget; el.style.borderColor = notifAberta ? 'var(--red)' : 'var(--br)'; el.style.color = notifAberta ? 'var(--red)' : 'var(--t2)'; el.style.boxShadow = 'none'; el.style.transform = 'none' }}
         >
           <BellIcon />
-          {alertas.length > 0 && (
+          {(alertas.length + kpiViolacoes.length) > 0 && (
             <span style={{
               position: 'absolute', top: -4, right: -4, minWidth: 16, height: 16, padding: '0 4px',
               borderRadius: 999, background: 'var(--red)', color: '#fff', fontSize: 9.5, fontWeight: 700,
               display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
               boxShadow: '0 0 0 2px var(--bg-s)',
             }}>
-              {alertas.length}
+              {alertas.length + kpiViolacoes.length}
             </span>
           )}
         </button>
@@ -127,6 +137,28 @@ export default function DashboardHeader({ clienteName, clienteTipo = 'leads', cl
                 }}>
                   <p style={{ fontSize: 11.5, fontWeight: 700, color: a.severidade === 'critico' ? '#EF4444' : '#F59E0B', margin: 0 }}>{a.titulo}</p>
                   <p style={{ fontSize: 10.5, color: 'var(--t2)', margin: '4px 0 0', lineHeight: 1.5 }}>{a.corpo}</p>
+                </div>
+              ))}
+            </div>
+
+            <div>
+              <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--t3)', margin: '0 0 10px' }}>
+                Metas de KPI (Gestor de Mídia)
+              </p>
+              {kpiViolacoes.length === 0 && (
+                <p style={{ fontSize: 11.5, color: 'var(--t3)' }}>Nenhuma meta configurada fora do aceitável.</p>
+              )}
+              {kpiViolacoes.map((v) => (
+                <div key={`${v.canal}-${v.key}`} style={{
+                  padding: '10px 12px', borderRadius: 9, marginBottom: 8,
+                  background: 'rgba(239,68,68,.07)', border: '1px solid rgba(239,68,68,.3)',
+                }}>
+                  <p style={{ fontSize: 11.5, fontWeight: 700, color: '#EF4444', margin: 0 }}>
+                    {v.label} <span style={{ color: 'var(--t3)', fontWeight: 600 }}>· {CANAL_LABEL[v.canal]}</span>
+                  </p>
+                  <p style={{ fontSize: 10.5, color: 'var(--t2)', margin: '4px 0 0', lineHeight: 1.5 }}>
+                    Atual {formatarKpi(v.valorAtual, v.formato)} — meta {v.direcao === 'min' ? 'mínima' : 'máxima'} {formatarKpi(v.meta, v.formato)}
+                  </p>
                 </div>
               ))}
             </div>
