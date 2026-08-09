@@ -38,6 +38,15 @@ function TrashIcon() {
   )
 }
 
+function MagicStarIcon({ color = 'currentColor', size = 13 }: { color?: string; size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" width={size} height={size}>
+      <path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3z" />
+      <path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7.7-2z" />
+    </svg>
+  )
+}
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
@@ -109,17 +118,81 @@ function TextosLimitados({ titulo, itens, limite, onChange }: { titulo: string; 
   )
 }
 
+// ── Sugestões via IA (Groq) ─────────────────────────────────────────────────
+interface Sugestao {
+  palavrasChave: GoogleAdsPalavra[]
+  negativas: string[]
+  headlines: string[]
+  descricoes: string[]
+}
+
+// Só preenche o que está faltando — nunca troca palavra/título/descrição que
+// o gestor já digitou (pedido explícito: a IA complementa, não substitui).
+function mesclarSugestaoNoGrupo(grupo: GoogleAdsGrupo, s: Sugestao): GoogleAdsGrupo {
+  const palavrasExistentes = new Set(grupo.palavrasChave.map((p) => p.texto.trim().toLowerCase()))
+  const novasPalavras = s.palavrasChave.filter((p) => p.texto.trim() && !palavrasExistentes.has(p.texto.trim().toLowerCase()))
+
+  const negativasExistentes = new Set(grupo.negativas.map((n) => n.texto.trim().toLowerCase()))
+  const novasNegativas = s.negativas
+    .filter((texto) => texto.trim() && !negativasExistentes.has(texto.trim().toLowerCase()))
+    .map((texto) => ({ texto, tipo: 'Phrase' as const }))
+
+  const headlines = [...grupo.headlines]
+  let hi = 0
+  for (let i = 0; i < headlines.length && hi < s.headlines.length; i++) {
+    if (!headlines[i].trim()) headlines[i] = s.headlines[hi++]
+  }
+  const descricoes = [...grupo.descricoes]
+  let di = 0
+  for (let i = 0; i < descricoes.length && di < s.descricoes.length; i++) {
+    if (!descricoes[i].trim()) descricoes[i] = s.descricoes[di++]
+  }
+
+  return {
+    ...grupo,
+    palavrasChave: [...grupo.palavrasChave, ...novasPalavras],
+    negativas: [...grupo.negativas, ...novasNegativas],
+    headlines,
+    descricoes,
+  }
+}
+
 // ── Um grupo de anúncios completo (accordion) ──────────────────────────────
-function GrupoEditor({ grupo, onChange, onRemover, abrirInicial }: {
-  grupo: GoogleAdsGrupo; onChange: (g: GoogleAdsGrupo) => void; onRemover: () => void; abrirInicial?: boolean
+function GrupoEditor({ clienteId, grupo, onChange, onRemover, abrirInicial }: {
+  clienteId: string; grupo: GoogleAdsGrupo; onChange: (g: GoogleAdsGrupo) => void; onRemover: () => void; abrirInicial?: boolean
 }) {
   // Fechado por padrão — cada grupo tem 2 tabelas de palavras + 15 títulos +
   // 4 descrições, então com vários grupos abertos ao mesmo tempo o modal
-  // ficava gigante e escondia o painel de IA lá em cima, mesmo ele já sendo
-  // o primeiro item do modal (tinha que rolar/minimizar grupo pra enxergar).
-  // `abrirInicial` abre só o grupo recém-criado (manual ou pela IA).
+  // ficava gigante. `abrirInicial` abre só o grupo recém-criado.
   const [aberto, setAberto] = useState(!!abrirInicial)
+  const [mostrarIA, setMostrarIA] = useState(false)
+  const [briefing, setBriefing] = useState('')
+  const [carregandoIA, setCarregandoIA] = useState(false)
+  const [erroIA, setErroIA] = useState<string | null>(null)
   const set = <K extends keyof GoogleAdsGrupo>(k: K, v: GoogleAdsGrupo[K]) => onChange({ ...grupo, [k]: v })
+
+  const gerarComIA = async () => {
+    if (!briefing.trim() || carregandoIA) return
+    setCarregandoIA(true); setErroIA(null)
+    try {
+      const idToken = await auth.currentUser?.getIdToken()
+      const res = await fetch('/api/google-ads-suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}) },
+        body: JSON.stringify({ clienteId, briefing }),
+      })
+      const data = await res.json()
+      if (!data.ok) { setErroIA(data.erro ?? 'falha ao gerar sugestões'); return }
+      onChange(mesclarSugestaoNoGrupo(grupo, data.sugestao as Sugestao))
+      setAberto(true)
+      setMostrarIA(false)
+      setBriefing('')
+    } catch {
+      setErroIA('falha de rede ao consultar a IA')
+    } finally {
+      setCarregandoIA(false)
+    }
+  }
 
   return (
     <div style={{ border: '1px solid var(--br)', borderRadius: 10, overflow: 'hidden' }}>
@@ -139,10 +212,50 @@ function GrupoEditor({ grupo, onChange, onRemover, abrirInicial }: {
         <span style={{ fontSize: 10.5, color: 'var(--t3)', flexShrink: 0, whiteSpace: 'nowrap' }}>
           {grupo.palavrasChave.length} palavras · {grupo.headlines.filter((h) => h.trim()).length} títulos
         </span>
+        <button
+          onClick={(e) => { e.stopPropagation(); setMostrarIA((v) => !v) }}
+          title="Sugerir com IA"
+          style={{
+            width: 24, height: 24, borderRadius: 7, flexShrink: 0, border: 'none', cursor: 'pointer',
+            background: mostrarIA ? 'linear-gradient(135deg, var(--red), var(--purple))' : 'transparent',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background .15s',
+          }}
+        >
+          <MagicStarIcon color={mostrarIA ? '#fff' : 'var(--t3)'} />
+        </button>
         <button onClick={(e) => { e.stopPropagation(); onRemover() }} style={{ color: 'var(--t3)', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}>
           <TrashIcon />
         </button>
       </div>
+      {mostrarIA && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6,
+            background: 'rgba(139,92,246,.06)', borderTop: '1px solid rgba(139,92,246,.25)', borderBottom: '1px solid rgba(139,92,246,.25)',
+          }}
+        >
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              value={briefing} onChange={(e) => setBriefing(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') gerarComIA() }}
+              placeholder="Produto, público e diferencial — ex: whey e creatina, treino de força, frete grátis acima de R$150"
+              style={{ ...inputStyle, flex: 1 }}
+            />
+            <button
+              onClick={gerarComIA} disabled={carregandoIA || !briefing.trim()}
+              style={{
+                padding: '0 14px', borderRadius: 7, fontSize: 11.5, fontWeight: 600, border: 'none', cursor: carregandoIA ? 'default' : 'pointer',
+                background: 'var(--red)', color: '#fff', opacity: carregandoIA || !briefing.trim() ? 0.6 : 1, flexShrink: 0,
+              }}
+            >
+              {carregandoIA ? 'Gerando…' : 'Gerar'}
+            </button>
+          </div>
+          <p style={{ fontSize: 9.5, color: 'var(--t3)', margin: 0 }}>Só preenche o que estiver vazio — não troca palavras/títulos já digitados.</p>
+          {erroIA && <p style={{ fontSize: 11, color: '#EF4444', margin: 0 }}>{erroIA}</p>}
+        </div>
+      )}
       {aberto && (
         <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -256,116 +369,6 @@ function SnippetsEditor({ itens, onChange }: { itens: GoogleAdsSnippet[]; onChan
   )
 }
 
-// ── Sugestões via IA (Groq) ─────────────────────────────────────────────────
-interface Sugestao {
-  palavrasChave: GoogleAdsPalavra[]
-  negativas: string[]
-  headlines: string[]
-  descricoes: string[]
-}
-
-function SugestaoIA({ clienteId, onAplicar }: { clienteId: string; onAplicar: (s: Sugestao) => void }) {
-  const [briefing, setBriefing] = useState('')
-  const [carregando, setCarregando] = useState(false)
-  const [erro, setErro] = useState<string | null>(null)
-  const [sugestao, setSugestao] = useState<Sugestao | null>(null)
-
-  const gerar = async () => {
-    if (!briefing.trim() || carregando) return
-    setCarregando(true); setErro(null); setSugestao(null)
-    try {
-      const idToken = await auth.currentUser?.getIdToken()
-      const res = await fetch('/api/google-ads-suggest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}) },
-        body: JSON.stringify({ clienteId, briefing }),
-      })
-      const data = await res.json()
-      if (!data.ok) { setErro(data.erro ?? 'falha ao gerar sugestões'); return }
-      setSugestao(data.sugestao)
-    } catch {
-      setErro('falha de rede ao consultar a IA')
-    } finally {
-      setCarregando(false)
-    }
-  }
-
-  return (
-    <div style={{
-      border: '1.5px solid rgba(139,92,246,.45)', borderRadius: 12,
-      background: 'linear-gradient(135deg, rgba(200,16,46,.08), rgba(139,92,246,.08))',
-      boxShadow: '0 0 0 1px rgba(139,92,246,.08), 0 8px 24px -8px rgba(139,92,246,.35)',
-      overflow: 'hidden',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px 4px' }}>
-        <span style={{
-          width: 30, height: 30, borderRadius: 9, flexShrink: 0, background: 'linear-gradient(135deg, var(--red), var(--purple))',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" width={15} height={15}>
-            <path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-8a3 3 0 0 1 3-3h1V6a4 4 0 0 1 4-4z" />
-            <circle cx="9" cy="13" r="1" /><circle cx="15" cy="13" r="1" />
-          </svg>
-        </span>
-        <div>
-          <p style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--t1)', margin: 0 }}>Sugerir com IA</p>
-          <p style={{ fontSize: 10.5, color: 'var(--t3)', margin: '1px 0 0' }}>Descreva a campanha e gere palavras-chave + anúncio completo automaticamente</p>
-        </div>
-      </div>
-      <div style={{ padding: '10px 16px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <textarea
-            value={briefing} onChange={(e) => setBriefing(e.target.value)}
-            placeholder="Descreva o produto/serviço, objetivo da campanha, público e diferenciais. Ex: campanha de aquisição pra loja de suplementos, foco em whey protein e creatina, público treino de força, diferencial é frete grátis acima de R$150."
-            rows={3}
-            style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5 }}
-          />
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button
-              onClick={gerar} disabled={carregando || !briefing.trim()}
-              style={{
-                padding: '7px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600, border: 'none', cursor: carregando ? 'default' : 'pointer',
-                background: 'var(--red)', color: '#fff', opacity: carregando || !briefing.trim() ? 0.6 : 1,
-              }}
-            >
-              {carregando ? 'Gerando…' : 'Gerar sugestões'}
-            </button>
-          </div>
-
-          {erro && <p style={{ fontSize: 11.5, color: '#EF4444', margin: 0 }}>{erro}</p>}
-
-          {sugestao && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 12, borderRadius: 8, background: 'var(--bg-base)', border: '1px solid var(--br)' }}>
-              <div>
-                <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' }}>Palavras-chave sugeridas</span>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 6 }}>
-                  {sugestao.palavrasChave.map((p, i) => (
-                    <span key={i} style={{ fontSize: 10.5, padding: '3px 8px', borderRadius: 999, background: 'var(--bg-c)', border: '1px solid var(--br)', color: 'var(--t2)' }}>
-                      {p.texto} <span style={{ color: 'var(--t3)' }}>· {p.tipo}</span>
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' }}>Títulos ({sugestao.headlines.length})</span>
-                <p style={{ fontSize: 11.5, color: 'var(--t2)', margin: '4px 0 0', lineHeight: 1.6 }}>{sugestao.headlines.join(' · ')}</p>
-              </div>
-              <div>
-                <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' }}>Descrições ({sugestao.descricoes.length})</span>
-                <p style={{ fontSize: 11.5, color: 'var(--t2)', margin: '4px 0 0', lineHeight: 1.6 }}>{sugestao.descricoes.join(' · ')}</p>
-              </div>
-              <button
-                onClick={() => { onAplicar(sugestao); setSugestao(null); setBriefing('') }}
-                style={{ alignSelf: 'flex-start', padding: '6px 14px', borderRadius: 7, fontSize: 11.5, fontWeight: 600, border: 'none', cursor: 'pointer', background: 'var(--red)', color: '#fff' }}
-              >
-                Adicionar como novo grupo de anúncios
-              </button>
-            </div>
-          )}
-      </div>
-    </div>
-  )
-}
-
 // ── Modal de campanha ────────────────────────────────────────────────────────
 function CampanhaFormModal({
   clienteId, campanha, onClose,
@@ -404,19 +407,6 @@ function CampanhaFormModal({
   const updGrupo = (i: number, g: GoogleAdsGrupo) => set('grupos', form.grupos.map((gg, idx) => (idx === i ? g : gg)))
   const remGrupo = (i: number) => set('grupos', form.grupos.filter((_, idx) => idx !== i))
 
-  const aplicarSugestao = (s: Sugestao) => {
-    const grupo: GoogleAdsGrupo = {
-      ...novoGrupo(),
-      nome: form.nome ? `${form.nome} — IA` : 'Grupo sugerido pela IA',
-      palavrasChave: s.palavrasChave,
-      negativas: s.negativas.map((texto) => ({ texto, tipo: 'Phrase' as const })),
-      headlines: [...s.headlines, ...Array(15).fill('')].slice(0, 15),
-      descricoes: [...s.descricoes, ...Array(4).fill('')].slice(0, 4),
-    }
-    set('grupos', [...form.grupos, grupo])
-    setGrupoRecenteId(grupo.id)
-  }
-
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div style={{
@@ -431,8 +421,6 @@ function CampanhaFormModal({
             </svg>
           </button>
         </div>
-
-        <SugestaoIA clienteId={clienteId} onAplicar={aplicarSugestao} />
 
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 10 }}>
           <Field label="Nome da campanha"><input value={form.nome} onChange={(e) => set('nome', e.target.value)} style={inputStyle} /></Field>
@@ -454,7 +442,7 @@ function CampanhaFormModal({
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {form.grupos.map((g, i) => (
-              <GrupoEditor key={g.id} grupo={g} onChange={(gg) => updGrupo(i, gg)} onRemover={() => remGrupo(i)} abrirInicial={g.id === grupoRecenteId} />
+              <GrupoEditor key={g.id} clienteId={clienteId} grupo={g} onChange={(gg) => updGrupo(i, gg)} onRemover={() => remGrupo(i)} abrirInicial={g.id === grupoRecenteId} />
             ))}
             {form.grupos.length === 0 && <p style={{ fontSize: 11.5, color: 'var(--t3)', margin: 0 }}>Nenhum grupo ainda.</p>}
           </div>
