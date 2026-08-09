@@ -284,6 +284,58 @@ export interface KpiStatusDoc {
   atualizadoEm?: number
 }
 
+// ── Campanhas de Google Ads (Gestor de Mídia) — doc raiz em
+// partners/{id}/google_ads_campanhas/{campanhaId} ────────────────────────────
+// Modelo espelha o template de planilha (Palavra Chaves / Anúncio / Recursos)
+// que os gestores já usavam pra montar campanha antes de subir pro Google Ads
+// Editor. Sitelinks/Callouts/Snippets/Telefone ficam no nível da CAMPANHA
+// (não por grupo) — é como o Google Ads trata esses recursos de verdade.
+export type GoogleAdsMatchType = 'Broad' | 'Phrase' | 'Exact'
+
+export interface GoogleAdsPalavra {
+  texto: string
+  tipo: GoogleAdsMatchType
+  volumeBusca?: number // vol. de pesquisas mensais — só referência, não vai no export
+}
+
+export interface GoogleAdsGrupo {
+  id: string
+  nome: string
+  maxCpc: number
+  palavrasChave: GoogleAdsPalavra[]
+  negativas: GoogleAdsPalavra[]
+  headlines: string[]  // até 15, 30 caracteres cada (Responsive Search Ad)
+  descricoes: string[] // até 4, 90 caracteres cada
+  path1: string
+  path2: string
+  finalUrl: string
+}
+
+export interface GoogleAdsSitelink {
+  texto: string
+  finalUrl: string
+  descricao1?: string
+  descricao2?: string
+}
+
+export interface GoogleAdsSnippet {
+  header: string // um dos headers fixos do Google (ex: 'Marcas', 'Serviços', 'Estilos'...)
+  valores: string[]
+}
+
+export interface GoogleAdsCampanha {
+  id?: string
+  nome: string
+  orcamentoDiario: number
+  status: 'Enabled' | 'Paused'
+  grupos: GoogleAdsGrupo[]
+  sitelinks: GoogleAdsSitelink[]
+  callouts: string[]
+  snippets: GoogleAdsSnippet[]
+  telefone?: string
+  atualizadoEm?: number
+}
+
 // ── Membro de um partner (controle de acesso) ─────────────────────────────────
 export type MemberRole = 'admin' | 'viewer'
 

@@ -11,6 +11,7 @@ import { useSubcolecao } from './firestore-hooks'
 import type {
   Evento, Identidade, UTMRegistro, Conversao, Integration, IntegrationPlataforma, Insight,
   PlanoMidiaItem, PlanoMidiaConfigMes, KpiMetasDoc, KpiMetaConfig, KpiStatusDoc, KpiViolacao,
+  GoogleAdsCampanha,
 } from '@/lib/types'
 import type { GrowthPackCanal } from './agregacoes'
 
@@ -152,6 +153,25 @@ export async function salvarKpiStatus(
   dados: { geral: KpiViolacao[]; meta: KpiViolacao[]; google: KpiViolacao[]; periodoLabel: string },
 ) {
   await setDoc(doc(db, 'partners', clienteId, 'kpi_status', 'atual'), { ...dados, atualizadoEm: Date.now() }, { merge: true })
+}
+
+// ── Campanhas de Google Ads (Gestor de Mídia) — partners/{id}/google_ads_campanhas ─
+export function useGoogleAdsCampanhas(clienteId: string | undefined) {
+  const { docs, loading } = useSubcolecao<GoogleAdsCampanha & { id: string }>(clienteId, 'google_ads_campanhas')
+  return { campanhas: docs, loading }
+}
+
+export async function salvarGoogleAdsCampanha(clienteId: string, campanha: GoogleAdsCampanha & { id?: string }) {
+  const { id, ...dados } = campanha
+  const ref = id
+    ? doc(db, 'partners', clienteId, 'google_ads_campanhas', id)
+    : doc(collection(db, 'partners', clienteId, 'google_ads_campanhas'))
+  await setDoc(ref, { ...dados, atualizadoEm: Date.now() }, { merge: true })
+  return ref.id
+}
+
+export async function excluirGoogleAdsCampanha(clienteId: string, campanhaId: string) {
+  await deleteDoc(doc(db, 'partners', clienteId, 'google_ads_campanhas', campanhaId))
 }
 
 // ── Insights ──────────────────────────────────────────────────────────────────

@@ -6,8 +6,9 @@ import { useCliente } from '@/lib/data/partners'
 import VisaoGeralGrowthPack from '@/components/midia/VisaoGeralGrowthPack'
 import PlanoMidia from '@/components/midia/PlanoMidia'
 import MetasAlertas from '@/components/midia/MetasAlertas'
+import PalavrasAnuncios from '@/components/midia/PalavrasAnuncios'
 
-type Aba = 'visao-geral' | 'plano-midia' | 'metas-alertas'
+type Aba = 'visao-geral' | 'plano-midia' | 'metas-alertas' | 'palavras-anuncios'
 
 export default function MidiaPage({ params }: { params: Promise<{ clienteId: string }> }) {
   const { clienteId } = use(params)
@@ -36,12 +37,14 @@ export default function MidiaPage({ params }: { params: Promise<{ clienteId: str
             <button onClick={() => setAba('visao-geral')} style={abaBtn('visao-geral')}>Visão Geral</button>
             <button onClick={() => setAba('plano-midia')} style={abaBtn('plano-midia')}>Plano de Mídia</button>
             <button onClick={() => setAba('metas-alertas')} style={abaBtn('metas-alertas')}>Metas & Alertas</button>
+            <button onClick={() => setAba('palavras-anuncios')} style={abaBtn('palavras-anuncios')}>Palavras & Anúncios</button>
           </div>
         </div>
 
         {aba === 'visao-geral' && <VisaoGeralGrowthPack clienteId={clienteId} clienteTipo={cliente?.tipo} isDemo={isDemo} />}
         {aba === 'plano-midia' && <PlanoMidia clienteId={clienteId} clienteTipo={cliente?.tipo} isDemo={isDemo} />}
         {aba === 'metas-alertas' && <MetasAlertas clienteId={clienteId} clienteTipo={cliente?.tipo} isDemo={isDemo} />}
+        {aba === 'palavras-anuncios' && <PalavrasAnuncios clienteId={clienteId} isDemo={isDemo} />}
       </main>
     </>
   )
