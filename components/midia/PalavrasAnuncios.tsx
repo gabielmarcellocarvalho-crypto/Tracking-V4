@@ -258,7 +258,6 @@ interface Sugestao {
 }
 
 function SugestaoIA({ clienteId, onAplicar }: { clienteId: string; onAplicar: (s: Sugestao) => void }) {
-  const [aberto, setAberto] = useState(false)
   const [briefing, setBriefing] = useState('')
   const [carregando, setCarregando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
@@ -285,28 +284,29 @@ function SugestaoIA({ clienteId, onAplicar }: { clienteId: string; onAplicar: (s
   }
 
   return (
-    <div style={{ border: '1px solid rgba(139,92,246,.3)', borderRadius: 10, background: 'rgba(139,92,246,.05)', overflow: 'hidden' }}>
-      <button
-        onClick={() => setAberto((v) => !v)}
-        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
-      >
+    <div style={{
+      border: '1.5px solid rgba(139,92,246,.45)', borderRadius: 12,
+      background: 'linear-gradient(135deg, rgba(200,16,46,.08), rgba(139,92,246,.08))',
+      boxShadow: '0 0 0 1px rgba(139,92,246,.08), 0 8px 24px -8px rgba(139,92,246,.35)',
+      overflow: 'hidden',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px 4px' }}>
         <span style={{
-          width: 24, height: 24, borderRadius: 7, flexShrink: 0, background: 'linear-gradient(135deg, var(--red), var(--purple))',
+          width: 30, height: 30, borderRadius: 9, flexShrink: 0, background: 'linear-gradient(135deg, var(--red), var(--purple))',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" width={12} height={12}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" width={15} height={15}>
             <path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-8a3 3 0 0 1 3-3h1V6a4 4 0 0 1 4-4z" />
             <circle cx="9" cy="13" r="1" /><circle cx="15" cy="13" r="1" />
           </svg>
         </span>
-        <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--t1)', flex: 1 }}>Sugerir palavras-chave e anúncio com IA</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="var(--t3)" strokeWidth={2} width={12} height={12} style={{ transform: aberto ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </button>
-      {aberto && (
-        <div style={{ padding: '0 14px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <textarea
+        <div>
+          <p style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--t1)', margin: 0 }}>Sugerir com IA</p>
+          <p style={{ fontSize: 10.5, color: 'var(--t3)', margin: '1px 0 0' }}>Descreva a campanha e gere palavras-chave + anúncio completo automaticamente</p>
+        </div>
+      </div>
+      <div style={{ padding: '10px 16px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <textarea
             value={briefing} onChange={(e) => setBriefing(e.target.value)}
             placeholder="Descreva o produto/serviço, objetivo da campanha, público e diferenciais. Ex: campanha de aquisição pra loja de suplementos, foco em whey protein e creatina, público treino de força, diferencial é frete grátis acima de R$150."
             rows={3}
@@ -354,8 +354,7 @@ function SugestaoIA({ clienteId, onAplicar }: { clienteId: string; onAplicar: (s
               </button>
             </div>
           )}
-        </div>
-      )}
+      </div>
     </div>
   )
 }
@@ -418,6 +417,8 @@ function CampanhaFormModal({
           </button>
         </div>
 
+        <SugestaoIA clienteId={clienteId} onAplicar={aplicarSugestao} />
+
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 10 }}>
           <Field label="Nome da campanha"><input value={form.nome} onChange={(e) => set('nome', e.target.value)} style={inputStyle} /></Field>
           <Field label="Orçamento diário (R$)">
@@ -430,8 +431,6 @@ function CampanhaFormModal({
             </select>
           </Field>
         </div>
-
-        <SugestaoIA clienteId={clienteId} onAplicar={aplicarSugestao} />
 
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
