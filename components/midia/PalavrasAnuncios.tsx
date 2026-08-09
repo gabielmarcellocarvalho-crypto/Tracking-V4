@@ -110,8 +110,15 @@ function TextosLimitados({ titulo, itens, limite, onChange }: { titulo: string; 
 }
 
 // ── Um grupo de anúncios completo (accordion) ──────────────────────────────
-function GrupoEditor({ grupo, onChange, onRemover }: { grupo: GoogleAdsGrupo; onChange: (g: GoogleAdsGrupo) => void; onRemover: () => void }) {
-  const [aberto, setAberto] = useState(true)
+function GrupoEditor({ grupo, onChange, onRemover, abrirInicial }: {
+  grupo: GoogleAdsGrupo; onChange: (g: GoogleAdsGrupo) => void; onRemover: () => void; abrirInicial?: boolean
+}) {
+  // Fechado por padrão — cada grupo tem 2 tabelas de palavras + 15 títulos +
+  // 4 descrições, então com vários grupos abertos ao mesmo tempo o modal
+  // ficava gigante e escondia o painel de IA lá em cima, mesmo ele já sendo
+  // o primeiro item do modal (tinha que rolar/minimizar grupo pra enxergar).
+  // `abrirInicial` abre só o grupo recém-criado (manual ou pela IA).
+  const [aberto, setAberto] = useState(!!abrirInicial)
   const set = <K extends keyof GoogleAdsGrupo>(k: K, v: GoogleAdsGrupo[K]) => onChange({ ...grupo, [k]: v })
 
   return (
@@ -370,6 +377,9 @@ function CampanhaFormModal({
   const [form, setForm] = useState(campanha)
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
+  // Só o grupo criado por último (manual ou pela IA) abre sozinho — os
+  // demais continuam fechados, sem precisar minimizar nada na mão.
+  const [grupoRecenteId, setGrupoRecenteId] = useState<string | null>(null)
 
   const set = <K extends keyof GoogleAdsCampanha>(k: K, v: GoogleAdsCampanha[K]) => setForm((f) => ({ ...f, [k]: v }))
 
@@ -386,7 +396,11 @@ function CampanhaFormModal({
     }
   }
 
-  const addGrupo = () => set('grupos', [...form.grupos, novoGrupo()])
+  const addGrupo = () => {
+    const grupo = novoGrupo()
+    set('grupos', [...form.grupos, grupo])
+    setGrupoRecenteId(grupo.id)
+  }
   const updGrupo = (i: number, g: GoogleAdsGrupo) => set('grupos', form.grupos.map((gg, idx) => (idx === i ? g : gg)))
   const remGrupo = (i: number) => set('grupos', form.grupos.filter((_, idx) => idx !== i))
 
@@ -400,6 +414,7 @@ function CampanhaFormModal({
       descricoes: [...s.descricoes, ...Array(4).fill('')].slice(0, 4),
     }
     set('grupos', [...form.grupos, grupo])
+    setGrupoRecenteId(grupo.id)
   }
 
   return (
@@ -439,7 +454,7 @@ function CampanhaFormModal({
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {form.grupos.map((g, i) => (
-              <GrupoEditor key={g.id} grupo={g} onChange={(gg) => updGrupo(i, gg)} onRemover={() => remGrupo(i)} />
+              <GrupoEditor key={g.id} grupo={g} onChange={(gg) => updGrupo(i, gg)} onRemover={() => remGrupo(i)} abrirInicial={g.id === grupoRecenteId} />
             ))}
             {form.grupos.length === 0 && <p style={{ fontSize: 11.5, color: 'var(--t3)', margin: 0 }}>Nenhum grupo ainda.</p>}
           </div>
