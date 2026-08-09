@@ -18,6 +18,7 @@ const icons = {
   midia:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px] shrink-0"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>,
   copies:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px] shrink-0"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/></svg>,
   forecasting: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px] shrink-0"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>,
+  palavras:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px] shrink-0"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16" y2="16"/><line x1="8" y1="11" x2="14" y2="11"/></svg>,
   meta:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px] shrink-0"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>,
   google:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px] shrink-0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
   ga4:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px] shrink-0"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
@@ -26,7 +27,7 @@ const icons = {
 
 // Rotas que pertencem ao modo "Gestor de Mídia" — tudo que não estiver aqui
 // (e não for /clientes) é considerado modo "Tracking".
-const ROTAS_MIDIA = ['performance', 'midia', 'copies', 'forecasting']
+const ROTAS_MIDIA = ['performance', 'midia', 'palavras-anuncios', 'copies', 'forecasting']
 // Rotas sem modo próprio (servem os dois) — a sidebar mantém o modo em que
 // o usuário já estava em vez de cair pra Tracking por padrão.
 const ROTAS_UNIVERSAIS = ['conexoes']
@@ -178,6 +179,7 @@ export default function Sidebar({ clienteId }: { clienteId?: string }) {
               <SectionLabel>Gestor de Mídia</SectionLabel>
               <NavItem label="Performance"              href={`${base}/performance`} icon={icons.performance} active={isActive(`${base}/performance`)} />
               <NavItem label="Growthpack / Plano de Mídia" href={`${base}/midia`}     icon={icons.midia}       active={isActive(`${base}/midia`)} />
+              <NavItem label="Palavras & Anúncios"      href={`${base}/palavras-anuncios`} icon={icons.palavras} active={isActive(`${base}/palavras-anuncios`)} />
               <NavItem label="Copies"                   href={`${base}/copies`}      icon={icons.copies}      active={isActive(`${base}/copies`)} />
               <NavItem label="Forecasting"               href={`${base}/forecasting`} icon={icons.forecasting} active={isActive(`${base}/forecasting`)} />
             </>
