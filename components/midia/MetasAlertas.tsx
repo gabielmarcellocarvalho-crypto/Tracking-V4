@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ClienteTipo } from '@/lib/demo-data'
 import { useDateRange } from '@/lib/date-range-context'
 import { useMetaAdsGasto } from '@/lib/data/meta-ads-metrics'
@@ -28,7 +28,7 @@ export default function MetasAlertas({ clienteId, clienteTipo, isDemo }: Props) 
 
   const { gasto: metaGasto, loading: loadingMeta } = useMetaAdsGasto(isDemo ? undefined : clienteId, periodo)
   const { gasto: googleGasto, loading: loadingGoogle } = useGoogleAdsGasto(isDemo ? undefined : clienteId, periodo)
-  const { metas: metasSalvas } = useKpiMetas(isDemo ? undefined : clienteId)
+  const { metas: metasSalvas, loading: carregandoMetas } = useKpiMetas(isDemo ? undefined : clienteId)
 
   const catalogo = kpisDoTipo(clienteTipo)
   const ehEcommerce = clienteTipo === 'ecommerce' || !clienteTipo
@@ -88,30 +88,50 @@ export default function MetasAlertas({ clienteId, clienteTipo, isDemo }: Props) 
   }, [clienteId, isDemo, metasSalvas, kpisPorCanal, catalogo, periodo.label])
 
   // Edição local do canal exibido — sincroniza com o que está salvo ao trocar
-  // de canal, sem sobrescrever digitação em andamento por outros motivos.
+  // de canal ou quando o Firestore confirma um salvamento. `pularProximoAutoSave`
+  // evita que essa sincronização (que também dispara o efeito de auto-save
+  // abaixo, já que muda `edicao`) regrave no banco os mesmos dados que acabou
+  // de ler de lá — e principalmente evita salvar ANTES do primeiro carregamento
+  // do Firestore terminar (senão o valor local zerado do primeiro render
+  // sobrescreveria metas já salvas antes delas chegarem).
   const [edicao, setEdicao] = useState<Record<string, KpiMetaConfig>>({})
+  const pularProximoAutoSave = useRef(true)
   useEffect(() => {
+    if (carregandoMetas) return
     const base: Record<string, KpiMetaConfig> = {}
     for (const kpi of catalogo) base[kpi.key] = metasSalvas?.[canal]?.[kpi.key] ?? { ativo: false, valor: 0 }
+    pularProximoAutoSave.current = true
     setEdicao(base)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canal, metasSalvas])
+  }, [canal, metasSalvas, carregandoMetas])
 
-  const [salvando, setSalvando] = useState(false)
-  const [salvo, setSalvo] = useState(false)
-  const salvar = async () => {
-    setSalvando(true)
-    try {
-      await salvarKpiMetas(clienteId, canal, edicao)
-      setSalvo(true)
-      setTimeout(() => setSalvo(false), 2000)
-    } finally {
-      setSalvando(false)
-    }
-  }
+  // Salva sozinho ~700ms depois da última mudança — sem precisar de um botão
+  // "Salvar" separado (o gestor mudava o toggle/valor, esquecia de clicar
+  // salvar, e ao recarregar a página parecia que nada tinha sido gravado).
+  const [statusSalvar, setStatusSalvar] = useState<'idle' | 'salvando' | 'salvo' | 'erro'>('idle')
+  useEffect(() => {
+    if (carregandoMetas) return
+    if (pularProximoAutoSave.current) { pularProximoAutoSave.current = false; return }
+    setStatusSalvar('salvando')
+    const timer = setTimeout(() => {
+      salvarKpiMetas(clienteId, canal, edicao)
+        .then(() => { setStatusSalvar('salvo'); setTimeout(() => setStatusSalvar((s) => (s === 'salvo' ? 'idle' : s)), 2000) })
+        .catch(() => setStatusSalvar('erro'))
+    }, 700)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [edicao])
 
   const carregando = loadingMeta || loadingGoogle
   const valoresCanal = kpisPorCanal[canal]
+
+  // Quantas métricas já estão monitoradas em CADA canal — mostrado nas abas
+  // pra ficar claro que o que foi salvo continua lá mesmo trocando de aba ou
+  // recarregando a página (a aba sempre volta pra "Geral" ao reabrir).
+  const ativosPorCanal = useMemo(() => {
+    const contar = (c: GrowthPackCanal) => Object.values(metasSalvas?.[c] ?? {}).filter((v) => v.ativo).length
+    return { geral: contar('geral'), meta: contar('meta'), google: contar('google') }
+  }, [metasSalvas])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -131,12 +151,22 @@ export default function MetasAlertas({ clienteId, clienteTipo, isDemo }: Props) 
               key={c.key}
               onClick={() => setCanal(c.key)}
               style={{
+                display: 'flex', alignItems: 'center', gap: 6,
                 padding: '6px 14px', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none',
                 background: canal === c.key ? 'var(--red)' : 'transparent',
                 color: canal === c.key ? '#fff' : 'var(--t2)',
               }}
             >
               {c.label}
+              {ativosPorCanal[c.key] > 0 && (
+                <span style={{
+                  fontSize: 9.5, fontWeight: 700, padding: '1px 6px', borderRadius: 999,
+                  background: canal === c.key ? 'rgba(255,255,255,.25)' : 'rgba(200,16,46,.15)',
+                  color: canal === c.key ? '#fff' : 'var(--red)',
+                }}>
+                  {ativosPorCanal[c.key]}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -217,18 +247,16 @@ export default function MetasAlertas({ clienteId, clienteTipo, isDemo }: Props) 
         </table>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, alignItems: 'center' }}>
-        {salvo && <span style={{ fontSize: 11.5, color: '#10B981' }}>Metas salvas.</span>}
-        <button
-          onClick={salvar}
-          disabled={salvando || isDemo}
-          style={{
-            padding: '8px 18px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: salvando || isDemo ? 'not-allowed' : 'pointer',
-            background: 'var(--red)', border: 'none', color: '#fff', opacity: salvando || isDemo ? 0.6 : 1,
-          }}
-        >
-          {salvando ? 'Salvando…' : `Salvar metas — ${CANAIS.find((c) => c.key === canal)?.label}`}
-        </button>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6, minHeight: 18 }}>
+        {!isDemo && statusSalvar === 'salvando' && (
+          <span style={{ fontSize: 11.5, color: 'var(--t3)' }}>Salvando…</span>
+        )}
+        {!isDemo && statusSalvar === 'salvo' && (
+          <span style={{ fontSize: 11.5, color: '#10B981', fontWeight: 600 }}>✓ Salvo automaticamente</span>
+        )}
+        {!isDemo && statusSalvar === 'erro' && (
+          <span style={{ fontSize: 11.5, color: '#EF4444' }}>Falha ao salvar — verifique sua conexão e tente de novo</span>
+        )}
       </div>
     </div>
   )
