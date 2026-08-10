@@ -21,12 +21,13 @@ export const ORIGEM_LABEL: Record<Origem, string> = {
   direto: 'Direto',
   email: 'Email',
   shopify: 'Shopify',
+  'loja-integrada': 'Loja Integrada',
   outro: 'Outro',
 }
 
 const ORIGEM_COR: Record<string, string> = {
   'Meta Ads': '#1877F2', 'Google Ads': '#4285F4', 'Orgânico': '#10B981',
-  'Direto': '#6B7280', 'Email': '#F59E0B', 'Shopify': '#96BF48', 'Outro': '#8B5CF6',
+  'Direto': '#6B7280', 'Email': '#F59E0B', 'Shopify': '#96BF48', 'Loja Integrada': '#00C48C', 'Outro': '#8B5CF6',
 }
 
 const EVENTO_META: Record<string, Pick<EventHealth, 'label' | 'description' | 'icon' | 'color'>> = {

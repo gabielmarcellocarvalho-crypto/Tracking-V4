@@ -2,11 +2,19 @@
 
 import { use, useEffect, useState } from 'react'
 import DashboardHeader from '@/components/tracking/DashboardHeader'
-import { useCliente, definirCorteDados } from '@/lib/data/partners'
+import { useCliente, definirCorteDados, definirEcommercePlataforma } from '@/lib/data/partners'
 import { useConexoes, salvarConexao } from '@/lib/data/colecoes'
 import { useMetaIntegration } from '@/lib/data/meta-integration'
 import { iniciarLoginMeta } from '@/lib/integrations/meta-oauth-client'
-import type { IntegrationPlataforma } from '@/lib/types'
+import type { IntegrationPlataforma, EcommercePlataforma } from '@/lib/types'
+
+const ECOMMERCE_PLATAFORMA_LABEL: Record<EcommercePlataforma, string> = {
+  shopify: 'Shopify',
+  nuvemshop: 'Nuvemshop',
+  tray: 'Tray',
+  'loja-integrada': 'Loja Integrada',
+  outro: 'Outra / não sei ainda',
+}
 
 interface CampoDef {
   id: string
@@ -14,6 +22,8 @@ interface CampoDef {
   placeholder: string
   secreto?: boolean
   textarea?: boolean
+  /** Mostra um botão "Gerar" que preenche o campo com um token aleatório — pra segredos que a V4 define, não a plataforma externa. */
+  gerar?: boolean
 }
 
 interface LogoDef {
@@ -57,6 +67,11 @@ const LOGOS: Record<IntegrationPlataforma, LogoDef> = {
   },
   // Idem — sem ícone oficial da Tray no Simple Icons, mesmo glifo genérico.
   tray: {
+    viewBox: '0 0 24 24',
+    path: 'M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0',
+  },
+  // Idem — Loja Integrada também não está no acervo Simple Icons.
+  'loja-integrada': {
     viewBox: '0 0 24 24',
     path: 'M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0',
   },
@@ -207,9 +222,27 @@ const PLATAFORMAS: {
       'Assim que o app parceiro estiver aprovado, o fluxo de conexão aqui é atualizado',
     ],
   },
+  {
+    id: 'loja-integrada',
+    nome: 'Loja Integrada',
+    cor: '#00C48C',
+    desc: 'Recebe pedidos da Loja Integrada via webhook, injeta como eventos de compra na fila de conversões CAPI e alimenta a jornada do usuário — mesmo pipeline server-to-server da Shopify (webhook → evento de compra → envio automático pro Meta). ' +
+      'Aviso: a documentação técnica oficial da Loja Integrada fica atrás de um portal que não conseguimos ler por completo — os nomes de campo do payload do pedido foram implementados de forma tolerante (tenta várias variações comuns), mas vale disparar um pedido de teste e conferir os logs antes de confiar 100% nos números.',
+    campos: [
+      { id: 'chaveAplicacao', label: 'Chave de Aplicação', placeholder: 'Gerada pelo formulário de integrador da Loja Integrada', secreto: true },
+      { id: 'chaveApi', label: 'Chave de API (da loja)', placeholder: 'Painel da loja → Configurações → API', secreto: true },
+      { id: 'webhookToken', label: 'Token do Webhook (gerado pela V4 — não é da Loja Integrada)', placeholder: 'Clique em Gerar →', gerar: true },
+    ],
+    passos: [
+      'Peça a Chave de Aplicação no formulário de integrador (ajuda.lojaintegrada.com.br) — identifica a V4 como integradora',
+      'Painel da loja → Configurações → API → copie a Chave de API (identifica essa loja específica)',
+      'Clique em "Gerar" no campo Token do Webhook acima e salve — sem isso a URL abaixo fica incompleta',
+      'Painel da loja → Webhooks → Criar → evento "Pedido" → cole a URL abaixo (já com o token)',
+    ],
+  },
 ]
 
-const ECOMMERCE_IDS: IntegrationPlataforma[] = ['shopify', 'nuvemshop', 'tray']
+const ECOMMERCE_IDS: IntegrationPlataforma[] = ['shopify', 'nuvemshop', 'tray', 'loja-integrada']
 
 function MetaConnectionStatus() {
   const { meta, conectado, loading } = useMetaIntegration()
@@ -378,6 +411,42 @@ function ShopifyWebhookInfo({ clienteId }: { clienteId: string }) {
   )
 }
 
+function LojaIntegradaWebhookInfo({ clienteId, token }: { clienteId: string; token?: string }) {
+  const [copiado, setCopiado] = useState(false)
+  const origem = typeof window !== 'undefined' ? window.location.origin : 'https://SEU-DOMINIO.vercel.app'
+  const url = `${origem}/api/webhooks/loja-integrada/${clienteId}${token ? `?token=${token}` : ''}`
+
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <label style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--t2)', display: 'block', marginBottom: 4 }}>
+        URL do webhook (cole no painel da Loja Integrada)
+      </label>
+      {!token && (
+        <p style={{ fontSize: 10.5, color: '#F59E0B', margin: '0 0 6px' }}>
+          Gere o Token do Webhook abaixo antes de copiar essa URL — sem ele, o link fica incompleto.
+        </p>
+      )}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <code style={{
+          flex: 1, display: 'block', padding: '9px 11px', borderRadius: 8, fontSize: 11,
+          fontFamily: 'monospace', color: 'var(--t2)', background: 'var(--bg-base)',
+          border: '1px solid var(--border)', wordBreak: 'break-all',
+        }}>{url}</code>
+        <button
+          onClick={() => { navigator.clipboard.writeText(url); setCopiado(true); setTimeout(() => setCopiado(false), 1500) }}
+          disabled={!token}
+          style={{
+            padding: '9px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, flexShrink: 0,
+            background: copiado ? 'rgba(16,185,129,.12)' : 'var(--bg-base)',
+            border: `1px solid ${copiado ? '#10B981' : 'var(--border)'}`,
+            color: copiado ? '#10B981' : 'var(--t2)', cursor: token ? 'pointer' : 'not-allowed', opacity: token ? 1 : 0.6,
+          }}
+        >{copiado ? 'Copiado ✓' : 'Copiar'}</button>
+      </div>
+    </div>
+  )
+}
+
 function CardConexao({ plataforma, clienteId, camposSalvos, statusSalvo, isDemo }: {
   plataforma: typeof PLATAFORMAS[number]
   clienteId: string
@@ -470,7 +539,8 @@ function CardConexao({ plataforma, clienteId, camposSalvos, statusSalvo, isDemo 
           {plataforma.id === 'meta-ads' && <div style={{ marginTop: 14 }}><MetaBmStatusBadge /></div>}
           {plataforma.id === 'google-ads' && <div style={{ marginTop: 14 }}><GoogleAdsMccStatusBadge /></div>}
           {plataforma.id === 'shopify' && <div style={{ marginTop: 14 }}><ShopifyWebhookInfo clienteId={clienteId} /></div>}
-          <div style={{ display: 'flex', gap: 20, marginTop: ['meta', 'meta-ads', 'google-ads', 'shopify'].includes(plataforma.id) ? 0 : 14, flexWrap: 'wrap' }}>
+          {plataforma.id === 'loja-integrada' && <div style={{ marginTop: 14 }}><LojaIntegradaWebhookInfo clienteId={clienteId} token={valores.webhookToken} /></div>}
+          <div style={{ display: 'flex', gap: 20, marginTop: ['meta', 'meta-ads', 'google-ads', 'shopify', 'loja-integrada'].includes(plataforma.id) ? 0 : 14, flexWrap: 'wrap' }}>
             {/* Campos */}
             <div style={{ flex: 1, minWidth: 260, display: 'flex', flexDirection: 'column', gap: 10 }}>
               {plataforma.campos.map((c) => (
@@ -484,6 +554,30 @@ function CardConexao({ plataforma, clienteId, camposSalvos, statusSalvo, isDemo 
                       rows={3}
                       style={{ ...inputStyle, resize: 'vertical' }}
                     />
+                  ) : c.gerar ? (
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input
+                        type="text"
+                        value={valores[c.id] ?? ''}
+                        onChange={(e) => setValores((v) => ({ ...v, [c.id]: e.target.value }))}
+                        placeholder={c.placeholder}
+                        style={{ ...inputStyle, flex: 1 }}
+                      />
+                      <button
+                        onClick={() => {
+                          const bytes = new Uint8Array(16)
+                          crypto.getRandomValues(bytes)
+                          const token = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
+                          setValores((v) => ({ ...v, [c.id]: token }))
+                        }}
+                        style={{
+                          padding: '9px 12px', borderRadius: 8, fontSize: 11.5, fontWeight: 600, flexShrink: 0,
+                          background: 'var(--bg-base)', border: '1px solid var(--border)', color: 'var(--t2)', cursor: 'pointer',
+                        }}
+                      >
+                        Gerar
+                      </button>
+                    </div>
                   ) : (
                     <input
                       type={c.secreto ? 'password' : 'text'}
@@ -539,6 +633,17 @@ export default function ConexoesPage({ params }: { params: Promise<{ clienteId: 
   const { conexoes } = useConexoes(isDemo ? undefined : clienteId)
   const [copiado, setCopiado] = useState(false)
   const [aplicandoCorte, setAplicandoCorte] = useState(false)
+  const [trocandoPlataforma, setTrocandoPlataforma] = useState(false)
+
+  const handleTrocarPlataforma = async (nova: EcommercePlataforma) => {
+    if (nova === cliente?.ecommercePlataforma) return
+    if (!window.confirm(
+      `Trocar a plataforma de e-commerce pra ${ECOMMERCE_PLATAFORMA_LABEL[nova]}? ` +
+      'O card certo passa a aparecer aqui embaixo pra você conectar. Se quiser parar de contar o histórico da plataforma anterior, use "Desconsiderar dados anteriores" logo abaixo depois de trocar.',
+    )) return
+    setTrocandoPlataforma(true)
+    try { await definirEcommercePlataforma(clienteId, nova) } finally { setTrocandoPlataforma(false) }
+  }
 
   const handleDesconsiderar = async () => {
     if (!window.confirm(
@@ -626,6 +731,25 @@ export default function ConexoesPage({ params }: { params: Promise<{ clienteId: 
               <p style={{ fontSize: 11.5, color: 'var(--t3)', margin: 0 }}>
                 As conversões já ficam enfileiradas com payload pronto — o envio ativa quando as credenciais forem salvas.
               </p>
+              {cliente?.tipo === 'ecommerce' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                  <label style={{ fontSize: 10.5, color: 'var(--t3)' }}>Plataforma de e-commerce:</label>
+                  <select
+                    value={cliente.ecommercePlataforma ?? 'outro'}
+                    onChange={(e) => handleTrocarPlataforma(e.target.value as EcommercePlataforma)}
+                    disabled={trocandoPlataforma || isDemo}
+                    style={{
+                      padding: '4px 8px', borderRadius: 6, fontSize: 11.5, fontWeight: 600,
+                      background: 'var(--bg-c)', border: '1px solid var(--border)', color: 'var(--t1)',
+                      cursor: trocandoPlataforma || isDemo ? 'default' : 'pointer',
+                    }}
+                  >
+                    {Object.entries(ECOMMERCE_PLATAFORMA_LABEL).map(([id, label]) => (
+                      <option key={id} value={id}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
             <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
               {plataformasVisiveis.map((p) => {

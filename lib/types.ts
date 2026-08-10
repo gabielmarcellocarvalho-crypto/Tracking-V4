@@ -10,7 +10,7 @@ import type { Timestamp } from 'firebase/firestore'
 export type PartnerTipo   = 'ecommerce' | 'leads' | 'mensagens'
 export type PartnerStatus = 'ativo' | 'inativo'
 /** Só relevante quando tipo === 'ecommerce' — cada plataforma tem webhook/API própria */
-export type EcommercePlataforma = 'shopify' | 'nuvemshop' | 'tray' | 'outro'
+export type EcommercePlataforma = 'shopify' | 'nuvemshop' | 'tray' | 'loja-integrada' | 'outro'
 
 export interface Partner {
   id: string
@@ -40,7 +40,7 @@ export interface Partner {
 
 // ── Evento ────────────────────────────────────────────────────────────────────
 export type EventoTipo = 'page_view' | 'lead' | 'checkout' | 'compra' | 'custom'
-export type Origem     = 'meta' | 'google' | 'organico' | 'direto' | 'email' | 'shopify' | 'outro'
+export type Origem     = 'meta' | 'google' | 'organico' | 'direto' | 'email' | 'shopify' | 'loja-integrada' | 'outro'
 
 export interface UTMSet {
   source?: string
@@ -210,7 +210,7 @@ export interface Conversao {
 }
 
 // ── Integração de plataforma (doc raiz em partners/{id}/integrations/{plataforma}) ─
-export type IntegrationPlataforma = 'meta' | 'meta-ads' | 'google' | 'google-ads' | 'ga4' | 'shopify' | 'nuvemshop' | 'tray'
+export type IntegrationPlataforma = 'meta' | 'meta-ads' | 'google' | 'google-ads' | 'ga4' | 'shopify' | 'nuvemshop' | 'tray' | 'loja-integrada'
 export type IntegrationStatus     = 'desconectado' | 'configurado'
 
 export interface Integration {

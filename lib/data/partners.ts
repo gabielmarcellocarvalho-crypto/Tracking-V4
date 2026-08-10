@@ -105,6 +105,16 @@ export async function criarCliente(input: {
 }
 
 /**
+ * Troca a plataforma de e-commerce do cliente (ex: Nuvemshop → Loja
+ * Integrada) sem precisar recriá-lo — o card certo passa a aparecer em
+ * Conexões. Não mexe em eventos antigos; combine com `definirCorteDados`
+ * se quiser também parar de contar o histórico da plataforma anterior.
+ */
+export async function definirEcommercePlataforma(clienteId: string, plataforma: EcommercePlataforma) {
+  await setDoc(doc(db, 'partners', clienteId), { ecommercePlataforma: plataforma }, { merge: true })
+}
+
+/**
  * Marca um corte de data: eventos com `ts` até `timestamp` somem de todos os
  * cálculos (Growth Pack, Performance, Agente IA, alertas) sem apagar nada do
  * Firestore — usado quando o cliente troca de plataforma de e-commerce e o
