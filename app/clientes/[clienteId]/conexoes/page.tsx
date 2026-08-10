@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from 'react'
 import DashboardHeader from '@/components/tracking/DashboardHeader'
-import { useCliente } from '@/lib/data/partners'
+import { useCliente, definirCorteDados } from '@/lib/data/partners'
 import { useConexoes, salvarConexao } from '@/lib/data/colecoes'
 import { useMetaIntegration } from '@/lib/data/meta-integration'
 import { iniciarLoginMeta } from '@/lib/integrations/meta-oauth-client'
@@ -538,6 +538,22 @@ export default function ConexoesPage({ params }: { params: Promise<{ clienteId: 
   const { cliente, isDemo } = useCliente(clienteId)
   const { conexoes } = useConexoes(isDemo ? undefined : clienteId)
   const [copiado, setCopiado] = useState(false)
+  const [aplicandoCorte, setAplicandoCorte] = useState(false)
+
+  const handleDesconsiderar = async () => {
+    if (!window.confirm(
+      'Isso vai fazer os eventos já registrados até agora pararem de entrar em Growth Pack, Performance, Agente IA e alertas deste cliente. ' +
+      'Eles continuam guardados no banco (nada é apagado) — só o que for capturado a partir de agora passa a contar. Confirmar?',
+    )) return
+    setAplicandoCorte(true)
+    try { await definirCorteDados(clienteId, Date.now()) } finally { setAplicandoCorte(false) }
+  }
+
+  const handleRemoverCorte = async () => {
+    if (!window.confirm('Remover o corte? Os eventos anteriores voltam a contar em todos os relatórios.')) return
+    setAplicandoCorte(true)
+    try { await definirCorteDados(clienteId, null) } finally { setAplicandoCorte(false) }
+  }
 
   // Cards de e-commerce (shopify/nuvemshop) só aparecem pro cliente que tipo/plataforma
   // corresponde — cada um tem webhook e credenciais próprios, não faz sentido mostrar os dois.
@@ -643,6 +659,57 @@ export default function ConexoesPage({ params }: { params: Promise<{ clienteId: 
               )
             })}
           </div>
+        </div>
+
+        {/* Corte de dados — reset de histórico ao trocar de plataforma */}
+        <div style={{ background: 'var(--bg-c)', border: '1px solid var(--br)', borderRadius: 12, padding: 18 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <span style={{
+              width: 34, height: 34, borderRadius: 9, flexShrink: 0,
+              background: 'rgba(245,158,11,.12)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" width={15} height={15}>
+                <path d="M3 12a9 9 0 1 0 2.64-6.36" /><polyline points="3 4 3 9 8 9" />
+              </svg>
+            </span>
+            <div>
+              <p style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--t1)', margin: 0 }}>3. Desconsiderar dados anteriores</p>
+              <p style={{ fontSize: 11.5, color: 'var(--t3)', margin: '2px 0 0', lineHeight: 1.5 }}>
+                Use ao trocar de plataforma (ex: Shopify → loja integrada). Os eventos já registrados continuam guardados —
+                só param de entrar em Growth Pack, Performance, Agente IA e alertas. O que for capturado depois passa a contar normalmente.
+              </p>
+            </div>
+          </div>
+
+          {cliente?.dadosIgnoradosAte ? (
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
+              padding: '10px 12px', borderRadius: 8, background: 'rgba(245,158,11,.06)', border: '1px solid rgba(245,158,11,.25)',
+            }}>
+              <p style={{ fontSize: 12, color: 'var(--t2)', margin: 0 }}>
+                Desconsiderando tudo até <strong style={{ color: 'var(--t1)' }}>{new Date(cliente.dadosIgnoradosAte).toLocaleString('pt-BR')}</strong>.
+              </p>
+              <button
+                onClick={handleRemoverCorte} disabled={aplicandoCorte || isDemo}
+                style={{
+                  padding: '7px 14px', borderRadius: 7, fontSize: 11.5, fontWeight: 600, cursor: aplicandoCorte || isDemo ? 'default' : 'pointer',
+                  background: 'none', border: '1px solid var(--br)', color: 'var(--t2)', opacity: aplicandoCorte || isDemo ? 0.6 : 1,
+                }}
+              >
+                Remover corte
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleDesconsiderar} disabled={aplicandoCorte || isDemo}
+              style={{
+                padding: '9px 16px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: aplicandoCorte || isDemo ? 'default' : 'pointer',
+                background: 'rgba(245,158,11,.12)', border: '1px solid rgba(245,158,11,.35)', color: '#F59E0B', opacity: aplicandoCorte || isDemo ? 0.6 : 1,
+              }}
+            >
+              {aplicandoCorte ? 'Aplicando…' : 'Desconsiderar dados até agora'}
+            </button>
+          )}
         </div>
       </main>
     </>

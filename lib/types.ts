@@ -28,6 +28,14 @@ export interface Partner {
   demo?: boolean
   criadoEm?: number
   eventos?: number
+  /**
+   * epoch ms — eventos com `ts` menor ou igual a isso são ignorados em TODOS
+   * os cálculos (Growth Pack, Performance, Agente IA, alertas). Usado quando
+   * o cliente troca de plataforma (ex: Shopify → loja integrada) e o gestor
+   * quer "zerar" o histórico sem apagar nada do Firestore — os eventos
+   * continuam lá, só param de entrar nas contas a partir desse corte.
+   */
+  dadosIgnoradosAte?: number
 }
 
 // ── Evento ────────────────────────────────────────────────────────────────────

@@ -5,7 +5,7 @@
 import {
   addDoc, collection, deleteDoc, doc, onSnapshot, setDoc, serverTimestamp,
 } from 'firebase/firestore'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { db } from '@/lib/firebase'
 import { useSubcolecao } from './firestore-hooks'
 import type {
@@ -16,11 +16,30 @@ import type {
 import type { GrowthPackCanal } from './agregacoes'
 
 // ── Eventos ───────────────────────────────────────────────────────────────────
+// Filtra pelo corte de dados do cliente (partners/{id}.dadosIgnoradosAte) —
+// centralizado aqui pra nenhum consumidor (Growth Pack, Performance, Agente
+// IA, alertas) precisar lembrar de aplicar esse filtro na mão.
+function useDadosIgnoradosAte(clienteId: string | undefined) {
+  const [corte, setCorte] = useState<number | null>(null)
+  useEffect(() => {
+    if (!clienteId) { setCorte(null); return }
+    const unsub = onSnapshot(
+      doc(db, 'partners', clienteId),
+      (snap) => setCorte(snap.data()?.dadosIgnoradosAte ?? null),
+      () => setCorte(null),
+    )
+    return unsub
+  }, [clienteId])
+  return corte
+}
+
 export function useEventos(clienteId: string | undefined, limite = 2000) {
   const { docs, loading, isDemo } = useSubcolecao<Evento>(clienteId, 'eventos', {
     ordenarPor: 'ts', desc: true, limite,
   })
-  return { eventos: docs, loading, isDemo }
+  const corte = useDadosIgnoradosAte(clienteId)
+  const eventos = useMemo(() => (corte ? docs.filter((e) => e.ts > corte) : docs), [docs, corte])
+  return { eventos, loading, isDemo }
 }
 
 // ── Identidades (jornadas) ────────────────────────────────────────────────────

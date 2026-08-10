@@ -105,6 +105,16 @@ export async function criarCliente(input: {
 }
 
 /**
+ * Marca um corte de data: eventos com `ts` até `timestamp` somem de todos os
+ * cálculos (Growth Pack, Performance, Agente IA, alertas) sem apagar nada do
+ * Firestore — usado quando o cliente troca de plataforma de e-commerce e o
+ * histórico antigo passa a atrapalhar os números. `null` remove o corte.
+ */
+export async function definirCorteDados(clienteId: string, timestamp: number | null) {
+  await setDoc(doc(db, 'partners', clienteId), { dadosIgnoradosAte: timestamp }, { merge: true })
+}
+
+/**
  * Remove o cliente por completo (doc raiz + todas as subcoleções) via
  * /api/clientes/{id} — um deleteDoc() direto no client SDK não apaga
  * subcoleções e deixaria eventos/identidades/conversões órfãos.
