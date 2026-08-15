@@ -3,7 +3,7 @@
 // ─── HOOKS POR SUBCOLEÇÃO + escritas ─────────────────────────────────────────
 
 import {
-  addDoc, collection, deleteDoc, doc, onSnapshot, setDoc, serverTimestamp,
+  addDoc, collection, deleteDoc, doc, onSnapshot, setDoc, serverTimestamp, updateDoc,
 } from 'firebase/firestore'
 import { useEffect, useMemo, useState } from 'react'
 import { db } from '@/lib/firebase'
@@ -61,8 +61,14 @@ export function useUTMs(clienteId: string | undefined) {
 export async function salvarUTM(clienteId: string, utm: Omit<UTMRegistro, 'id'>) {
   await addDoc(collection(db, 'partners', clienteId, 'utms'), {
     ...utm,
+    ativo: utm.ativo ?? true,
     criadoEmServer: serverTimestamp(),
   })
+}
+
+/** Liga/desliga uma UTM sem apagar — Detectadas usa isso pra saber quais UTMs em campo estão em uso. */
+export async function alternarAtivaUTM(clienteId: string, utmId: string, ativo: boolean) {
+  await updateDoc(doc(db, 'partners', clienteId, 'utms', utmId), { ativo })
 }
 
 // ── Conversões ────────────────────────────────────────────────────────────────

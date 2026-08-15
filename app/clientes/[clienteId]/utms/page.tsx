@@ -4,7 +4,7 @@ import { use, useMemo, useState } from 'react'
 import DashboardHeader from '@/components/tracking/DashboardHeader'
 import UTMWizard from '@/components/utms/UTMWizard'
 import { useCliente } from '@/lib/data/partners'
-import { useUTMs, useEventos } from '@/lib/data/colecoes'
+import { useUTMs, useEventos, alternarAtivaUTM } from '@/lib/data/colecoes'
 import { validateUTM } from '@/lib/utm/engine'
 import { utmMetaData, utmGoogleData, utmLinkedinData, utmOtherData } from '@/lib/demo-data'
 import type { UTMCanal, UTMRegistro, UTMSet } from '@/lib/types'
@@ -96,6 +96,44 @@ function PadraoBadge({ padraoV4, erros }: { padraoV4: boolean; erros?: string[] 
   )
 }
 
+/** Liga/desliga a UTM sem apagar — em Detectadas dá pra ver quais UTMs em campo estão realmente em uso. */
+function AtivaToggle({ ativo, onToggle, disabled }: { ativo: boolean; onToggle: () => void; disabled?: boolean }) {
+  return (
+    <button
+      onClick={onToggle}
+      disabled={disabled}
+      title={disabled ? undefined : ativo ? 'Clique para desativar' : 'Clique para ativar'}
+      className="px-[7px] py-[3px] rounded-[5px] text-[10px] font-bold whitespace-nowrap transition-all duration-150"
+      style={{
+        background: ativo ? 'rgba(16,185,129,.1)' : 'rgba(255,255,255,.05)',
+        color: ativo ? '#10B981' : 'var(--text-3)',
+        border: `1px solid ${ativo ? 'rgba(16,185,129,.25)' : 'var(--border)'}`,
+        cursor: disabled ? 'default' : 'pointer',
+        opacity: disabled ? 0.6 : 1,
+      }}
+    >
+      {ativo ? '● Ativa' : '○ Inativa'}
+    </button>
+  )
+}
+
+function StatusDetectada({ status }: { status: 'ativa' | 'inativa' | 'nao-cadastrada' }) {
+  const cfg = {
+    ativa:           { label: '● Ativa',           bg: 'rgba(16,185,129,.1)',  color: '#10B981' },
+    inativa:         { label: '○ Inativa',         bg: 'rgba(255,255,255,.05)', color: 'var(--text-3)' },
+    'nao-cadastrada': { label: '— Não cadastrada', bg: 'rgba(245,158,11,.1)', color: '#F59E0B' },
+  }[status]
+  return (
+    <span
+      className="px-[7px] py-[3px] rounded-[5px] text-[10px] font-bold whitespace-nowrap"
+      style={{ background: cfg.bg, color: cfg.color }}
+      title={status === 'nao-cadastrada' ? 'Chegou tráfego com essa UTM, mas ela nunca foi gerada aqui na plataforma' : undefined}
+    >
+      {cfg.label}
+    </span>
+  )
+}
+
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false)
   return (
@@ -176,6 +214,17 @@ export default function UTMsPage({ params }: { params: Promise<{ clienteId: stri
       .map((g) => ({ ...g, validacao: validateUTM(g.utm) }))
   }, [eventos])
 
+  // UTMs geradas na plataforma (todos os canais) → usado em Detectadas pra saber
+  // se o que chegou do site corresponde a uma UTM ativa, inativa ou nunca gerada aqui.
+  const utmsAtivasMap = useMemo(() => {
+    const m = new Map<string, boolean>()
+    for (const u of utms) {
+      const chave = [u.campaign, u.term, u.content].join('|')
+      m.set(chave, u.ativo !== false)
+    }
+    return m
+  }, [utms])
+
   const mostrandoDemo = aba !== 'detectadas' && registros.some((r) => String(r.id).startsWith('demo-'))
 
   return (
@@ -224,17 +273,19 @@ export default function UTMsPage({ params }: { params: Promise<{ clienteId: stri
             <div className="rounded-[12px] overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
               <table className="w-full border-collapse">
                 <thead><tr style={{ background: 'rgba(0,0,0,.15)' }}>
-                  {['Campanha (UTM_CAMPAIGN)', 'Conjunto (UTM_TERM)', 'Anúncio (UTM_CONTENT)', 'Source', 'Padrão', ''].map((h) => (
+                  {['Campanha (UTM_CAMPAIGN)', 'Conjunto (UTM_TERM)', 'Anúncio (UTM_CONTENT)', 'Source', 'Padrão', 'Status', ''].map((h) => (
                     <th key={h} className={thBase} style={{ borderBottom: '1px solid var(--border)' }}>{h}</th>
                   ))}
                 </tr></thead>
                 <tbody>
                   {registros.length === 0 && (
-                    <tr><td colSpan={6} className="px-4 py-8 text-center text-[12px]" style={{ color: 'var(--text-3)' }}>
+                    <tr><td colSpan={7} className="px-4 py-8 text-center text-[12px]" style={{ color: 'var(--text-3)' }}>
                       Nenhuma UTM gerada neste canal ainda — clique em “+ Gerar UTM”.
                     </td></tr>
                   )}
-                  {registros.map((u, i) => (
+                  {registros.map((u, i) => {
+                    const isDemoRow = !u.id || u.id.startsWith('demo-')
+                    return (
                     <tr key={u.id} style={{ borderBottom: i < registros.length - 1 ? '1px solid var(--border-sub)' : 'none' }}>
                       <td className={tdBase}><MonoCell text={u.campaign} /></td>
                       <td className={tdBase}><MonoCell text={u.term} /></td>
@@ -242,13 +293,21 @@ export default function UTMsPage({ params }: { params: Promise<{ clienteId: stri
                       <td className={tdBase}><Badge label={u.source} bg="rgba(255,255,255,.05)" color="var(--text-2)" /></td>
                       <td className={tdBase}><PadraoBadge padraoV4={u.validacao.padraoV4} erros={u.validacao.erros} /></td>
                       <td className={tdBase}>
+                        <AtivaToggle
+                          ativo={u.ativo !== false}
+                          disabled={isDemoRow}
+                          onToggle={() => { if (!isDemoRow) alternarAtivaUTM(clienteId, u.id!, !(u.ativo !== false)) }}
+                        />
+                      </td>
+                      <td className={tdBase}>
                         <CopyButton text={
                           u.urlTagueada ??
                           `?utm_medium=${encodeURIComponent(u.medium)}&utm_source=${encodeURIComponent(u.source)}&utm_campaign=${encodeURIComponent(u.campaign)}${u.term ? `&utm_term=${encodeURIComponent(u.term)}` : ''}${u.content ? `&utm_content=${encodeURIComponent(u.content)}` : ''}`
                         } />
                       </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -267,19 +326,24 @@ export default function UTMsPage({ params }: { params: Promise<{ clienteId: stri
             <div className="rounded-[12px] overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
               <table className="w-full border-collapse">
                 <thead><tr style={{ background: 'rgba(0,0,0,.15)' }}>
-                  {['Campanha', 'Conjunto', 'Anúncio', 'Eventos', 'Último', 'Padrão'].map((h) => (
+                  {['Campanha', 'Conjunto', 'Anúncio', 'Eventos', 'Último', 'Padrão', 'Status'].map((h) => (
                     <th key={h} className={thBase} style={{ borderBottom: '1px solid var(--border)' }}>{h}</th>
                   ))}
                 </tr></thead>
                 <tbody>
                   {detectadas.length === 0 && (
-                    <tr><td colSpan={6} className="px-4 py-8 text-center text-[12px]" style={{ color: 'var(--text-3)' }}>
+                    <tr><td colSpan={7} className="px-4 py-8 text-center text-[12px]" style={{ color: 'var(--text-3)' }}>
                       {isDemo
                         ? 'Cliente demo — crie um cliente real e instale o snippet para detectar UTMs.'
                         : 'Nenhum evento com UTM recebido ainda. Instale o snippet v4track.js no site do cliente.'}
                     </td></tr>
                   )}
-                  {detectadas.map((d, i) => (
+                  {detectadas.map((d, i) => {
+                    const chave = [d.utm.campaign, d.utm.term, d.utm.content].join('|')
+                    const cadastrada = utmsAtivasMap.get(chave)
+                    const status: 'ativa' | 'inativa' | 'nao-cadastrada' =
+                      cadastrada === undefined ? 'nao-cadastrada' : cadastrada ? 'ativa' : 'inativa'
+                    return (
                     <tr key={i} style={{ borderBottom: i < detectadas.length - 1 ? '1px solid var(--border-sub)' : 'none' }}>
                       <td className={tdBase}><MonoCell text={d.utm.campaign} /></td>
                       <td className={tdBase}><MonoCell text={d.utm.term} /></td>
@@ -291,8 +355,10 @@ export default function UTMsPage({ params }: { params: Promise<{ clienteId: stri
                         </span>
                       </td>
                       <td className={tdBase}><PadraoBadge padraoV4={d.validacao.padraoV4} erros={d.validacao.erros} /></td>
+                      <td className={tdBase}><StatusDetectada status={status} /></td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

@@ -187,6 +187,8 @@ export interface UTMRegistro {
   urlTagueada?: string
   validacao: { padraoV4: boolean; erros: string[] }
   criadoEm: number
+  /** UTM em uso (default true) — desativar não apaga, só marca como fora de uso pra cruzar com Detectadas */
+  ativo?: boolean
 }
 
 // ── Conversão (fila CAPI / Enhanced Conversions) ──────────────────────────────
