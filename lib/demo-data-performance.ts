@@ -141,40 +141,48 @@ export const perfMsgData = {
 }
 
 // ── PERSONALIZADO — blocos disponíveis ───────────────────────────────────────
+// `fonte` decide de onde o bloco lê dado — nunca dois numa mesma fonte
+// combinada, é assim que evitamos duplicar (ver PersonalizadoTemplate).
 export const AVAILABLE_BLOCKS = [
   // Métricas
-  { id: 'card-investimento',  tipo: 'card',   label: 'Investimento',          color: '#C8102E', cat: 'Métricas' },
-  { id: 'card-receita',       tipo: 'card',   label: 'Receita',               color: '#10B981', cat: 'Métricas' },
-  { id: 'card-roas',          tipo: 'card',   label: 'ROAS',                  color: '#3B82F6', cat: 'Métricas' },
-  { id: 'card-cpl',           tipo: 'card',   label: 'CPL',                   color: '#8B5CF6', cat: 'Métricas' },
-  { id: 'card-cpa',           tipo: 'card',   label: 'CPA',                   color: '#F59E0B', cat: 'Métricas' },
-  { id: 'card-ticket',        tipo: 'card',   label: 'Ticket Médio',          color: '#10B981', cat: 'Métricas' },
-  { id: 'card-leads',         tipo: 'card',   label: 'Total de Leads',        color: '#8B5CF6', cat: 'Métricas' },
-  { id: 'card-compras',       tipo: 'card',   label: 'Total de Compras',      color: '#10B981', cat: 'Métricas' },
-  { id: 'card-conversao',     tipo: 'card',   label: 'Taxa de Conversão',     color: '#3B82F6', cat: 'Métricas' },
-  { id: 'card-capi',          tipo: 'card',   label: 'Match Rate Meta CAPI',  color: '#C8102E', cat: 'Métricas' },
-  { id: 'card-gec',           tipo: 'card',   label: 'Match Rate Google EC',  color: '#4285F4', cat: 'Métricas' },
-  { id: 'card-eventos',       tipo: 'card',   label: 'Total de Eventos',      color: '#F59E0B', cat: 'Métricas' },
-  { id: 'card-qualificados',  tipo: 'card',   label: 'Leads Qualificados',    color: '#8B5CF6', cat: 'Métricas' },
-  { id: 'card-abandono',      tipo: 'card',   label: 'Taxa de Abandono',      color: '#EF4444', cat: 'Métricas' },
-  { id: 'card-cpm',           tipo: 'card',   label: 'Custo por Mensagem',    color: '#F59E0B', cat: 'Métricas' },
-  { id: 'card-contatos',      tipo: 'card',   label: 'Total de Contatos',     color: '#10B981', cat: 'Métricas' },
+  { id: 'card-investimento',  tipo: 'card',   label: 'Investimento',          color: '#C8102E', cat: 'Métricas', fonte: 'site' },
+  { id: 'card-receita',       tipo: 'card',   label: 'Receita',               color: '#10B981', cat: 'Métricas', fonte: 'site' },
+  { id: 'card-roas',          tipo: 'card',   label: 'ROAS',                  color: '#3B82F6', cat: 'Métricas', fonte: 'site' },
+  { id: 'card-cpl',           tipo: 'card',   label: 'CPL',                   color: '#8B5CF6', cat: 'Métricas', fonte: 'site' },
+  { id: 'card-cpa',           tipo: 'card',   label: 'CPA',                   color: '#F59E0B', cat: 'Métricas', fonte: 'site' },
+  { id: 'card-ticket',        tipo: 'card',   label: 'Ticket Médio',          color: '#10B981', cat: 'Métricas', fonte: 'site' },
+  { id: 'card-leads',         tipo: 'card',   label: 'Total de Leads',        color: '#8B5CF6', cat: 'Métricas', fonte: 'site' },
+  { id: 'card-compras',       tipo: 'card',   label: 'Total de Compras',      color: '#10B981', cat: 'Métricas', fonte: 'site' },
+  { id: 'card-conversao',     tipo: 'card',   label: 'Taxa de Conversão',     color: '#3B82F6', cat: 'Métricas', fonte: 'site' },
+  { id: 'card-capi',          tipo: 'card',   label: 'Match Rate Meta CAPI',  color: '#C8102E', cat: 'Métricas', fonte: 'site' },
+  { id: 'card-gec',           tipo: 'card',   label: 'Match Rate Google EC',  color: '#4285F4', cat: 'Métricas', fonte: 'site' },
+  { id: 'card-eventos',       tipo: 'card',   label: 'Total de Eventos',      color: '#F59E0B', cat: 'Métricas', fonte: 'site' },
+  { id: 'card-qualificados',  tipo: 'card',   label: 'Leads Qualificados',    color: '#8B5CF6', cat: 'Métricas', fonte: 'site' },
+  { id: 'card-abandono',      tipo: 'card',   label: 'Taxa de Abandono',      color: '#EF4444', cat: 'Métricas', fonte: 'site' },
+  { id: 'card-cpm',           tipo: 'card',   label: 'Custo por Mensagem',    color: '#F59E0B', cat: 'Métricas', fonte: 'site' },
+  { id: 'card-contatos',      tipo: 'card',   label: 'Total de Contatos',     color: '#10B981', cat: 'Métricas', fonte: 'site' },
   // Gráficos
-  { id: 'chart-bar',          tipo: 'grafico', label: 'Receita vs Investimento', color: '#10B981', cat: 'Gráficos' },
-  { id: 'chart-leads-dia',    tipo: 'grafico', label: 'Leads por Dia',           color: '#8B5CF6', cat: 'Gráficos' },
-  { id: 'chart-roas',         tipo: 'grafico', label: 'ROAS ao Longo do Tempo',  color: '#3B82F6', cat: 'Gráficos' },
-  { id: 'chart-cpl',          tipo: 'grafico', label: 'CPL ao Longo do Tempo',   color: '#F59E0B', cat: 'Gráficos' },
-  { id: 'chart-funil',        tipo: 'grafico', label: 'Funil de Conversão',      color: '#8B5CF6', cat: 'Gráficos' },
-  { id: 'chart-canais',       tipo: 'grafico', label: 'Origem por Canal',        color: '#C8102E', cat: 'Gráficos' },
-  { id: 'chart-campanhas',    tipo: 'grafico', label: 'Top Campanhas',           color: '#3B82F6', cat: 'Gráficos' },
+  { id: 'chart-bar',          tipo: 'grafico', label: 'Receita vs Investimento', color: '#10B981', cat: 'Gráficos', fonte: 'site' },
+  { id: 'chart-leads-dia',    tipo: 'grafico', label: 'Leads por Dia',           color: '#8B5CF6', cat: 'Gráficos', fonte: 'site' },
+  { id: 'chart-roas',         tipo: 'grafico', label: 'ROAS ao Longo do Tempo',  color: '#3B82F6', cat: 'Gráficos', fonte: 'site' },
+  { id: 'chart-cpl',          tipo: 'grafico', label: 'CPL ao Longo do Tempo',   color: '#F59E0B', cat: 'Gráficos', fonte: 'site' },
+  { id: 'chart-funil',        tipo: 'grafico', label: 'Funil de Conversão',      color: '#8B5CF6', cat: 'Gráficos', fonte: 'site' },
+  { id: 'chart-canais',       tipo: 'grafico', label: 'Origem por Canal',        color: '#C8102E', cat: 'Gráficos', fonte: 'site' },
+  { id: 'chart-campanhas',    tipo: 'grafico', label: 'Top Campanhas',           color: '#3B82F6', cat: 'Gráficos', fonte: 'site' },
   // Tabelas
-  { id: 'table-leads',        tipo: 'tabela', label: 'Leads Recentes',           color: '#6B7280', cat: 'Tabelas' },
-  { id: 'table-compras',      tipo: 'tabela', label: 'Compras Recentes',         color: '#6B7280', cat: 'Tabelas' },
-  { id: 'table-campanhas',    tipo: 'tabela', label: 'Top Campanhas',            color: '#6B7280', cat: 'Tabelas' },
+  { id: 'table-leads',        tipo: 'tabela', label: 'Leads Recentes',           color: '#6B7280', cat: 'Tabelas', fonte: 'site' },
+  { id: 'table-compras',      tipo: 'tabela', label: 'Compras Recentes',         color: '#6B7280', cat: 'Tabelas', fonte: 'site' },
+  { id: 'table-campanhas',    tipo: 'tabela', label: 'Top Campanhas',            color: '#6B7280', cat: 'Tabelas', fonte: 'site' },
   // Extras
-  { id: 'extra-meta-inv',     tipo: 'extra',  label: 'Meta de Investimento',     color: '#C8102E', cat: 'Extras' },
-  { id: 'extra-meta-leads',   tipo: 'extra',  label: 'Meta de Leads/Vendas',     color: '#8B5CF6', cat: 'Extras' },
-  { id: 'extra-saude',        tipo: 'extra',  label: 'Saúde do Tracking',        color: '#10B981', cat: 'Extras' },
+  { id: 'extra-meta-inv',     tipo: 'extra',  label: 'Meta de Investimento',     color: '#C8102E', cat: 'Extras', fonte: 'site' },
+  { id: 'extra-meta-leads',   tipo: 'extra',  label: 'Meta de Leads/Vendas',     color: '#8B5CF6', cat: 'Extras', fonte: 'site' },
+  { id: 'extra-saude',        tipo: 'extra',  label: 'Saúde do Tracking',        color: '#10B981', cat: 'Extras', fonte: 'site' },
+  // GA4 — tráfego nativo (sessões/canais), nunca somado com os blocos "site"
+  { id: 'card-ga4-sessoes',      tipo: 'card',    label: 'Sessões (GA4)',           color: '#4285F4', cat: 'GA4', fonte: 'ga4' },
+  { id: 'card-ga4-usuarios',     tipo: 'card',    label: 'Usuários (GA4)',          color: '#8B5CF6', cat: 'GA4', fonte: 'ga4' },
+  { id: 'card-ga4-engajamento',  tipo: 'card',    label: 'Taxa de Engajamento (GA4)', color: '#F59E0B', cat: 'GA4', fonte: 'ga4' },
+  { id: 'chart-ga4-sessoes-dia', tipo: 'grafico', label: 'Sessões por Dia (GA4)',   color: '#4285F4', cat: 'GA4', fonte: 'ga4' },
+  { id: 'chart-ga4-canais',      tipo: 'grafico', label: 'Sessões por Canal (GA4)', color: '#06B6D4', cat: 'GA4', fonte: 'ga4' },
 ] as const
 
 export const DEFAULT_PERSONALIZADO_BLOCKS = [

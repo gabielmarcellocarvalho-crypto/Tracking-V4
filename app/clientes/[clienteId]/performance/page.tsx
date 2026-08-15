@@ -139,11 +139,24 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
 
   const usarDemo = isDemo
 
+  // Tipo do cliente decide quais templates fazem sentido — ecommerce não tem
+  // Leads/Mensagens (sem filtro de lead pro tipo de cliente errado) e
+  // inside-sales não tem E-commerce (sem filtro de compra/checkout).
+  const templatesPermitidos: PerformanceTemplate[] = cliente?.tipo === 'ecommerce'
+    ? ['ecommerce', 'personalizado']
+    : ['leads', 'mensagens', 'personalizado']
+  const defaultTemplate: PerformanceTemplate = cliente?.tipo === 'ecommerce' ? 'ecommerce' : 'leads'
+  const [template, setTemplate] = useState<PerformanceTemplate>(defaultTemplate)
+
   // Visão por canal — "Geral" continua só mídia paga (Meta+Google), a aba
   // GA4 é tráfego nativo do GA4 (sessões/canais), nunca misturados.
   const [canal, setCanal] = useState<CanalPerformance>('geral')
   const ga4Conectado = !usarDemo && conexoes.some((c) => c.id === 'ga4' && c.status === 'configurado')
-  const { dados: ga4Dados, loading: loadingGA4 } = useGA4Dados(ga4Conectado && canal === 'ga4' ? clienteId : undefined, periodo)
+  // Personalizado não usa o seletor de canal — dispara o fetch também
+  // quando esse template está ativo (pode ter blocos GA4 no layout).
+  const { dados: ga4Dados, loading: loadingGA4 } = useGA4Dados(
+    ga4Conectado && (canal === 'ga4' || template === 'personalizado') ? clienteId : undefined, periodo,
+  )
 
   // Agregação real dos eventos dentro do período selecionado — null quando cliente é demo
   const agregadoBase = useMemo(
@@ -292,15 +305,6 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
     }
   }, [agregado])
 
-  // Tipo do cliente decide quais templates fazem sentido — ecommerce não tem
-  // Leads/Mensagens (sem filtro de lead pro tipo de cliente errado) e
-  // inside-sales não tem E-commerce (sem filtro de compra/checkout).
-  const templatesPermitidos: PerformanceTemplate[] = cliente?.tipo === 'ecommerce'
-    ? ['ecommerce', 'personalizado']
-    : ['leads', 'mensagens', 'personalizado']
-  const defaultTemplate: PerformanceTemplate = cliente?.tipo === 'ecommerce' ? 'ecommerce' : 'leads'
-
-  const [template, setTemplate]         = useState<PerformanceTemplate>(defaultTemplate)
   const [loading, setLoading]           = useState(true)
   const [personBlocks, setPersonBlocks] = useState<string[]>(DEFAULT_PERSONALIZADO_BLOCKS)
   // Independente de qual template está ativo agora — existe um layout
@@ -546,6 +550,8 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
                   dados={agregado ?? undefined}
                   real={!usarDemo}
                   onSaved={() => setTemPersonalizadoSalvo(true)}
+                  ga4Dados={ga4Dados ?? undefined}
+                  ga4Conectado={ga4Conectado}
                 />
               )}
             </motion.div>

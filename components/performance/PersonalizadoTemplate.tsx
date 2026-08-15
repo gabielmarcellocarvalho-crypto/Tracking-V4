@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { doc, setDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import {
@@ -13,8 +14,36 @@ import {
   perfEcData, perfLeadsData,
 } from '@/lib/demo-data-performance'
 import type { agregarPerformance } from '@/lib/data/agregacoes'
+import type { GA4Dados } from '@/lib/data/ga4-metrics'
 
 type PerformanceAggregate = ReturnType<typeof agregarPerformance>
+
+const tt2 = {
+  contentStyle: { background: '#0d0d0d', border: '1px solid #1e1e1e', borderRadius: 8, fontSize: 11, color: '#f0f0f0' },
+  labelStyle: { color: '#777' },
+  cursor: { fill: 'rgba(255,255,255,.03)' },
+}
+const ax2 = { tick: { fill: '#555', fontSize: 10 }, axisLine: false, tickLine: false }
+const COR_CANAL_GA4: Record<string, string> = {
+  'Organic Search': '#10B981', 'Paid Search': '#4285F4', 'Paid Social': '#1877F2',
+  'Organic Social': '#8B5CF6', Direct: '#6B7280', Referral: '#F59E0B',
+  Email: '#EC4899', Display: '#06B6D4', Unassigned: '#374151',
+}
+function fmtDiaGA4(data: string) {
+  const [, m, d] = data.split('-')
+  return `${d}/${m}`
+}
+
+// GA4 desconectado depois de já ter bloco GA4 salvo no layout — mantém o
+// bloco na lista (não quebra o layout salvo) mas explica o estado, em vez
+// de sumir ou mostrar zero como se fosse dado real.
+function GA4Desconectado({ clienteId }: { clienteId: string }) {
+  return (
+    <p style={{ fontSize: 11.5, color: 'var(--t3)', padding: '20px 0', textAlign: 'center' }}>
+      GA4 desconectado — <Link href={`/clientes/${clienteId}/conexoes`} style={{ color: 'var(--red)' }}>reconecte em Conexões</Link>.
+    </p>
+  )
+}
 
 const tt = {
   contentStyle: { background: '#0d0d0d', border: '1px solid #1e1e1e', borderRadius: 8, fontSize: 11, color: '#f0f0f0' },
@@ -51,10 +80,80 @@ function SemDados({ texto }: { texto: string }) {
 // conexão de ads ainda não é fabricado), e o que não tem equivalente real ainda
 // (match rate CAPI/G.EC, metas, breakdown por campanha) mostra "—"/estado vazio
 // em vez de inventar um número.
-function renderBlock(blockId: string, dados: PerformanceAggregate | undefined, real: boolean) {
+function renderBlock(
+  blockId: string,
+  dados: PerformanceAggregate | undefined,
+  real: boolean,
+  ga4Dados: GA4Dados | undefined,
+  ga4Conectado: boolean,
+  clienteId: string,
+) {
   const d = perfEcData
   const l = perfLeadsData
   const p = dados
+
+  // Blocos GA4 nunca leem de `p` (site/mídia paga) — fonte isolada, sem
+  // duplicar (ver AVAILABLE_BLOCKS.fonte).
+  if (blockId.startsWith('card-ga4-') || blockId.startsWith('chart-ga4-')) {
+    if (!ga4Conectado) return <GA4Desconectado clienteId={clienteId} />
+    const porDia = ga4Dados?.sessoesPorDia ?? []
+    const porCanal = ga4Dados?.sessoesPorCanal ?? []
+    const totalSessoes = porDia.reduce((s, x) => s + x.sessions, 0)
+    const totalUsuarios = porDia.reduce((s, x) => s + x.totalUsers, 0)
+    const totalEngajadas = porDia.reduce((s, x) => s + x.engagedSessions, 0)
+    const taxaEngajamento = totalSessoes > 0 ? (totalEngajadas / totalSessoes) * 100 : 0
+
+    if (blockId === 'card-ga4-sessoes') return <PerfMetricCard label="Sessões (GA4)" value={totalSessoes.toLocaleString('pt-BR')} color="#4285F4" icon={<Ico d="M22 12h-4l-3 9L9 3l-3 9H2" />} />
+    if (blockId === 'card-ga4-usuarios') return <PerfMetricCard label="Usuários (GA4)" value={totalUsuarios.toLocaleString('pt-BR')} color="#8B5CF6" icon={<Ico d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" />} />
+    if (blockId === 'card-ga4-engajamento') return <PerfMetricCard label="Taxa de Engajamento (GA4)" value={`${taxaEngajamento.toFixed(1)}%`} color="#F59E0B" icon={<Ico d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />} />
+
+    if (blockId === 'chart-ga4-sessoes-dia') return (
+      <ChartCard title="Sessões por Dia (GA4)">
+        {porDia.length === 0 ? <SemDados texto="Sem dado do GA4 no período" /> : (
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart data={porDia.map((x) => ({ dia: fmtDiaGA4(x.data), sessions: x.sessions }))}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
+              <XAxis dataKey="dia" {...ax2} />
+              <YAxis {...ax2} />
+              <Tooltip {...tt2} formatter={(v) => [Number(v).toLocaleString('pt-BR'), 'Sessões']} />
+              <Line type="monotone" dataKey="sessions" stroke="#4285F4" strokeWidth={2} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
+      </ChartCard>
+    )
+
+    if (blockId === 'chart-ga4-canais') {
+      const totalCanais = porCanal.reduce((s, c) => s + c.sessions, 0) || 1
+      const pizza = porCanal.map((c) => ({ name: c.canal, value: Math.round((c.sessions / totalCanais) * 100), color: COR_CANAL_GA4[c.canal] ?? '#9CA3AF' }))
+      return (
+        <ChartCard title="Sessões por Canal (GA4)">
+          {pizza.length === 0 ? <SemDados texto="Sem dado do GA4 no período" /> : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <ResponsiveContainer width={100} height={100}>
+                <PieChart>
+                  <Pie data={pizza} dataKey="value" innerRadius={26} outerRadius={46} paddingAngle={3} startAngle={90} endAngle={450}>
+                    {pizza.map((c, i) => <Cell key={i} fill={c.color} />)}
+                  </Pie>
+                  <Tooltip {...tt2} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {pizza.map((c) => (
+                  <div key={c.name} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 2, background: c.color, flexShrink: 0 }} />
+                    <span style={{ flex: 1, fontSize: 11, color: 'var(--t2)' }}>{c.name}</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)' }}>{c.value}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </ChartCard>
+      )
+    }
+    return null
+  }
 
   if (real) {
     const k = p?.kpis
@@ -386,9 +485,11 @@ interface Props {
   dados?: PerformanceAggregate
   real?: boolean
   onSaved?: () => void
+  ga4Dados?: GA4Dados
+  ga4Conectado?: boolean
 }
 
-export default function PersonalizadoTemplate({ clienteId, initialBlocks, dados, real, onSaved }: Props) {
+export default function PersonalizadoTemplate({ clienteId, initialBlocks, dados, real, onSaved, ga4Dados, ga4Conectado }: Props) {
   const [blocks, setBlocks] = useState<string[]>(initialBlocks ?? DEFAULT_PERSONALIZADO_BLOCKS)
   const [panelOpen, setPanelOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -480,7 +581,7 @@ export default function PersonalizadoTemplate({ clienteId, initialBlocks, dados,
                   transition: 'opacity .15s, outline .1s',
                 }}
               >
-                {renderBlock(id, dados, !!real)}
+                {renderBlock(id, dados, !!real, ga4Dados, !!ga4Conectado, clienteId)}
               </div>
             )
           })}
@@ -510,7 +611,7 @@ export default function PersonalizadoTemplate({ clienteId, initialBlocks, dados,
                   transition: 'opacity .15s, outline .1s',
                 }}
               >
-                {renderBlock(id, dados, !!real)}
+                {renderBlock(id, dados, !!real, ga4Dados, !!ga4Conectado, clienteId)}
               </div>
             )
           })}
@@ -569,23 +670,39 @@ export default function PersonalizadoTemplate({ clienteId, initialBlocks, dados,
             </div>
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '12px 18px' }}>
-              {cats.map((cat) => (
+              {cats.map((cat) => {
+                const catBloqueada = cat === 'GA4' && !ga4Conectado
+                return (
                 <div key={cat} style={{ marginBottom: 20 }}>
-                  <div style={{ fontSize: '9.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--t3)', marginBottom: 8 }}>
-                    {cat}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <div style={{ fontSize: '9.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--t3)' }}>
+                      {cat}
+                    </div>
+                    {catBloqueada && (
+                      <Link href={`/clientes/${clienteId}/conexoes`} style={{ fontSize: 10, color: 'var(--red)', fontWeight: 600, textDecoration: 'none' }}>
+                        Conectar GA4 →
+                      </Link>
+                    )}
                   </div>
+                  {catBloqueada && (
+                    <p style={{ fontSize: 10.5, color: 'var(--t3)', margin: '0 0 8px' }}>
+                      GA4 não conectado — conecte em Conexões pra usar esses blocos.
+                    </p>
+                  )}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     {AVAILABLE_BLOCKS.filter((b) => b.cat === cat).map((b) => {
                       const active = blocks.includes(b.id)
                       return (
                         <button
                           key={b.id}
-                          onClick={() => toggle(b.id)}
+                          onClick={() => !catBloqueada && toggle(b.id)}
+                          disabled={catBloqueada}
                           style={{
                             display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px',
                             borderRadius: 8, border: `1px solid ${active ? b.color + '44' : 'var(--br)'}`,
                             background: active ? b.color + '0d' : 'var(--bg-c)',
-                            cursor: 'pointer', transition: 'all .15s', textAlign: 'left',
+                            cursor: catBloqueada ? 'not-allowed' : 'pointer', transition: 'all .15s', textAlign: 'left',
+                            opacity: catBloqueada ? 0.5 : 1,
                           }}
                         >
                           <span style={{ width: 8, height: 8, borderRadius: '50%', background: b.color, flexShrink: 0 }} />
@@ -598,7 +715,8 @@ export default function PersonalizadoTemplate({ clienteId, initialBlocks, dados,
                     })}
                   </div>
                 </div>
-              ))}
+                )
+              })}
             </div>
 
             <div style={{ padding: '14px 18px', borderTop: '1px solid var(--br)' }}>
