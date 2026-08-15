@@ -75,11 +75,15 @@ export function montarUrl(urlBase: string, utm: UTMSet): string {
   if (!urlBase) return ''
   const sep = urlBase.includes('?') ? '&' : '?'
   const params: string[] = []
-  if (utm.medium)   params.push(`utm_medium=${utm.medium}`)
-  if (utm.source)   params.push(`utm_source=${utm.source}`)
-  if (utm.campaign) params.push(`utm_campaign=${utm.campaign}`)
-  if (utm.term)     params.push(`utm_term=${utm.term}`)
-  if (utm.content)  params.push(`utm_content=${utm.content}`)
+  // encodeURIComponent é essencial aqui: qualquer valor com caractere reservado
+  // em query string (ex: "+", que vira espaço na decodificação padrão
+  // application/x-www-form-urlencoded) corrompe silenciosamente a UTM e derruba
+  // a validação de padrão V4 do lado de quem recebe.
+  if (utm.medium)   params.push(`utm_medium=${encodeURIComponent(utm.medium)}`)
+  if (utm.source)   params.push(`utm_source=${encodeURIComponent(utm.source)}`)
+  if (utm.campaign) params.push(`utm_campaign=${encodeURIComponent(utm.campaign)}`)
+  if (utm.term)     params.push(`utm_term=${encodeURIComponent(utm.term)}`)
+  if (utm.content)  params.push(`utm_content=${encodeURIComponent(utm.content)}`)
   return params.length ? `${urlBase}${sep}${params.join('&')}` : urlBase
 }
 

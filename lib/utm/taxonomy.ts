@@ -136,7 +136,7 @@ export const FORMATOS: TaxItem[] = [
   { label: 'Link ad — single ad',              valor: 'linkad' },
   { label: 'Carrossel',                        valor: 'carrossel' },
   { label: 'Stories',                          valor: 'stories' },
-  { label: 'Vídeo +30s',                       valor: 'video-+30' },
+  { label: 'Vídeo +30s',                       valor: 'video-30-mais' },
   { label: 'Vídeo 30s',                        valor: 'video-30' },
   { label: 'Vídeo 15s',                        valor: 'video-15' },
   { label: 'Vídeo 10s',                        valor: 'video-10' },

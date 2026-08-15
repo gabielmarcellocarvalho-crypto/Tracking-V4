@@ -35,7 +35,7 @@ interface Props extends EventHealth {
 }
 
 export default function EventHealthCard({
-  label, description, status, lastFired, countToday, countWeek, alert, icon, color, onClick, selected,
+  label, description, status, lastFired, countToday, countPeriodo, periodoLabel, alert, icon, color, onClick, selected,
 }: Props) {
   const cfg = STATUS_CFG[status]
 
@@ -104,9 +104,9 @@ export default function EventHealthCard({
         <div style={{ width: 1, background: 'var(--br)' }} />
         <div>
           <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--t2)', letterSpacing: '-.5px', lineHeight: 1 }}>
-            {countWeek.toLocaleString('pt-BR')}
+            {countPeriodo.toLocaleString('pt-BR')}
           </div>
-          <div style={{ fontSize: 10, color: 'var(--t3)', marginTop: 2 }}>7 dias</div>
+          <div style={{ fontSize: 10, color: 'var(--t3)', marginTop: 2 }}>{periodoLabel}</div>
         </div>
         <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end' }}>
           <div style={{ fontSize: 10.5, color: 'var(--t3)', textAlign: 'right' }}>

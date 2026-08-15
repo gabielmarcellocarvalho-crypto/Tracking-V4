@@ -64,11 +64,22 @@ function tempoRelativo(ms: number): string {
   return `há ${d} dia${d > 1 ? 's' : ''}`
 }
 
+/** "Últimos 30 dias" → "30 dias" · "Hoje" → "hoje" — rótulo curto pro card de saúde. */
+function labelPeriodoCurto(label: string): string {
+  return label.replace(/^Últimos\s+/i, '').toLowerCase()
+}
+
 // ── Saúde dos eventos ─────────────────────────────────────────────────────────
-export function agregarSaudeEventos(eventos: Evento[]): EventHealth[] {
+// `periodo` é o filtro de data selecionado no topo da tela (Hoje/7/30/90
+// dias/Personalizado) — quando ausente (ex: gerarAlertas, Agente IA), cai pra
+// uma janela fixa de 7 dias, que é o comportamento que essas duas chamadas
+// internas sempre tiveram.
+export function agregarSaudeEventos(eventos: Evento[], periodo?: { start: Date; end: Date; label: string }): EventHealth[] {
   const agora = Date.now()
   const inicioHoje = new Date().setHours(0, 0, 0, 0)
-  const inicioSemana = agora - 7 * DIA_MS
+  const inicioPeriodo = periodo ? new Date(periodo.start).setHours(0, 0, 0, 0) : agora - 7 * DIA_MS
+  const fimPeriodo = periodo ? new Date(periodo.end).setHours(23, 59, 59, 999) : agora
+  const periodoLabel = periodo ? labelPeriodoCurto(periodo.label) : '7 dias'
 
   return (['page_view', 'lead', 'checkout', 'compra'] as EventoTipo[]).map((tipo) => {
     const doTipo = eventos.filter((e) => e.tipo === tipo)
@@ -94,7 +105,8 @@ export function agregarSaudeEventos(eventos: Evento[]): EventHealth[] {
       lastFired: ultimo ? tempoRelativo(ultimo) : '—',
       lastFiredAgo: minAtras === Infinity ? 99999 : minAtras,
       countToday: doTipo.filter((e) => e.ts >= inicioHoje).length,
-      countWeek: doTipo.filter((e) => e.ts >= inicioSemana).length,
+      countPeriodo: doTipo.filter((e) => e.ts >= inicioPeriodo && e.ts <= fimPeriodo).length,
+      periodoLabel,
       alert,
     }
   })
@@ -103,7 +115,19 @@ export function agregarSaudeEventos(eventos: Evento[]): EventHealth[] {
 // ── Volume por dia (últimos 7 dias) ──────────────────────────────────────────
 const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
-export function agregarVolume7Dias(eventos: Evento[], janela: JanelaPeriodo | number = 7) {
+function toYMD(d: Date) { return d.toISOString().slice(0, 10) }
+
+/** Métricas diárias de mídia paga — subset estrutural comum ao Meta e Google (checkout/purchase). */
+interface MidiaPagaDia { checkout: number; purchase: number }
+
+export interface FallbackMidiaPaga {
+  /** true = cliente tem e-commerce conectado (webhook configurado) — eventos do site são a fonte, sem fallback */
+  ecommerceConectado: boolean
+  metaPorDia?: Map<string, MidiaPagaDia>
+  googlePorDia?: Map<string, MidiaPagaDia>
+}
+
+export function agregarVolume7Dias(eventos: Evento[], janela: JanelaPeriodo | number = 7, fallback?: FallbackMidiaPaga) {
   const range: JanelaPeriodo = typeof janela === 'number'
     ? { start: new Date(Date.now() - janela * DIA_MS), end: new Date() }
     : janela
@@ -113,19 +137,34 @@ export function agregarVolume7Dias(eventos: Evento[], janela: JanelaPeriodo | nu
   const totalDias = Math.max(1, Math.round((ateFim - corte) / DIA_MS) + 1)
   const agrupaPorSemana = totalDias > MAX_PONTOS_SERIE
   const passoMs = agrupaPorSemana ? 7 * DIA_MS : DIA_MS
+  const usaFallback = fallback && !fallback.ecommerceConectado
 
   const dias: { dia: string; page_view: number; lead: number; checkout: number; compra: number }[] = []
   for (let inicio = corte; inicio <= ateFim; inicio += passoMs) {
     const fim = Math.min(inicio + passoMs, ateFim + 1)
     const doDia = eventos.filter((e) => e.ts >= inicio && e.ts < fim)
+    let checkout = doDia.filter((e) => e.tipo === 'checkout').length
+    let compra = doDia.filter((e) => e.tipo === 'compra').length
+
+    // Sem e-commerce conectado, o site não tem como reportar checkout/compra
+    // reais — usa o que Meta/Google Ads reportaram de conversão nesses dias
+    // como aproximação (prioriza sempre o dado real do e-commerce quando existe).
+    if (usaFallback) {
+      for (let d = inicio; d < fim; d += DIA_MS) {
+        const key = toYMD(new Date(d))
+        checkout += (fallback!.metaPorDia?.get(key)?.checkout ?? 0) + (fallback!.googlePorDia?.get(key)?.checkout ?? 0)
+        compra   += (fallback!.metaPorDia?.get(key)?.purchase ?? 0) + (fallback!.googlePorDia?.get(key)?.purchase ?? 0)
+      }
+    }
+
     dias.push({
       dia: agrupaPorSemana
         ? `${new Date(inicio).getDate().toString().padStart(2, '0')}/${(new Date(inicio).getMonth() + 1).toString().padStart(2, '0')}`
         : DIAS_SEMANA[new Date(inicio).getDay()],
       page_view: doDia.filter((e) => e.tipo === 'page_view').length,
       lead:      doDia.filter((e) => e.tipo === 'lead').length,
-      checkout:  doDia.filter((e) => e.tipo === 'checkout').length,
-      compra:    doDia.filter((e) => e.tipo === 'compra').length,
+      checkout,
+      compra,
     })
   }
   return dias
@@ -378,7 +417,7 @@ export function gerarAlertas(eventos: Evento[]): Alerta[] {
 
   const saude = agregarSaudeEventos(eventos)
   for (const s of saude) {
-    if (s.status === 'offline' && s.countWeek > 0) {
+    if (s.status === 'offline' && s.countPeriodo > 0) {
       alertas.push({
         tipo: 'evento-parado',
         titulo: `Evento "${s.label}" parado`,

@@ -10,7 +10,9 @@ export interface EventHealth {
   lastFired: string       // relative "há 2 min"
   lastFiredAgo: number   // minutes ago (for logic)
   countToday: number
-  countWeek: number
+  countPeriodo: number
+  /** Rótulo curto do período do 2º número (ex: "30 dias", "hoje") — segue o filtro de data selecionado */
+  periodoLabel: string
   alert?: string
   icon: string            // SVG path
   color: string
@@ -25,7 +27,8 @@ export const eventHealthData: EventHealth[] = [
     lastFired: 'há 1 min',
     lastFiredAgo: 1,
     countToday: 3_847,
-    countWeek: 24_312,
+    countPeriodo: 24_312,
+    periodoLabel: '30 dias',
     icon: 'M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z',
     color: '#10B981',
   },
@@ -37,7 +40,8 @@ export const eventHealthData: EventHealth[] = [
     lastFired: 'há 8 min',
     lastFiredAgo: 8,
     countToday: 142,
-    countWeek: 891,
+    countPeriodo: 891,
+    periodoLabel: '30 dias',
     icon: 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8z',
     color: '#8B5CF6',
   },
@@ -49,7 +53,8 @@ export const eventHealthData: EventHealth[] = [
     lastFired: 'há 4 horas',
     lastFiredAgo: 240,
     countToday: 11,
-    countWeek: 203,
+    countPeriodo: 203,
+    periodoLabel: '30 dias',
     alert: 'Intervalo longo — verificar pixel',
     icon: 'M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-8 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
     color: '#F59E0B',
@@ -62,7 +67,8 @@ export const eventHealthData: EventHealth[] = [
     lastFired: 'há 26 horas',
     lastFiredAgo: 1560,
     countToday: 0,
-    countWeek: 47,
+    countPeriodo: 47,
+    periodoLabel: '30 dias',
     alert: 'Evento parado há mais de 24h — verificar integração',
     icon: 'M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm-1 15v-4H7l5-8v4h4l-5 8z',
     color: '#EF4444',

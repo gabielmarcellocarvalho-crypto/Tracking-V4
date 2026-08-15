@@ -160,7 +160,7 @@ async function montarContexto(clienteId: string): Promise<string | null> {
     funil: perf.funil,
     origens: perf.canais,
     serieDiaria7d: agregarVolume7Dias(eventos),
-    saudeEventos: saude.map((s) => ({ evento: s.label, status: s.status, ultimoDisparo: s.lastFired, hoje: s.countToday, semana: s.countWeek })),
+    saudeEventos: saude.map((s) => ({ evento: s.label, status: s.status, ultimoDisparo: s.lastFired, hoje: s.countToday, semana: s.countPeriodo })),
     paginasQuentes: agregarPaginas(eventos).slice(0, 6),
     topProdutos: perf.topProdutos,
     jornadas: {

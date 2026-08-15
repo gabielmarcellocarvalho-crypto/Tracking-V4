@@ -244,7 +244,7 @@ export default function UTMsPage({ params }: { params: Promise<{ clienteId: stri
                       <td className={tdBase}>
                         <CopyButton text={
                           u.urlTagueada ??
-                          `?utm_medium=${u.medium}&utm_source=${u.source}&utm_campaign=${u.campaign}${u.term ? `&utm_term=${u.term}` : ''}${u.content ? `&utm_content=${u.content}` : ''}`
+                          `?utm_medium=${encodeURIComponent(u.medium)}&utm_source=${encodeURIComponent(u.source)}&utm_campaign=${encodeURIComponent(u.campaign)}${u.term ? `&utm_term=${encodeURIComponent(u.term)}` : ''}${u.content ? `&utm_content=${encodeURIComponent(u.content)}` : ''}`
                         } />
                       </td>
                     </tr>

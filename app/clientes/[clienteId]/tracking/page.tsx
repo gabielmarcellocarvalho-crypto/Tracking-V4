@@ -10,8 +10,10 @@ import {
 import DashboardHeader from '@/components/tracking/DashboardHeader'
 import EventHealthCard from '@/components/tracking/EventHealthCard'
 import { useCliente } from '@/lib/data/partners'
-import { useEventos } from '@/lib/data/colecoes'
+import { useEventos, useConexoes } from '@/lib/data/colecoes'
 import { useDateRange } from '@/lib/date-range-context'
+import { useMetaAdsGasto } from '@/lib/data/meta-ads-metrics'
+import { useGoogleAdsGasto } from '@/lib/data/google-ads-metrics'
 import {
   agregarSaudeEventos, agregarVolume7Dias, agregarPorOrigem, agregarPaginas, agregarLogs,
 } from '@/lib/data/agregacoes'
@@ -153,9 +155,19 @@ export default function TrackingPage({ params }: { params: Promise<{ clienteId: 
   const { clienteId } = use(params)
   const { cliente, isDemo } = useCliente(clienteId)
   const { eventos } = useEventos(isDemo ? undefined : clienteId)
+  const { conexoes } = useConexoes(isDemo ? undefined : clienteId)
   const { range: periodo } = useDateRange()
 
   const usarDemo = isDemo
+
+  // E-commerce conectado = fonte real de checkout/compra. Sem conexão, o
+  // gráfico de volume cai pro que Meta/Google Ads reportaram de conversão
+  // (regra do Gabriel: prioriza e-commerce, mídia paga só como fallback).
+  const ecommerceConectado = !usarDemo && cliente?.tipo === 'ecommerce' &&
+    conexoes.some((c) => c.id === cliente.ecommercePlataforma && c.status === 'configurado')
+
+  const { gasto: metaGasto } = useMetaAdsGasto(usarDemo || ecommerceConectado ? undefined : clienteId, periodo)
+  const { gasto: googleGasto } = useGoogleAdsGasto(usarDemo || ecommerceConectado ? undefined : clienteId, periodo)
 
   // Dados reais agregados dos eventos do Firestore — ou demo quando vazio.
   // Saúde do tracking fica de fora do filtro de período (é sobre "está
@@ -174,13 +186,17 @@ export default function TrackingPage({ params }: { params: Promise<{ clienteId: 
     const fim = new Date(periodo.end).setHours(23, 59, 59, 999)
     const noPeriodo = eventos.filter((e) => e.ts >= inicio && e.ts <= fim)
     return {
-      saude: agregarSaudeEventos(eventos),
-      volume: agregarVolume7Dias(eventos, periodo),
+      saude: agregarSaudeEventos(eventos, periodo),
+      volume: agregarVolume7Dias(eventos, periodo, {
+        ecommerceConectado: !!ecommerceConectado,
+        metaPorDia: metaGasto?.porData,
+        googlePorDia: googleGasto?.porData,
+      }),
       porOrigem: agregarPorOrigem(noPeriodo),
       paginas: agregarPaginas(noPeriodo),
       logs: agregarLogs(noPeriodo),
     }
-  }, [usarDemo, eventos, periodo])
+  }, [usarDemo, eventos, periodo, ecommerceConectado, metaGasto, googleGasto])
 
   const [selectedEventId, setSelectedEventId] = useState<string>('lead')
   const selectedEvent = dados.saude.find(e => e.id === selectedEventId)
