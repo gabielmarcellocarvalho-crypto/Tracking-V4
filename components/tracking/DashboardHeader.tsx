@@ -13,9 +13,8 @@ import Markdown from './Markdown'
 const CANAL_LABEL: Record<string, string> = { geral: 'Geral', meta: 'Meta', google: 'Google' }
 
 const tipoConfig: Record<ClienteTipo, { label: string; bg: string; color: string }> = {
-  ecommerce: { label: 'E-COMMERCE', bg: 'rgba(200,16,46,.1)',  color: '#C8102E' },
-  leads:     { label: 'LEADS',      bg: 'rgba(59,130,246,.1)', color: '#3B82F6' },
-  mensagens: { label: 'MENSAGENS',  bg: 'rgba(245,158,11,.1)', color: '#F59E0B' },
+  ecommerce:      { label: 'E-COMMERCE',   bg: 'rgba(200,16,46,.1)',  color: '#C8102E' },
+  'inside-sales': { label: 'INSIDE SALES', bg: 'rgba(59,130,246,.1)', color: '#3B82F6' },
 }
 
 const BellIcon = () => (
@@ -31,14 +30,14 @@ export interface DashboardHeaderProps {
   clienteId?: string
 }
 
-export default function DashboardHeader({ clienteName, clienteTipo = 'leads', clienteId }: DashboardHeaderProps) {
+export default function DashboardHeader({ clienteName, clienteTipo = 'inside-sales', clienteId }: DashboardHeaderProps) {
   const tipo = tipoConfig[clienteTipo]
   const { range: dateRange, setRange: setDateRange } = useDateRange()
 
   const { eventos } = useEventos(clienteId)
   const { insights } = useInsights(clienteId)
   const { status: kpiStatus } = useKpiStatus(clienteId)
-  const alertas = useMemo(() => gerarAlertas(eventos), [eventos])
+  const alertas = useMemo(() => gerarAlertas(eventos, clienteTipo), [eventos, clienteTipo])
   const kpiViolacoes = useMemo(() => {
     if (!kpiStatus) return [] as (KpiViolacao & { canal: string })[]
     const canais: (keyof typeof CANAL_LABEL)[] = ['geral', 'meta', 'google']

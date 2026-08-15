@@ -259,7 +259,13 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
     }
   }, [agregado])
 
-  const defaultTemplate: PerformanceTemplate = cliente?.tipo ?? 'ecommerce'
+  // Tipo do cliente decide quais templates fazem sentido — ecommerce não tem
+  // Leads/Mensagens (sem filtro de lead pro tipo de cliente errado) e
+  // inside-sales não tem E-commerce (sem filtro de compra/checkout).
+  const templatesPermitidos: PerformanceTemplate[] = cliente?.tipo === 'ecommerce'
+    ? ['ecommerce', 'personalizado']
+    : ['leads', 'mensagens', 'personalizado']
+  const defaultTemplate: PerformanceTemplate = cliente?.tipo === 'ecommerce' ? 'ecommerce' : 'leads'
 
   const [template, setTemplate]         = useState<PerformanceTemplate>(defaultTemplate)
   const [canal, setCanal]               = useState<CanalPerformance>('geral')
@@ -278,7 +284,11 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
         const snap = await getDoc(ref)
         if (snap.exists()) {
           const data = snap.data()
-          if (data.template) setTemplate(data.template as PerformanceTemplate)
+          // Ignora template salvo que não faz mais sentido pro tipo atual do
+          // cliente (ex: cliente virou e-commerce mas tinha "leads" salvo).
+          const t = data.template as PerformanceTemplate | undefined
+          const aindaValido = t && (cliente?.tipo === 'ecommerce' ? t !== 'leads' && t !== 'mensagens' : t !== 'ecommerce')
+          if (aindaValido) setTemplate(t)
           if (Array.isArray(data.blocos_personalizados) && data.blocos_personalizados.length > 0) {
             const sorted = [...data.blocos_personalizados].sort((a, b) => a.posicao - b.posicao)
             setPersonBlocks(sorted.map((b: { id: string; posicao: number }) => b.id))
@@ -289,7 +299,10 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
       finally { setLoading(false) }
     }
     load()
-  }, [clienteId])
+    // cliente carrega async — reavalia quando o tipo real chegar, senão o
+    // check acima usaria cliente=null (undefined) e podia rejeitar um
+    // template salvo válido enquanto o cliente ainda estava carregando.
+  }, [clienteId, cliente?.tipo])
 
   const handleTemplateChange = async (t: PerformanceTemplate) => {
     if (t === template) return
@@ -381,7 +394,7 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
                 Ver layout Personalizado salvo
               </button>
             )}
-            <TemplateSelect value={template} onChange={handleTemplateChange} />
+            <TemplateSelect value={template} onChange={handleTemplateChange} permitidos={templatesPermitidos} />
           </div>
         </div>
 

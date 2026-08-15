@@ -7,9 +7,8 @@ import { excluirCliente } from '@/lib/data/partners'
 import type { Partner, PartnerTipo, PartnerStatus } from '@/lib/types'
 
 const tipoConfig: Record<PartnerTipo, { label: string; bg: string; color: string }> = {
-  ecommerce: { label: 'E-COMMERCE', bg: 'rgba(200,16,46,.1)',  color: '#C8102E' },
-  leads:     { label: 'LEADS',      bg: 'rgba(59,130,246,.1)', color: '#3B82F6' },
-  mensagens: { label: 'MENSAGENS',  bg: 'rgba(245,158,11,.1)', color: '#F59E0B' },
+  ecommerce:      { label: 'E-COMMERCE',   bg: 'rgba(200,16,46,.1)',  color: '#C8102E' },
+  'inside-sales': { label: 'INSIDE SALES', bg: 'rgba(59,130,246,.1)', color: '#3B82F6' },
 }
 
 const statusConfig: Record<PartnerStatus, { label: string; bg: string; color: string; dot: string }> = {

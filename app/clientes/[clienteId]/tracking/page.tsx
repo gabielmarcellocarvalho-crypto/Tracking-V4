@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useMemo, useState } from 'react'
+import { use, useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   LineChart, Line, BarChart, Bar,
@@ -16,6 +16,7 @@ import { useMetaAdsGasto } from '@/lib/data/meta-ads-metrics'
 import { useGoogleAdsGasto } from '@/lib/data/google-ads-metrics'
 import {
   agregarSaudeEventos, agregarVolume7Dias, agregarPorOrigem, agregarPaginas, agregarLogs,
+  eventoTiposDoCliente,
 } from '@/lib/data/agregacoes'
 import {
   eventHealthData, eventVolumeData, eventBySource, pageHeatData, eventLogs,
@@ -160,6 +161,10 @@ export default function TrackingPage({ params }: { params: Promise<{ clienteId: 
 
   const usarDemo = isDemo
 
+  // Quais linhas do gráfico de volume fazem sentido pro tipo desse cliente
+  // (mesma regra dos cards de Saúde dos Eventos — ver eventoTiposDoCliente).
+  const tiposVisiveis = new Set(eventoTiposDoCliente(usarDemo ? undefined : cliente?.tipo))
+
   // E-commerce conectado = fonte real de checkout/compra. Sem conexão, o
   // gráfico de volume cai pro que Meta/Google Ads reportaram de conversão
   // (regra do Gabriel: prioriza e-commerce, mídia paga só como fallback).
@@ -186,7 +191,7 @@ export default function TrackingPage({ params }: { params: Promise<{ clienteId: 
     const fim = new Date(periodo.end).setHours(23, 59, 59, 999)
     const noPeriodo = eventos.filter((e) => e.ts >= inicio && e.ts <= fim)
     return {
-      saude: agregarSaudeEventos(eventos, periodo),
+      saude: agregarSaudeEventos(eventos, periodo, cliente?.tipo),
       volume: agregarVolume7Dias(eventos, periodo, {
         ecommerceConectado: !!ecommerceConectado,
         metaPorDia: metaGasto?.porData,
@@ -196,10 +201,17 @@ export default function TrackingPage({ params }: { params: Promise<{ clienteId: 
       paginas: agregarPaginas(noPeriodo),
       logs: agregarLogs(noPeriodo),
     }
-  }, [usarDemo, eventos, periodo, ecommerceConectado, metaGasto, googleGasto])
+  }, [usarDemo, eventos, periodo, ecommerceConectado, metaGasto, googleGasto, cliente?.tipo])
 
-  const [selectedEventId, setSelectedEventId] = useState<string>('lead')
+  const [selectedEventId, setSelectedEventId] = useState<string>('page_view')
   const selectedEvent = dados.saude.find(e => e.id === selectedEventId)
+  // O tipo do cliente decide quais eventos existem pra ele (ver eventoTiposDoCliente)
+  // — se o evento selecionado sumiu (ex: trocou de cliente), volta pro primeiro disponível.
+  useEffect(() => {
+    if (!dados.saude.some((e) => e.id === selectedEventId) && dados.saude[0]) {
+      setSelectedEventId(dados.saude[0].id)
+    }
+  }, [dados.saude, selectedEventId])
 
   return (
     <>
@@ -254,9 +266,12 @@ export default function TrackingPage({ params }: { params: Promise<{ clienteId: 
                 <Tooltip {...tt} formatter={(v: any, n: any) => [v.toLocaleString('pt-BR'), n]} />
                 <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: 10, color: '#666', paddingTop: 8 }} />
                 <Line type="monotone" dataKey="page_view" name="Page View" stroke="#6366F1" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-                <Line type="monotone" dataKey="lead"      name="Lead"      stroke="#8B5CF6" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-                <Line type="monotone" dataKey="checkout"  name="Checkout"  stroke="#F59E0B" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-                <Line type="monotone" dataKey="compra"    name="Compra"    stroke="#EF4444" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                {tiposVisiveis.has('lead') &&
+                  <Line type="monotone" dataKey="lead"      name="Lead"      stroke="#8B5CF6" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />}
+                {tiposVisiveis.has('checkout') &&
+                  <Line type="monotone" dataKey="checkout"  name="Checkout"  stroke="#F59E0B" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />}
+                {tiposVisiveis.has('compra') &&
+                  <Line type="monotone" dataKey="compra"    name="Compra"    stroke="#EF4444" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />}
               </LineChart>
             </ResponsiveContainer>
           </Card>

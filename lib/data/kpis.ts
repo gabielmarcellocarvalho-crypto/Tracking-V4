@@ -26,7 +26,7 @@ export const KPIS_ECOMMERCE: KpiDef[] = [
   { key: 'ticketMedio',    label: 'Ticket Médio',                   formato: 'moeda',      direcao: 'min' },
 ]
 
-// 'leads' e 'mensagens' — só o que dá pra calcular com dado real de anúncio,
+// inside-sales — só o que dá pra calcular com dado real de anúncio,
 // sem misturar com contagem de lead do site (não confiável por canal ainda).
 export const KPIS_LEADS: KpiDef[] = [
   { key: 'ctr', label: 'CTR (Cliques/Impressões)',       formato: 'percentual', direcao: 'min' },

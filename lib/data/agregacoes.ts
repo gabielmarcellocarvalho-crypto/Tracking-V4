@@ -2,7 +2,7 @@
 // Transformam eventos/identidades brutos do Firestore nos formatos que as telas
 // já consomem (mesmos shapes dos dados demo).
 
-import type { Evento, EventoTipo, Identidade, Origem } from '@/lib/types'
+import type { Evento, EventoTipo, Identidade, Origem, PartnerTipo } from '@/lib/types'
 import type { EventHealth, EventLogItem, PageHeatEntry } from '@/lib/demo-data-tracking'
 import type { UsuarioJornada, EventoJornada } from '@/lib/demo-data'
 
@@ -69,19 +69,33 @@ function labelPeriodoCurto(label: string): string {
   return label.replace(/^Últimos\s+/i, '').toLowerCase()
 }
 
+// E-commerce não tem etapa de "Lead" (retirado dos dashs por decisão do
+// Gabriel); inside-sales não tem checkout/compra (não existe e-commerce pra
+// gerar esses eventos). Sem tipo (demo/desconhecido), mostra tudo.
+export function eventoTiposDoCliente(tipoCliente?: PartnerTipo): EventoTipo[] {
+  if (tipoCliente === 'ecommerce')    return ['page_view', 'checkout', 'compra']
+  if (tipoCliente === 'inside-sales') return ['page_view', 'lead']
+  return ['page_view', 'lead', 'checkout', 'compra']
+}
+
 // ── Saúde dos eventos ─────────────────────────────────────────────────────────
 // `periodo` é o filtro de data selecionado no topo da tela (Hoje/7/30/90
 // dias/Personalizado) — quando ausente (ex: gerarAlertas, Agente IA), cai pra
 // uma janela fixa de 7 dias, que é o comportamento que essas duas chamadas
-// internas sempre tiveram.
-export function agregarSaudeEventos(eventos: Evento[], periodo?: { start: Date; end: Date; label: string }): EventHealth[] {
+// internas sempre tiveram. `tipoCliente` decide quais tipos de evento fazem
+// sentido pra esse cliente (ver eventoTiposDoCliente).
+export function agregarSaudeEventos(
+  eventos: Evento[],
+  periodo?: { start: Date; end: Date; label: string },
+  tipoCliente?: PartnerTipo,
+): EventHealth[] {
   const agora = Date.now()
   const inicioHoje = new Date().setHours(0, 0, 0, 0)
   const inicioPeriodo = periodo ? new Date(periodo.start).setHours(0, 0, 0, 0) : agora - 7 * DIA_MS
   const fimPeriodo = periodo ? new Date(periodo.end).setHours(23, 59, 59, 999) : agora
   const periodoLabel = periodo ? labelPeriodoCurto(periodo.label) : '7 dias'
 
-  return (['page_view', 'lead', 'checkout', 'compra'] as EventoTipo[]).map((tipo) => {
+  return eventoTiposDoCliente(tipoCliente).map((tipo) => {
     const doTipo = eventos.filter((e) => e.tipo === tipo)
     const ultimo = doTipo.reduce<number>((m, e) => Math.max(m, e.ts), 0)
     const minAtras = ultimo ? Math.floor((agora - ultimo) / 60000) : Infinity
@@ -411,11 +425,11 @@ export interface Alerta {
   severidade: 'info' | 'atencao' | 'critico'
 }
 
-export function gerarAlertas(eventos: Evento[]): Alerta[] {
+export function gerarAlertas(eventos: Evento[], tipoCliente?: PartnerTipo): Alerta[] {
   const alertas: Alerta[] = []
   if (eventos.length === 0) return alertas
 
-  const saude = agregarSaudeEventos(eventos)
+  const saude = agregarSaudeEventos(eventos, undefined, tipoCliente)
   for (const s of saude) {
     if (s.status === 'offline' && s.countPeriodo > 0) {
       alertas.push({

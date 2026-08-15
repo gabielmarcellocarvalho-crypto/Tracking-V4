@@ -10,8 +10,8 @@ export interface GrowthPackColuna {
   formato: 'moeda' | 'numero' | 'razao'
 }
 
-// 'mensagens' reaproveita o funil de 'leads' até termos uma planilha própria
-// (decisão registrada na conversa de unificação — sem dado de refência ainda).
+// inside-sales reaproveita o funil de leads (sem planilha própria de
+// mensagens ainda — decisão registrada na conversa de unificação de tipos).
 export function funilDoTipo(tipo: ClienteTipo): GrowthPackFunil {
   return tipo === 'ecommerce' ? 'ecommerce' : 'leadsFunil'
 }

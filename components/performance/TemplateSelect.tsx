@@ -15,18 +15,21 @@ const OPTIONS: { id: TemplateId; label: string; desc: string; icon: string }[] =
 interface Props {
   value: TemplateId
   onChange: (val: TemplateId) => void
+  /** Quais templates fazem sentido pro tipo do cliente atual — sem isso, mostra os 4. */
+  permitidos?: TemplateId[]
 }
 
-export default function TemplateSelect({ value, onChange }: Props) {
+export default function TemplateSelect({ value, onChange, permitidos }: Props) {
+  const options = permitidos ? OPTIONS.filter((o) => permitidos.includes(o.id)) : OPTIONS
   const [isOpen, setIsOpen] = useState(false)
-  const [selectedIndex, setSelectedIndex] = useState(() => OPTIONS.findIndex(o => o.id === value))
+  const [selectedIndex, setSelectedIndex] = useState(() => options.findIndex(o => o.id === value))
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Sync selectedIndex when value prop changes
   useEffect(() => {
-    const idx = OPTIONS.findIndex(o => o.id === value)
+    const idx = options.findIndex(o => o.id === value)
     setSelectedIndex(idx)
-  }, [value])
+  }, [value, options])
 
   // Close on outside click
   useEffect(() => {
@@ -41,11 +44,11 @@ export default function TemplateSelect({ value, onChange }: Props) {
 
   const handleSelect = (idx: number) => {
     setSelectedIndex(idx)
-    onChange(OPTIONS[idx].id)
+    onChange(options[idx].id)
     setIsOpen(false)
   }
 
-  const current = OPTIONS[selectedIndex] ?? OPTIONS[0]
+  const current = options[selectedIndex] ?? options[0]
 
   return (
     <div ref={containerRef} style={{ position: 'relative', userSelect: 'none' }}>
@@ -83,7 +86,7 @@ export default function TemplateSelect({ value, onChange }: Props) {
             transform: `translateY(calc(${selectedIndex * -100}% - ${selectedIndex * 4}px))`,
             transition: 'transform .3s cubic-bezier(.4,0,.2,1)',
           }}>
-            {OPTIONS.map((opt) => (
+            {options.map((opt) => (
               <div key={opt.id} style={{ height: 20, display: 'flex', alignItems: 'center' }}>
                 <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--t1)', whiteSpace: 'nowrap' }}>
                   {opt.label}
@@ -122,7 +125,7 @@ export default function TemplateSelect({ value, onChange }: Props) {
               transformOrigin: 'top center',
             }}
           >
-            {OPTIONS.map((opt, i) => {
+            {options.map((opt, i) => {
               const active = opt.id === value
               return (
                 <motion.button
@@ -138,7 +141,7 @@ export default function TemplateSelect({ value, onChange }: Props) {
                     padding: '10px 14px', cursor: 'pointer', textAlign: 'left',
                     background: active ? 'rgba(200,16,46,.08)' : 'transparent',
                     border: 'none',
-                    borderBottom: i < OPTIONS.length - 1 ? '1px solid var(--br)' : 'none',
+                    borderBottom: i < options.length - 1 ? '1px solid var(--br)' : 'none',
                     transition: 'background .12s',
                   }}
                   onMouseEnter={(e) => {

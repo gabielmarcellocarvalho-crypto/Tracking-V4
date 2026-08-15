@@ -7,7 +7,7 @@ import type { Timestamp } from 'firebase/firestore'
 // "Cliente"/"conexão" continuam o vocabulário da UI e das rotas (/clientes/**);
 // só a coleção do Firestore e os tipos internos usam "Partner"/"Integration",
 // nome herdado da estrutura definida para o banco desta plataforma.
-export type PartnerTipo   = 'ecommerce' | 'leads' | 'mensagens'
+export type PartnerTipo   = 'ecommerce' | 'inside-sales'
 export type PartnerStatus = 'ativo' | 'inativo'
 /** Só relevante quando tipo === 'ecommerce' — cada plataforma tem webhook/API própria */
 export type EcommercePlataforma = 'shopify' | 'nuvemshop' | 'tray' | 'loja-integrada' | 'outro'

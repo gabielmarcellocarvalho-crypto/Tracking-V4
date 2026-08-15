@@ -80,7 +80,7 @@ export const sourceChips = [
 ]
 
 // ─── CLIENTES ────────────────────────────────────────────────────────────────
-export type ClienteTipo   = 'ecommerce' | 'leads' | 'mensagens'
+export type ClienteTipo   = 'ecommerce' | 'inside-sales'
 export type ClienteStatus = 'ativo' | 'inativo'
 
 export interface Cliente {
@@ -93,14 +93,14 @@ export interface Cliente {
 }
 
 export const clientesData: Cliente[] = [
-  { id: 'klubi',        nome: 'Klubi',              segmento: 'Finanças',      tipo: 'ecommerce',  status: 'ativo',   eventos: 124800 },
-  { id: 'nova-era',     nome: 'Loja Nova Era',      segmento: 'E-commerce',    tipo: 'ecommerce',  status: 'ativo',   eventos: 84200  },
-  { id: 'studio-fit',   nome: 'Studio Fit',         segmento: 'Academia',      tipo: 'leads',      status: 'ativo',   eventos: 31400  },
-  { id: 'consultoria',  nome: 'Consultoria Plus',   segmento: 'Consultoria',   tipo: 'leads',      status: 'ativo',   eventos: 18900  },
-  { id: 'zap-vendas',   nome: 'ZapVendas',          segmento: 'Tecnologia',    tipo: 'mensagens',  status: 'ativo',   eventos: 52300  },
-  { id: 'odonto-elite', nome: 'OdontoElite',        segmento: 'Saúde',         tipo: 'leads',      status: 'ativo',   eventos: 9700   },
-  { id: 'roupas-moda',  nome: 'Modas São Paulo',    segmento: 'Moda',          tipo: 'ecommerce',  status: 'inativo', eventos: 4100   },
-  { id: 'imob-prime',   nome: 'ImobPrime',          segmento: 'Imobiliário',   tipo: 'leads',      status: 'ativo',   eventos: 14600  },
+  { id: 'klubi',        nome: 'Klubi',              segmento: 'Finanças',      tipo: 'ecommerce',    status: 'ativo',   eventos: 124800 },
+  { id: 'nova-era',     nome: 'Loja Nova Era',      segmento: 'E-commerce',    tipo: 'ecommerce',    status: 'ativo',   eventos: 84200  },
+  { id: 'studio-fit',   nome: 'Studio Fit',         segmento: 'Academia',      tipo: 'inside-sales',  status: 'ativo',   eventos: 31400  },
+  { id: 'consultoria',  nome: 'Consultoria Plus',   segmento: 'Consultoria',   tipo: 'inside-sales',  status: 'ativo',   eventos: 18900  },
+  { id: 'zap-vendas',   nome: 'ZapVendas',          segmento: 'Tecnologia',    tipo: 'inside-sales',  status: 'ativo',   eventos: 52300  },
+  { id: 'odonto-elite', nome: 'OdontoElite',        segmento: 'Saúde',         tipo: 'inside-sales',  status: 'ativo',   eventos: 9700   },
+  { id: 'roupas-moda',  nome: 'Modas São Paulo',    segmento: 'Moda',          tipo: 'ecommerce',    status: 'inativo', eventos: 4100   },
+  { id: 'imob-prime',   nome: 'ImobPrime',          segmento: 'Imobiliário',   tipo: 'inside-sales',  status: 'ativo',   eventos: 14600  },
 ]
 
 // ─── UTMs MOCK ────────────────────────────────────────────────────────────────

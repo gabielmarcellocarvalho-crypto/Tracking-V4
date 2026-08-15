@@ -24,7 +24,7 @@ const db = getFirestore(adminApp)
 
 await db.doc('config/superadmins').set({ emails: ['super@test.com'] })
 await db.doc('partners/test-partner').set({
-  id: 'test-partner', nome: 'Test Partner', segmento: 'x', tipo: 'leads', status: 'ativo',
+  id: 'test-partner', nome: 'Test Partner', segmento: 'x', tipo: 'inside-sales', status: 'ativo',
 })
 await db.doc('partners/test-partner/members/admin@test.com').set({
   email: 'admin@test.com', role: 'admin', addedAt: Date.now(),

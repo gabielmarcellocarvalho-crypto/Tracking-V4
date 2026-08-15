@@ -6,9 +6,8 @@ import { criarCliente } from '@/lib/data/partners'
 import type { Partner, PartnerTipo, EcommercePlataforma } from '@/lib/types'
 
 const TIPOS: { id: PartnerTipo; label: string; desc: string; color: string }[] = [
-  { id: 'ecommerce', label: 'E-commerce', desc: 'Receita · ROAS · Compras',      color: '#10B981' },
-  { id: 'leads',     label: 'Leads',      desc: 'CPL · Qualificados · CPA',      color: '#8B5CF6' },
-  { id: 'mensagens', label: 'Mensagens',  desc: 'WhatsApp · Contatos · CPM',     color: '#25D366' },
+  { id: 'ecommerce',      label: 'E-commerce',   desc: 'Receita · ROAS · Compras',              color: '#10B981' },
+  { id: 'inside-sales',   label: 'Inside Sales', desc: 'CPL · Qualificados · WhatsApp · CPA',    color: '#8B5CF6' },
 ]
 
 const ECOMMERCE_PLATAFORMAS: { id: EcommercePlataforma; label: string }[] = [
