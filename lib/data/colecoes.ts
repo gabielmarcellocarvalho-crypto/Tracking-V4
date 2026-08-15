@@ -33,9 +33,13 @@ function useDadosIgnoradosAte(clienteId: string | undefined) {
   return corte
 }
 
-export function useEventos(clienteId: string | undefined, limite = 2000) {
+// `desde` limita a query no próprio Firestore (where ts >= desde) — sem isso,
+// um cliente de alto volume estoura o `limite` antes de alcançar o período
+// que a tela pediu, e o filtro de data (30/90 dias etc.) fica silenciosamente
+// truncado no mesmo teto de "hoje" (bug real, achado testando Hanoi Editora).
+export function useEventos(clienteId: string | undefined, opts?: { limite?: number; desde?: number }) {
   const { docs, loading, isDemo } = useSubcolecao<Evento>(clienteId, 'eventos', {
-    ordenarPor: 'ts', desc: true, limite,
+    ordenarPor: 'ts', desc: true, limite: opts?.limite ?? 2000, desde: opts?.desde,
   })
   const corte = useDadosIgnoradosAte(clienteId)
   const eventos = useMemo(() => (corte ? docs.filter((e) => e.ts > corte) : docs), [docs, corte])

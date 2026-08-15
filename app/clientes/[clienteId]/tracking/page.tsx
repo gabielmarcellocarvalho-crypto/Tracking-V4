@@ -155,9 +155,13 @@ function EventLogTable({ eventId, logs }: { eventId: string; logs: Record<string
 export default function TrackingPage({ params }: { params: Promise<{ clienteId: string }> }) {
   const { clienteId } = use(params)
   const { cliente, isDemo } = useCliente(clienteId)
-  const { eventos } = useEventos(isDemo ? undefined : clienteId)
-  const { conexoes } = useConexoes(isDemo ? undefined : clienteId)
   const { range: periodo } = useDateRange()
+  // Sempre inclui hoje no que é buscado, mesmo que o período selecionado não
+  // cubra hoje (ex: "Ontem") — o card "Hoje" da Saúde dos Eventos depende
+  // disso pra continuar correto independente do filtro.
+  const desdeEventos = Math.min(periodo.start.getTime(), new Date().setHours(0, 0, 0, 0))
+  const { eventos } = useEventos(isDemo ? undefined : clienteId, { desde: desdeEventos, limite: 20000 })
+  const { conexoes } = useConexoes(isDemo ? undefined : clienteId)
 
   const usarDemo = isDemo
 

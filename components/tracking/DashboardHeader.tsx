@@ -34,7 +34,9 @@ export default function DashboardHeader({ clienteName, clienteTipo = 'inside-sal
   const tipo = tipoConfig[clienteTipo]
   const { range: dateRange, setRange: setDateRange } = useDateRange()
 
-  const { eventos } = useEventos(clienteId)
+  // gerarAlertas só olha os últimos 7 dias (mesmo default de agregarSaudeEventos
+  // sem período) — bounding aqui evita puxar histórico inteiro só pro sino.
+  const { eventos } = useEventos(clienteId, { desde: Date.now() - 7 * 24 * 60 * 60 * 1000, limite: 20000 })
   const { insights } = useInsights(clienteId)
   const { status: kpiStatus } = useKpiStatus(clienteId)
   const alertas = useMemo(() => gerarAlertas(eventos, clienteTipo), [eventos, clienteTipo])

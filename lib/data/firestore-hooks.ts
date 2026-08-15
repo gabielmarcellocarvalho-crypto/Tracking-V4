@@ -6,7 +6,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import {
-  collection, doc, onSnapshot, orderBy, query, limit as qLimit,
+  collection, doc, onSnapshot, orderBy, query, limit as qLimit, where,
   type Query, type DocumentData,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
@@ -15,6 +15,9 @@ export interface SubcolecaoOpts {
   ordenarPor?: string
   desc?: boolean
   limite?: number
+  /** Filtra `ordenarPor >= desde` na própria query — evita que um `limite` fixo
+   *  esconda dado mais antigo que o cliente pediu (ver useEventos). */
+  desde?: number
 }
 
 export function useSubcolecao<T>(
@@ -28,12 +31,14 @@ export function useSubcolecao<T>(
   const ordenarPor = opts?.ordenarPor
   const desc       = opts?.desc ?? true
   const limite     = opts?.limite
+  const desde      = opts?.desde
 
   useEffect(() => {
     if (!clienteId) { setDocs([]); setLoading(false); return }
     setLoading(true)
     let q: Query<DocumentData> = collection(db, 'partners', clienteId, nome)
     if (ordenarPor) q = query(q, orderBy(ordenarPor, desc ? 'desc' : 'asc'))
+    if (ordenarPor && desde !== undefined) q = query(q, where(ordenarPor, '>=', desde))
     if (limite)     q = query(q, qLimit(limite))
 
     const unsub = onSnapshot(
@@ -45,7 +50,7 @@ export function useSubcolecao<T>(
       () => { setDocs([]); setLoading(false) },
     )
     return unsub
-  }, [clienteId, nome, ordenarPor, desc, limite])
+  }, [clienteId, nome, ordenarPor, desc, limite, desde])
 
   const isDemo = !loading && docs.length === 0
   return useMemo(() => ({ docs, loading, isDemo }), [docs, loading, isDemo])
