@@ -106,6 +106,27 @@ function ConexaoNecessaria({ plataforma, clienteId }: { plataforma: string; clie
   )
 }
 
+// Sem isso, o tempo real de resposta da API (Meta/Google/GA4, 1-3s) fazia a
+// tela mostrar "não conectado" por engano enquanto o dado ainda estava a
+// caminho — parecia bug (plataforma conectada "esquecendo" que está
+// conectada) quando na verdade só estava carregando.
+function CarregandoCanal({ plataforma }: { plataforma: string }) {
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      gap: 10, padding: '60px 24px', textAlign: 'center',
+      background: 'var(--bg-c)', border: '1px solid var(--br)', borderRadius: 14,
+    }}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--t3)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" width={20} height={20}
+        style={{ animation: 'spin 1s linear infinite' }}>
+        <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+      </svg>
+      <p style={{ fontSize: 12.5, color: 'var(--t3)', margin: 0 }}>Carregando dados do {plataforma}…</p>
+    </div>
+  )
+}
+
 export default function PerformancePage({ params }: { params: Promise<{ clienteId: string }> }) {
   const { clienteId } = use(params)
   const { cliente, isDemo } = useCliente(clienteId)
@@ -122,7 +143,7 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
   // GA4 é tráfego nativo do GA4 (sessões/canais), nunca misturados.
   const [canal, setCanal] = useState<CanalPerformance>('geral')
   const ga4Conectado = !usarDemo && conexoes.some((c) => c.id === 'ga4' && c.status === 'configurado')
-  const { dados: ga4Dados } = useGA4Dados(ga4Conectado && canal === 'ga4' ? clienteId : undefined, periodo)
+  const { dados: ga4Dados, loading: loadingGA4 } = useGA4Dados(ga4Conectado && canal === 'ga4' ? clienteId : undefined, periodo)
 
   // Agregação real dos eventos dentro do período selecionado — null quando cliente é demo
   const agregadoBase = useMemo(
@@ -498,17 +519,23 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
               {template === 'ecommerce' && canal === 'meta' && (
                 ecommerceMeta
                   ? <EcommerceTemplate dados={ecommerceMeta} real={!usarDemo} />
-                  : <ConexaoNecessaria plataforma="Meta Ads" clienteId={clienteId} />
+                  : loadingMeta
+                    ? <CarregandoCanal plataforma="Meta Ads" />
+                    : <ConexaoNecessaria plataforma="Meta Ads" clienteId={clienteId} />
               )}
               {template === 'ecommerce' && canal === 'google' && (
                 ecommerceGoogle
                   ? <EcommerceTemplate dados={ecommerceGoogle} real={!usarDemo} />
-                  : <ConexaoNecessaria plataforma="Google Ads" clienteId={clienteId} />
+                  : loadingGoogle
+                    ? <CarregandoCanal plataforma="Google Ads" />
+                    : <ConexaoNecessaria plataforma="Google Ads" clienteId={clienteId} />
               )}
               {template === 'ecommerce' && canal === 'ga4' && (
                 ga4Dados
                   ? <GA4Template dados={ga4Dados} real={!usarDemo} />
-                  : <ConexaoNecessaria plataforma="GA4" clienteId={clienteId} />
+                  : loadingGA4
+                    ? <CarregandoCanal plataforma="GA4" />
+                    : <ConexaoNecessaria plataforma="GA4" clienteId={clienteId} />
               )}
               {template === 'leads'         && <LeadsTemplate dados={real?.leads} real={!usarDemo} />}
               {template === 'mensagens'     && <MensagensTemplate dados={real?.mensagens} real={!usarDemo} />}
