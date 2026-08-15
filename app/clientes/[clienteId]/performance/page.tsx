@@ -12,7 +12,8 @@ import { useCliente } from '@/lib/data/partners'
 import { useDateRange } from '@/lib/date-range-context'
 import { useMetaAdsGasto } from '@/lib/data/meta-ads-metrics'
 import { useGoogleAdsGasto } from '@/lib/data/google-ads-metrics'
-import { useEventos } from '@/lib/data/colecoes'
+import { useGA4Dados } from '@/lib/data/ga4-metrics'
+import { useEventos, useConexoes } from '@/lib/data/colecoes'
 import { agregarPerformance } from '@/lib/data/agregacoes'
 import type { PerformanceTemplate } from '@/lib/demo-data-performance'
 import { DEFAULT_PERSONALIZADO_BLOCKS } from '@/lib/demo-data-performance'
@@ -21,6 +22,7 @@ import { DEFAULT_PERSONALIZADO_BLOCKS } from '@/lib/demo-data-performance'
 const EcommerceTemplate    = dynamic(() => import('@/components/performance/EcommerceTemplate'))
 const LeadsTemplate        = dynamic(() => import('@/components/performance/LeadsTemplate'))
 const MensagensTemplate    = dynamic(() => import('@/components/performance/MensagensTemplate'))
+const GA4Template          = dynamic(() => import('@/components/performance/GA4Template'))
 const PersonalizadoTemplate = dynamic(() => import('@/components/performance/PersonalizadoTemplate'))
 
 function Skeleton() {
@@ -61,11 +63,11 @@ const TEMPLATE_META: Record<PerformanceTemplate, { label: string; color: string;
 // ── Visão por canal (só template E-commerce por enquanto) ────────────────────
 type CanalPerformance = 'geral' | 'meta' | 'google' | 'ga4'
 
-const CANAIS_PERFORMANCE: { key: CanalPerformance; label: string; disabled?: boolean }[] = [
+const CANAIS_PERFORMANCE: { key: CanalPerformance; label: string }[] = [
   { key: 'geral',  label: 'Geral' },
   { key: 'meta',   label: 'Meta' },
   { key: 'google', label: 'Google' },
-  { key: 'ga4',    label: 'GA4', disabled: true },
+  { key: 'ga4',    label: 'GA4' },
 ]
 
 function construirFunilAds(sessoes: number, addToCart: number, checkout: number, purchase: number) {
@@ -112,8 +114,15 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
   // de alcançar o período pedido e o filtro de data fica silenciosamente
   // truncado (mesmo bug achado e corrigido na tela de Eventos).
   const { eventos } = useEventos(isDemo ? undefined : clienteId, { desde: periodo.start.getTime(), limite: 20000 })
+  const { conexoes } = useConexoes(isDemo ? undefined : clienteId)
 
   const usarDemo = isDemo
+
+  // Visão por canal — "Geral" continua só mídia paga (Meta+Google), a aba
+  // GA4 é tráfego nativo do GA4 (sessões/canais), nunca misturados.
+  const [canal, setCanal] = useState<CanalPerformance>('geral')
+  const ga4Conectado = !usarDemo && conexoes.some((c) => c.id === 'ga4' && c.status === 'configurado')
+  const { dados: ga4Dados } = useGA4Dados(ga4Conectado && canal === 'ga4' ? clienteId : undefined, periodo)
 
   // Agregação real dos eventos dentro do período selecionado — null quando cliente é demo
   const agregadoBase = useMemo(
@@ -271,7 +280,6 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
   const defaultTemplate: PerformanceTemplate = cliente?.tipo === 'ecommerce' ? 'ecommerce' : 'leads'
 
   const [template, setTemplate]         = useState<PerformanceTemplate>(defaultTemplate)
-  const [canal, setCanal]               = useState<CanalPerformance>('geral')
   const [loading, setLoading]           = useState(true)
   const [personBlocks, setPersonBlocks] = useState<string[]>(DEFAULT_PERSONALIZADO_BLOCKS)
   // Independente de qual template está ativo agora — existe um layout
@@ -403,23 +411,26 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
 
         {template === 'ecommerce' && (
           <div style={{ display: 'flex', gap: 4, padding: 3, borderRadius: 9, background: 'var(--bg-c)', border: '1px solid var(--br)', width: 'fit-content', marginTop: 12 }}>
-            {CANAIS_PERFORMANCE.map((c) => (
-              <button
-                key={c.key}
-                onClick={() => !c.disabled && setCanal(c.key)}
-                disabled={c.disabled}
-                title={c.disabled ? 'GA4 ainda não conectado' : undefined}
-                style={{
-                  padding: '6px 16px', borderRadius: 7, fontSize: 12, fontWeight: 600, border: 'none',
-                  cursor: c.disabled ? 'not-allowed' : 'pointer',
-                  background: canal === c.key ? 'var(--red)' : 'transparent',
-                  color: c.disabled ? 'var(--t3)' : canal === c.key ? '#fff' : 'var(--t2)',
-                  opacity: c.disabled ? 0.5 : 1,
-                }}
-              >
-                {c.label}
-              </button>
-            ))}
+            {CANAIS_PERFORMANCE.map((c) => {
+              const disabled = c.key === 'ga4' ? !ga4Conectado : false
+              return (
+                <button
+                  key={c.key}
+                  onClick={() => !disabled && setCanal(c.key)}
+                  disabled={disabled}
+                  title={disabled ? 'GA4 não conectado — configure em Conexões' : undefined}
+                  style={{
+                    padding: '6px 16px', borderRadius: 7, fontSize: 12, fontWeight: 600, border: 'none',
+                    cursor: disabled ? 'not-allowed' : 'pointer',
+                    background: canal === c.key ? 'var(--red)' : 'transparent',
+                    color: disabled ? 'var(--t3)' : canal === c.key ? '#fff' : 'var(--t2)',
+                    opacity: disabled ? 0.5 : 1,
+                  }}
+                >
+                  {c.label}
+                </button>
+              )
+            })}
           </div>
         )}
       </div>
@@ -493,6 +504,11 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
                 ecommerceGoogle
                   ? <EcommerceTemplate dados={ecommerceGoogle} real={!usarDemo} />
                   : <ConexaoNecessaria plataforma="Google Ads" clienteId={clienteId} />
+              )}
+              {template === 'ecommerce' && canal === 'ga4' && (
+                ga4Dados
+                  ? <GA4Template dados={ga4Dados} real={!usarDemo} />
+                  : <ConexaoNecessaria plataforma="GA4" clienteId={clienteId} />
               )}
               {template === 'leads'         && <LeadsTemplate dados={real?.leads} real={!usarDemo} />}
               {template === 'mensagens'     && <MensagensTemplate dados={real?.mensagens} real={!usarDemo} />}

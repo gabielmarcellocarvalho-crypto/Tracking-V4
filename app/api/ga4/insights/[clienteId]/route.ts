@@ -1,12 +1,12 @@
 // ─── GET /api/ga4/insights/{clienteId}?start=&end= ───────────────────────────
-// Retorna screenPageViews diário real do GA4 conectado nesse cliente
+// Retorna page views + sessões/canais reais do GA4 conectado nesse cliente
 // (Conexões → GA4), usando a service account colada por lá. Exige idToken do
 // Firebase Auth — libera admin ou viewer.
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getDbAdmin } from '@/lib/firebase-admin'
 import { emailDoToken, ehMembroDoPartner } from '@/lib/server/auth-helpers'
-import { buscarPageViewsGA4, GA4InsightsError, type GA4Credenciais } from '@/lib/integrations/ga4'
+import { buscarSessoesGA4, GA4InsightsError, type GA4Credenciais } from '@/lib/integrations/ga4'
 
 export async function GET(
   req: NextRequest,
@@ -42,8 +42,11 @@ export async function GET(
   }
 
   try {
-    const pageViewsPorDia = await buscarPageViewsGA4(cred, new Date(start), new Date(end))
-    return NextResponse.json({ ok: true, configurado: true, pageViewsPorDia })
+    const { porDia, porCanal } = await buscarSessoesGA4(cred, new Date(start), new Date(end))
+    // pageViewsPorDia é um subset de porDia — mantido separado porque a tela
+    // de Eventos só precisa disso (ver useGA4Dados/agregarSaudeEventos).
+    const pageViewsPorDia = porDia.map((d) => ({ data: d.data, screenPageViews: d.screenPageViews }))
+    return NextResponse.json({ ok: true, configurado: true, pageViewsPorDia, sessoesPorDia: porDia, sessoesPorCanal: porCanal })
   } catch (err) {
     const erro = err instanceof GA4InsightsError || err instanceof Error
       ? err.message

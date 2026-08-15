@@ -9,14 +9,31 @@ import { useCallback, useEffect, useState } from 'react'
 import { auth } from '@/lib/firebase'
 import type { DateRange } from '@/components/tracking/DateRangePicker'
 
+export interface GA4SessoesDia {
+  data: string
+  sessions: number
+  engagedSessions: number
+  totalUsers: number
+  screenPageViews: number
+}
+
+export interface GA4SessoesPorCanal {
+  canal: string
+  sessions: number
+}
+
 export interface GA4Dados {
-  porData: Map<string, number> // 'YYYY-MM-DD' → screenPageViews
+  porData: Map<string, number> // 'YYYY-MM-DD' → screenPageViews (usado pela tela de Eventos)
+  sessoesPorDia: GA4SessoesDia[]
+  sessoesPorCanal: GA4SessoesPorCanal[]
 }
 
 interface RespostaApi {
   ok: boolean
   configurado?: boolean
   pageViewsPorDia?: { data: string; screenPageViews: number }[]
+  sessoesPorDia?: GA4SessoesDia[]
+  sessoesPorCanal?: GA4SessoesPorCanal[]
   erro?: string
 }
 
@@ -52,7 +69,7 @@ export function useGA4Dados(clienteId: string | undefined, periodo: DateRange) {
         }
         const porData = new Map<string, number>()
         for (const l of json.pageViewsPorDia ?? []) porData.set(l.data, l.screenPageViews)
-        setDados({ porData })
+        setDados({ porData, sessoesPorDia: json.sessoesPorDia ?? [], sessoesPorCanal: json.sessoesPorCanal ?? [] })
         setErro(null)
         setUltimaAtualizacao(new Date())
       } catch {
