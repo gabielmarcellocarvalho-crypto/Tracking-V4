@@ -1,0 +1,72 @@
+'use client'
+
+// ─── PAGE VIEWS REAIS DO GA4 (por cliente + período) ─────────────────────────
+// Chama /api/ga4/insights/{clienteId}, que lê a service account de Conexões e
+// busca screenPageViews diário na Data API. GA4 prevalece sobre o snippet
+// quando conectado (ver agregarSaudeEventos/agregarVolume7Dias).
+
+import { useCallback, useEffect, useState } from 'react'
+import { auth } from '@/lib/firebase'
+import type { DateRange } from '@/components/tracking/DateRangePicker'
+
+export interface GA4Dados {
+  porData: Map<string, number> // 'YYYY-MM-DD' → screenPageViews
+}
+
+interface RespostaApi {
+  ok: boolean
+  configurado?: boolean
+  pageViewsPorDia?: { data: string; screenPageViews: number }[]
+  erro?: string
+}
+
+function toYMD(d: Date) { return d.toISOString().slice(0, 10) }
+
+export function useGA4Dados(clienteId: string | undefined, periodo: DateRange) {
+  const [dados, setDados] = useState<GA4Dados | null>(null)
+  const [erro, setErro] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [ultimaAtualizacao, setUltimaAtualizacao] = useState<Date | null>(null)
+  const [versao, setVersao] = useState(0)
+
+  useEffect(() => {
+    if (!clienteId) { setDados(null); setErro(null); return }
+    let cancelado = false
+
+    const buscar = async () => {
+      setLoading(true)
+      try {
+        const idToken = await auth.currentUser?.getIdToken()
+        if (!idToken) return
+        const qs = new URLSearchParams({ start: toYMD(periodo.start), end: toYMD(periodo.end) })
+        const res = await fetch(`/api/ga4/insights/${clienteId}?${qs.toString()}`, {
+          headers: { Authorization: `Bearer ${idToken}` },
+        })
+        const json: RespostaApi = await res.json()
+        if (cancelado) return
+
+        if (!json.ok) {
+          setDados(null)
+          setErro(json.configurado ? (json.erro ?? 'falha ao buscar page views do GA4') : null)
+          return
+        }
+        const porData = new Map<string, number>()
+        for (const l of json.pageViewsPorDia ?? []) porData.set(l.data, l.screenPageViews)
+        setDados({ porData })
+        setErro(null)
+        setUltimaAtualizacao(new Date())
+      } catch {
+        if (!cancelado) { setDados(null); setErro('falha de rede ao buscar page views do GA4') }
+      } finally {
+        if (!cancelado) setLoading(false)
+      }
+    }
+
+    buscar()
+    return () => { cancelado = true }
+  }, [clienteId, periodo.start, periodo.end, versao])
+
+  const refetch = useCallback(() => setVersao((v) => v + 1), [])
+
+  return { dados, erro, loading, ultimaAtualizacao, refetch }
+}

@@ -13,6 +13,8 @@ export interface EventHealth {
   countPeriodo: number
   /** Rótulo curto do período do 2º número (ex: "30 dias", "hoje") — segue o filtro de data selecionado */
   periodoLabel: string
+  /** Quando uma fonte prevalece sobre outra (ex: GA4 sobre o snippet) — mostra a fonte não-usada pra conferir se bate */
+  fonteAlternativa?: { label: string; valor: number }
   alert?: string
   icon: string            // SVG path
   color: string

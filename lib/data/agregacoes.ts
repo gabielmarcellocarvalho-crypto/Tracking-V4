@@ -8,6 +8,17 @@ import type { UsuarioJornada, EventoJornada } from '@/lib/demo-data'
 
 const DIA_MS = 24 * 60 * 60 * 1000
 
+function toYMD(d: Date) { return d.toISOString().slice(0, 10) }
+
+/** Soma um Map<'YYYY-MM-DD', number> (ex: page views do GA4) entre dois timestamps, inclusive. */
+function somarPeriodoMap(porDia: Map<string, number>, inicio: number, fim: number): number {
+  let soma = 0
+  for (let d = new Date(inicio).setHours(0, 0, 0, 0); d <= fim; d += DIA_MS) {
+    soma += porDia.get(toYMD(new Date(d))) ?? 0
+  }
+  return soma
+}
+
 export interface JanelaPeriodo { start: Date; end: Date }
 
 // Máximo de pontos numa série temporal — períodos maiores agrupam por semana
@@ -93,6 +104,7 @@ export function agregarSaudeEventos(
   eventos: Evento[],
   periodo?: { start: Date; end: Date; label: string },
   tipoCliente?: PartnerTipo,
+  ga4?: { porDia: Map<string, number> },
 ): EventHealth[] {
   const agora = Date.now()
   const inicioHoje = new Date().setHours(0, 0, 0, 0)
@@ -117,6 +129,20 @@ export function agregarSaudeEventos(
       : status === 'warning' ? 'Intervalo longo — verificar disparo no site'
       : undefined
 
+    const contagemSnippetPeriodo = doTipo.filter((e) => e.ts >= inicioPeriodo && e.ts <= fimPeriodo).length
+
+    // GA4 prevalece sobre o snippet pro page_view do período (nunca soma —
+    // troca a fonte) — "Hoje" sempre fica no snippet porque o GA4 tem atraso
+    // de processamento e mostraria número baixo/zerado sem ser esse o caso.
+    // Mantém a contagem do snippet visível em fonteAlternativa pra dar pra
+    // conferir se as duas fontes batem.
+    let countPeriodo = contagemSnippetPeriodo
+    let fonteAlternativa: EventHealth['fonteAlternativa']
+    if (tipo === 'page_view' && ga4) {
+      countPeriodo = somarPeriodoMap(ga4.porDia, inicioPeriodo, fimPeriodo)
+      fonteAlternativa = { label: 'snippet', valor: contagemSnippetPeriodo }
+    }
+
     return {
       id: tipo,
       ...EVENTO_META[tipo],
@@ -124,8 +150,9 @@ export function agregarSaudeEventos(
       lastFired: ultimo ? tempoRelativo(ultimo) : '—',
       lastFiredAgo: minAtras === Infinity ? 99999 : minAtras,
       countToday: doTipo.filter((e) => e.ts >= inicioHoje).length,
-      countPeriodo: doTipo.filter((e) => e.ts >= inicioPeriodo && e.ts <= fimPeriodo).length,
+      countPeriodo,
       periodoLabel,
+      fonteAlternativa,
       alert,
     }
   })
@@ -133,8 +160,6 @@ export function agregarSaudeEventos(
 
 // ── Volume por dia (últimos 7 dias) ──────────────────────────────────────────
 const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
-
-function toYMD(d: Date) { return d.toISOString().slice(0, 10) }
 
 /** Métricas diárias de mídia paga — subset estrutural comum ao Meta e Google (checkout/purchase). */
 interface MidiaPagaDia { checkout: number; purchase: number }
@@ -146,7 +171,12 @@ export interface FallbackMidiaPaga {
   googlePorDia?: Map<string, MidiaPagaDia>
 }
 
-export function agregarVolume7Dias(eventos: Evento[], janela: JanelaPeriodo | number = 7, fallback?: FallbackMidiaPaga) {
+export function agregarVolume7Dias(
+  eventos: Evento[],
+  janela: JanelaPeriodo | number = 7,
+  fallback?: FallbackMidiaPaga,
+  ga4?: { porDia: Map<string, number> },
+) {
   const range: JanelaPeriodo = typeof janela === 'number'
     ? { start: new Date(Date.now() - janela * DIA_MS), end: new Date() }
     : janela
@@ -176,11 +206,16 @@ export function agregarVolume7Dias(eventos: Evento[], janela: JanelaPeriodo | nu
       }
     }
 
+    // GA4 prevalece sobre o snippet pro page_view (nunca soma — troca a fonte,
+    // mesma regra de agregarSaudeEventos). Cada ponto do gráfico já é um dia
+    // fechado, então não tem o problema de atraso do GA4 que existe pro "Hoje".
+    const pageView = ga4 ? somarPeriodoMap(ga4.porDia, inicio, fim - 1) : doDia.filter((e) => e.tipo === 'page_view').length
+
     dias.push({
       dia: agrupaPorSemana
         ? `${new Date(inicio).getDate().toString().padStart(2, '0')}/${(new Date(inicio).getMonth() + 1).toString().padStart(2, '0')}`
         : DIAS_SEMANA[new Date(inicio).getDay()],
-      page_view: doDia.filter((e) => e.tipo === 'page_view').length,
+      page_view: pageView,
       lead:      doDia.filter((e) => e.tipo === 'lead').length,
       checkout,
       compra,

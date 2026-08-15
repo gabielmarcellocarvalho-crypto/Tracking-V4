@@ -35,7 +35,7 @@ interface Props extends EventHealth {
 }
 
 export default function EventHealthCard({
-  label, description, status, lastFired, countToday, countPeriodo, periodoLabel, alert, icon, color, onClick, selected,
+  label, description, status, lastFired, countToday, countPeriodo, periodoLabel, fonteAlternativa, alert, icon, color, onClick, selected,
 }: Props) {
   const cfg = STATUS_CFG[status]
 
@@ -106,7 +106,17 @@ export default function EventHealthCard({
           <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--t2)', letterSpacing: '-.5px', lineHeight: 1 }}>
             {countPeriodo.toLocaleString('pt-BR')}
           </div>
-          <div style={{ fontSize: 10, color: 'var(--t3)', marginTop: 2 }}>{periodoLabel}</div>
+          <div style={{ fontSize: 10, color: 'var(--t3)', marginTop: 2 }}>
+            {periodoLabel}{fonteAlternativa && ' · GA4'}
+          </div>
+          {fonteAlternativa && (
+            <div
+              style={{ fontSize: 9, color: 'var(--t3)', marginTop: 1, opacity: 0.75 }}
+              title="Contagem do snippet no mesmo período, pra conferir se bate com o GA4"
+            >
+              {fonteAlternativa.label}: {fonteAlternativa.valor.toLocaleString('pt-BR')}
+            </div>
+          )}
         </div>
         <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end' }}>
           <div style={{ fontSize: 10.5, color: 'var(--t3)', textAlign: 'right' }}>
