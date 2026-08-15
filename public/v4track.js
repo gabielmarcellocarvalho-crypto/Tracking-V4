@@ -12,9 +12,12 @@
  *  - captura gclid / wbraid / gbraid (Google) e fbclid → formato fbc (Meta)
  *  - lê cookies _fbp/_fbc (Meta) e _ga (GA4 client_id)
  *  - dispara page_view automático (inclui SPAs — pushState)
+ *  - em lojas Shopify, dispara view_item automático em página de produto
+ *    (via window.ShopifyAnalytics — zero configuração)
  *  - expõe window.v4track(tipo, dados) para eventos manuais:
- *      v4track('lead',  { email:'x@y.com', telefone:'11999999999', nome:'Fulano' })
- *      v4track('compra',{ email:'x@y.com', valor:189.90, produto:'Plano Anual', transactionId:'PEDIDO123' })
+ *      v4track('lead',      { email:'x@y.com', telefone:'11999999999', nome:'Fulano' })
+ *      v4track('compra',    { email:'x@y.com', valor:189.90, produto:'Plano Anual', transactionId:'PEDIDO123' })
+ *      v4track('view_item', { produto:'Nome do Produto' }) // fora do Shopify — chamar na página de produto
  */
 (function () {
   'use strict';
@@ -148,16 +151,34 @@
   // ── API pública ────────────────────────────────────────────────────────────
   window.v4track = enviar;
 
-  // page_view automático
-  enviar('page_view');
+  // Shopify expõe isso em qualquer tema, sem precisar mexer no site —
+  // zero-config pra view_item em lojas Shopify. Título da página como nome
+  // do produto (confiável em qualquer tema, ao contrário de campos internos
+  // do ShopifyAnalytics.meta.product, que variam entre versões).
+  function verificarViewItemShopify() {
+    try {
+      var meta = window.ShopifyAnalytics && window.ShopifyAnalytics.meta;
+      if (meta && meta.page && meta.page.pageType === 'product') {
+        enviar('view_item', { produto: document.title });
+      }
+    } catch (e) { /* ShopifyAnalytics indisponível ou formato inesperado */ }
+  }
 
-  // SPAs: dispara page_view em navegação client-side
+  function disparoDePagina() {
+    enviar('page_view');
+    verificarViewItemShopify();
+  }
+
+  // page_view (+ view_item automático em produto Shopify)
+  disparoDePagina();
+
+  // SPAs: dispara em navegação client-side
   var pushState = history.pushState;
   history.pushState = function () {
     pushState.apply(history, arguments);
-    setTimeout(function () { enviar('page_view'); }, 50);
+    setTimeout(disparoDePagina, 50);
   };
   window.addEventListener('popstate', function () {
-    setTimeout(function () { enviar('page_view'); }, 50);
+    setTimeout(disparoDePagina, 50);
   });
 })();

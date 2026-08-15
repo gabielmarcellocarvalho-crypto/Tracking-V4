@@ -32,7 +32,7 @@ export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS })
 }
 
-const TIPOS_VALIDOS: EventoTipo[] = ['page_view', 'lead', 'checkout', 'compra', 'custom']
+const TIPOS_VALIDOS: EventoTipo[] = ['page_view', 'lead', 'checkout', 'compra', 'view_item', 'custom']
 
 // Crawlers/bots batem no site como um visitante normal (executam o snippet)
 // e poluem os dados — ex: o próprio meta-externalads visita a página de
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
   const { clienteId, key, tipo } = body
   if (!clienteId || !tipo || !TIPOS_VALIDOS.includes(tipo)) {
     return NextResponse.json(
-      { ok: false, erro: 'clienteId e tipo (page_view|lead|checkout|compra|custom) são obrigatórios' },
+      { ok: false, erro: 'clienteId e tipo (page_view|lead|checkout|compra|view_item|custom) são obrigatórios' },
       { status: 400, headers: CORS },
     )
   }

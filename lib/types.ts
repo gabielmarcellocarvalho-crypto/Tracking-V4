@@ -39,7 +39,7 @@ export interface Partner {
 }
 
 // ── Evento ────────────────────────────────────────────────────────────────────
-export type EventoTipo = 'page_view' | 'lead' | 'checkout' | 'compra' | 'custom'
+export type EventoTipo = 'page_view' | 'lead' | 'checkout' | 'compra' | 'view_item' | 'custom'
 export type Origem     = 'meta' | 'google' | 'organico' | 'direto' | 'email' | 'shopify' | 'loja-integrada' | 'outro'
 
 export interface UTMSet {

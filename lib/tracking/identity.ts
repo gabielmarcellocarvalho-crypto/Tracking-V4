@@ -4,8 +4,9 @@
 //   1. v4id (cookie próprio, 13 meses)
 //   2. email / telefone (quando o usuário se identifica — lead/compra/CRM)
 //   3. fbp (Meta browser id)
-//   4. gclid (Google click id)
-//   5. IP + user agent (fingerprint fraco — último recurso)
+//   4. gaClientId (GA4 client id, cookie _ga)
+//   5. gclid (Google click id)
+//   6. IP + user agent (fingerprint fraco — último recurso)
 // Usado pelo endpoint de ingestão (/api/track), roda no servidor.
 
 import type { Evento, Identidade, IdentidadeStatus, Toque } from '@/lib/types'
@@ -87,13 +88,14 @@ export async function resolverIdentidade(store: IdentityStore, evento: Evento): 
   const agora = evento.ts || Date.now()
   const { ids, dados, geo } = evento
 
-  // 1..5 — busca na ordem de confiança
+  // 1..6 — busca na ordem de confiança
   const encontradas: Identidade[] = []
   const buscas: [string, string | undefined][] = [
     ['v4ids', ids.v4id],
     ['emails', dados?.email?.toLowerCase()],
     ['telefones', dados?.telefone?.replace(/\D/g, '') || undefined],
     ['fbps', ids.fbp],
+    ['gaClientIds', ids.gaClientId],
     ['gclids', ids.gclid],
   ]
   for (const [campo, valor] of buscas) {

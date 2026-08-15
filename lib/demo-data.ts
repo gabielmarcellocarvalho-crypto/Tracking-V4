@@ -165,7 +165,7 @@ export const utmOtherData: UTMOther[] = [
 ]
 
 // ─── JORNADA MOCK ────────────────────────────────────────────────────────────
-export type EventoTipo = 'page_view' | 'lead' | 'checkout' | 'compra'
+export type EventoTipo = 'page_view' | 'lead' | 'checkout' | 'compra' | 'view_item'
 
 export interface EventoJornada {
   id: string
@@ -194,7 +194,7 @@ export interface UsuarioJornada {
   id: string
   email: string
   emailMasked: string
-  status: 'converteu' | 'lead' | 'checkout-abandonado'
+  status: 'converteu' | 'lead' | 'checkout-abandonado' | 'engajado'
   valor?: number
   eventos: EventoJornada[]
   cookies: {

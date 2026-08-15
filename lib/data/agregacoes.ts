@@ -51,6 +51,11 @@ const EVENTO_META: Record<string, Pick<EventHealth, 'label' | 'description' | 'i
     icon: 'M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm-1 15v-4H7l5-8v4h4l-5 8z',
     color: '#EF4444',
   },
+  view_item: {
+    label: 'View Item', description: 'Visualização de produto',
+    icon: 'M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16zM3.27 6.96L12 12.01l8.73-5.05M12 22.08V12',
+    color: '#06B6D4',
+  },
 }
 
 function tempoRelativo(ms: number): string {
@@ -73,7 +78,7 @@ function labelPeriodoCurto(label: string): string {
 // Gabriel); inside-sales não tem checkout/compra (não existe e-commerce pra
 // gerar esses eventos). Sem tipo (demo/desconhecido), mostra tudo.
 export function eventoTiposDoCliente(tipoCliente?: PartnerTipo): EventoTipo[] {
-  if (tipoCliente === 'ecommerce')    return ['page_view', 'checkout', 'compra']
+  if (tipoCliente === 'ecommerce')    return ['page_view', 'view_item', 'checkout', 'compra']
   if (tipoCliente === 'inside-sales') return ['page_view', 'lead']
   return ['page_view', 'lead', 'checkout', 'compra']
 }
@@ -153,7 +158,7 @@ export function agregarVolume7Dias(eventos: Evento[], janela: JanelaPeriodo | nu
   const passoMs = agrupaPorSemana ? 7 * DIA_MS : DIA_MS
   const usaFallback = fallback && !fallback.ecommerceConectado
 
-  const dias: { dia: string; page_view: number; lead: number; checkout: number; compra: number }[] = []
+  const dias: { dia: string; page_view: number; lead: number; checkout: number; compra: number; view_item: number }[] = []
   for (let inicio = corte; inicio <= ateFim; inicio += passoMs) {
     const fim = Math.min(inicio + passoMs, ateFim + 1)
     const doDia = eventos.filter((e) => e.ts >= inicio && e.ts < fim)
@@ -179,6 +184,7 @@ export function agregarVolume7Dias(eventos: Evento[], janela: JanelaPeriodo | nu
       lead:      doDia.filter((e) => e.tipo === 'lead').length,
       checkout,
       compra,
+      view_item: doDia.filter((e) => e.tipo === 'view_item').length,
     })
   }
   return dias
@@ -221,7 +227,7 @@ export function agregarPaginas(eventos: Evento[]): PageHeatEntry[] {
 
 // ── Logs por tipo (drill-down) ────────────────────────────────────────────────
 export function agregarLogs(eventos: Evento[]): Record<string, EventLogItem[]> {
-  const out: Record<string, EventLogItem[]> = { page_view: [], lead: [], checkout: [], compra: [] }
+  const out: Record<string, EventLogItem[]> = { page_view: [], lead: [], checkout: [], compra: [], view_item: [] }
   for (const e of eventos.slice(0, 400)) {
     if (!out[e.tipo]) continue
     if (out[e.tipo].length >= 12) continue
@@ -252,6 +258,7 @@ export function identidadeParaUsuarioJornada(ident: Identidade, eventos: Evento[
   const status: UsuarioJornada['status'] =
     ident.status === 'cliente' ? 'converteu'
     : ident.status === 'checkout' ? 'checkout-abandonado'
+    : ident.status === 'visitante' ? 'engajado'
     : 'lead'
 
   const evsJornada: EventoJornada[] = meus.map((e, i) => ({

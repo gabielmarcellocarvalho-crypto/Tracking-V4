@@ -241,7 +241,7 @@ export default function TrackingPage({ params }: { params: Promise<{ clienteId: 
           <div style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--t3)', marginBottom: 10 }}>
             Saúde dos Eventos
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
             {dados.saude.map(e => (
               <EventHealthCard
                 key={e.id}
@@ -266,6 +266,8 @@ export default function TrackingPage({ params }: { params: Promise<{ clienteId: 
                 <Tooltip {...tt} formatter={(v: any, n: any) => [v.toLocaleString('pt-BR'), n]} />
                 <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: 10, color: '#666', paddingTop: 8 }} />
                 <Line type="monotone" dataKey="page_view" name="Page View" stroke="#6366F1" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                {tiposVisiveis.has('view_item') &&
+                  <Line type="monotone" dataKey="view_item" name="View Item" stroke="#06B6D4" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />}
                 {tiposVisiveis.has('lead') &&
                   <Line type="monotone" dataKey="lead"      name="Lead"      stroke="#8B5CF6" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />}
                 {tiposVisiveis.has('checkout') &&

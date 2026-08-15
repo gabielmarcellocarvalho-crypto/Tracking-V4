@@ -39,10 +39,19 @@ function IcoCheck({ color }: { color: string }) {
     </svg>
   )
 }
+function IcoBox({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" width={14} height={14}>
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+      <polyline points="3.27 6.96 12 12.01 20.73 6.96" /><line x1="12" y1="22.08" x2="12" y2="12" />
+    </svg>
+  )
+}
 
 // ─── Event color/icon config ───────────────────────────────────────────────
 const EVENTO_CONFIG = {
   page_view: { label: 'Visitou o site',       bg: 'rgba(59,130,246,.08)',  border: 'rgba(59,130,246,.25)',  dot: '#3B82F6', Icon: IcoEye   },
+  view_item: { label: 'Viu produto',          bg: 'rgba(6,182,212,.08)',   border: 'rgba(6,182,212,.25)',   dot: '#06B6D4', Icon: IcoBox   },
   lead:      { label: 'Preencheu formulário', bg: 'rgba(249,115,22,.08)',  border: 'rgba(249,115,22,.25)',  dot: '#F59E0B', Icon: IcoUser  },
   checkout:  { label: 'Iniciou checkout',     bg: 'rgba(139,92,246,.08)',  border: 'rgba(139,92,246,.25)',  dot: '#8B5CF6', Icon: IcoCart  },
   compra:    { label: 'Efetuou compra',       bg: 'rgba(16,185,129,.08)',  border: 'rgba(16,185,129,.25)',  dot: '#10B981', Icon: IcoCheck },
@@ -52,6 +61,7 @@ const STATUS_CONFIG = {
   converteu:             { label: 'Converteu',           bg: 'rgba(16,185,129,.1)',  color: '#10B981' },
   lead:                  { label: 'Lead (não converteu)', bg: 'rgba(59,130,246,.1)', color: '#3B82F6' },
   'checkout-abandonado': { label: 'Checkout abandonado', bg: 'rgba(249,115,22,.1)', color: '#F97316' },
+  engajado:              { label: 'Engajado (viu produto)', bg: 'rgba(6,182,212,.1)', color: '#06B6D4' },
 }
 
 type EventoTipoFiltro = keyof typeof EVENTO_CONFIG
@@ -213,9 +223,12 @@ export default function JornadaPage({ params }: { params: Promise<{ clienteId: s
   // Jornadas reais (identidades unificadas + eventos) ou demo
   const usuarios = useMemo<UsuarioJornada[]>(() => {
     if (usarDemo) return usuariosJornada
-    // Visitante que só teve page_view não é lead — não polui a jornada; fica só em Tracking/Performance
+    // Visitante que só teve page_view não polui a jornada — fica só em
+    // Tracking/Performance. Mas quem já viu pelo menos 1 view_item (e-commerce)
+    // entra mesmo sem ter virado lead ainda — é a jornada de pré-venda que a
+    // gente quer enxergar. Aditivo: nunca tira quem já aparecia antes.
     return identidades
-      .filter((i) => i.status !== 'visitante')
+      .filter((i) => i.status !== 'visitante' || eventos.some((e) => e.visitorId === i.id && e.tipo === 'view_item'))
       .map((i) => identidadeParaUsuarioJornada(i, eventos))
   }, [usarDemo, identidades, eventos])
 
