@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from 'firebase/app'
 import { getAuth, connectAuthEmulator } from 'firebase/auth'
-import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore'
+import { initializeFirestore, getFirestore, connectFirestoreEmulator } from 'firebase/firestore'
 
 const firebaseConfig = {
   apiKey:            process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -11,10 +11,23 @@ const firebaseConfig = {
   appId:             process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 }
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]
+const jaExistia = getApps().length > 0
+const app = jaExistia ? getApps()[0] : initializeApp(firebaseConfig)
 
 export const auth = getAuth(app)
-export const db   = getFirestore(app)
+// Achado ao vivo (2026-08): canal Listen do Firestore em loop de reconexão
+// (erro 400 repetido, muda de sessão a cada poucos ciclos) tanto em teste
+// automatizado quanto no navegador real do Gabriel, inclusive em aba anônima
+// -- deixava toda tela que depende de onSnapshot (eventos, jornada, etc.)
+// presa em array vazio pra sempre, mesmo com dado real no banco. Esse é o
+// sintoma exato que a própria doc do Firebase recomenda resolver com
+// experimentalAutoDetectLongPolling: proxy/antivírus/rede no meio corta a
+// conexão de streaming (WebChannel) que o SDK usa por padrão; com essa opção
+// o SDK detecta isso e cai pra long-polling simples, que atravessa esse tipo
+// de rede sem problema.
+export const db = jaExistia
+  ? getFirestore(app)
+  : initializeFirestore(app, { experimentalAutoDetectLongPolling: true })
 
 // Conecta aos emuladores locais (firebase emulators:start) só quando explicitamente
 // habilitado via NEXT_PUBLIC_USE_EMULATOR=true — nunca aponta pra produção por engano.
