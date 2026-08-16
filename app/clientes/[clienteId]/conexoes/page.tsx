@@ -159,7 +159,7 @@ const PLATAFORMAS: {
   },
   {
     id: 'ga4',
-    nome: 'GA4',
+    nome: 'Google Analytics',
     cor: '#E37400',
     desc: 'Cruza sessões e canais do GA4 com os dados primários — validação de tráfego orgânico e assistido.',
     campos: [

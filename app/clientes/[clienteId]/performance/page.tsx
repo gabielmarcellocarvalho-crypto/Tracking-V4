@@ -314,6 +314,7 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
   const [temPersonalizadoSalvo, setTemPersonalizadoSalvo] = useState(false)
 
   useEffect(() => {
+    let templateAplicadoRef = false
     const load = async () => {
       try {
         const ref  = doc(db, 'partners', clienteId, 'performance_config', 'main')
@@ -324,12 +325,21 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
           // cliente (ex: cliente virou e-commerce mas tinha "leads" salvo).
           const t = data.template as PerformanceTemplate | undefined
           const aindaValido = t && (cliente?.tipo === 'ecommerce' ? t !== 'leads' && t !== 'mensagens' : t !== 'ecommerce')
-          if (aindaValido) setTemplate(t)
+          if (aindaValido) { setTemplate(t); templateAplicadoRef = true }
           if (Array.isArray(data.blocos_personalizados) && data.blocos_personalizados.length > 0) {
             const sorted = [...data.blocos_personalizados].sort((a, b) => a.posicao - b.posicao)
             setPersonBlocks(sorted.map((b: { id: string; posicao: number }) => b.id))
             setTemPersonalizadoSalvo(true)
           }
+        }
+        // Sem preferência salva válida — usa o default calculado a partir do
+        // tipo real do cliente. Sem isso, `template` ficava travado no valor
+        // do primeiro render (sempre "leads", já que `cliente` ainda era
+        // null nesse momento) mesmo depois do tipo real chegar — o badge
+        // "Performance" mostrava Leads/Mensagens pra cliente ecommerce até
+        // o usuário trocar manualmente no dropdown (bug pego ao vivo).
+        if (!templateAplicadoRef && cliente?.tipo) {
+          setTemplate(cliente.tipo === 'ecommerce' ? 'ecommerce' : 'leads')
         }
       } catch { /* silent */ }
       finally { setLoading(false) }
