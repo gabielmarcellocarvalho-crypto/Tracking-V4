@@ -2,8 +2,10 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from 'react'
@@ -38,15 +40,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return unsub
   }, [])
 
-  const signIn = (email: string, password: string) =>
-    signInWithEmailAndPassword(auth, email, password).then(() => undefined)
+  const signIn = useCallback((email: string, password: string) =>
+    signInWithEmailAndPassword(auth, email, password).then(() => undefined), [])
 
-  const signOut = () => firebaseSignOut(auth)
+  const signOut = useCallback(() => firebaseSignOut(auth), [])
 
-  const resetPassword = (email: string) => sendPasswordResetEmail(auth, email)
+  const resetPassword = useCallback((email: string) => sendPasswordResetEmail(auth, email), [])
+
+  // Sem isso, o objeto do value era recriado em TODO render de AuthProvider
+  // (raiz do app) — qualquer componente usando useAuth() (inclusive
+  // AuthGuard, que envolve toda página autenticada) re-renderizava a cada
+  // vez, mesmo sem o usuário real ter mudado.
+  const value = useMemo(
+    () => ({ user, loading, signIn, signOut, resetPassword }),
+    [user, loading, signIn, signOut, resetPassword],
+  )
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut, resetPassword }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   )
