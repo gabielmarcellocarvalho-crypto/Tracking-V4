@@ -17,20 +17,28 @@ interface Passo {
 // automaticamente. Se não achar (site sem esse dataLayer configurado), o
 // evento é registrado do mesmo jeito, só sem esses campos extras — nunca
 // quebra, é sempre um "a mais" quando disponível.
+//
+// A primeira linha (window.v4track = window.v4track || ...) é uma "fila de
+// espera": o script principal carrega com `defer`, então roda DEPOIS de
+// qualquer <script> comum da página — sem essa linha, colar o código de
+// Checkout/Compra na mesma página do snippet principal dá "v4track is not
+// defined" (o navegador chama v4track antes dele existir). Com essa linha,
+// a chamada fica guardada e é disparada assim que o script principal carrega.
 function montarPassos(): Passo[] {
+  const stub = `window.v4track = window.v4track || function(){(window.v4trackQueue = window.v4trackQueue || []).push(arguments)}`
   return [
     {
       titulo: '1. Checkout — cole na página de checkout',
       onde: 'Ex: /checkout, /finalizar-compra — dispara assim que o cliente entra nessa página.',
       cor: '#8B5CF6',
-      codigo: `<script>\n  v4track('checkout')\n</script>`,
+      codigo: `<script>\n  ${stub}\n  v4track('checkout')\n</script>`,
       extra: 'Tenta puxar o valor do carrinho sozinho, via window.dataLayer (se o site já tiver GA4/GTM configurado). Se preferir passar na mão: v4track(\'checkout\', { valor: 199.90 }).',
     },
     {
       titulo: '2. Compra — cole na página de pedido confirmado',
       onde: 'Ex: "Pedido realizado com sucesso" / "Obrigado pela compra" — a página que só carrega depois do pagamento aprovado.',
       cor: '#F59E0B',
-      codigo: `<script>\n  v4track('compra')\n</script>`,
+      codigo: `<script>\n  ${stub}\n  v4track('compra')\n</script>`,
       extra: 'Tenta puxar e-mail/valor/produto/nº do pedido sozinho, via window.dataLayer. Se preferir passar na mão: v4track(\'compra\', { email, valor, produto, transactionId }).',
     },
   ]

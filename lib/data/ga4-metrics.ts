@@ -81,7 +81,12 @@ export function useGA4Dados(clienteId: string | undefined, periodo: DateRange) {
 
     buscar()
     return () => { cancelado = true }
-  }, [clienteId, periodo.start, periodo.end, versao])
+    // periodo.start/end são objetos Date novos a cada render do contexto de
+    // período -- usar o objeto direto no dependency array reexecutava o
+    // efeito (e rebuscava) em loop infinito, mesmo com a mesma data
+    // selecionada. getTime() vira um número primitivo estável.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clienteId, periodo.start.getTime(), periodo.end.getTime(), versao])
 
   const refetch = useCallback(() => setVersao((v) => v + 1), [])
 

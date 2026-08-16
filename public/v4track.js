@@ -236,7 +236,19 @@
   }
 
   // ── API pública ────────────────────────────────────────────────────────────
+  // O snippet principal carrega com `defer`, então sempre executa DEPOIS de
+  // qualquer <script> comum no HTML -- se alguém colar v4track('checkout')
+  // solto na página (ex: guia de instalação de Checkout/Compra) ANTES desse
+  // arquivo terminar de carregar, dá "v4track is not defined" mesmo com a
+  // tag <script src="v4track.js"> presente na página. O stub logo abaixo
+  // (que o guia de instalação também injeta) guarda essas chamadas numa fila
+  // em vez de quebrar; aqui a gente escoa essa fila assim que a função real
+  // fica pronta -- mesmo padrão do gtag.js/fbq.
+  var filaPendente = window.v4trackQueue;
   window.v4track = enviar;
+  if (filaPendente && filaPendente.length) {
+    for (var fi = 0; fi < filaPendente.length; fi++) enviar.apply(null, filaPendente[fi]);
+  }
 
   // Shopify expõe isso em qualquer tema, sem precisar mexer no site —
   // zero-config pra view_item em lojas Shopify. Título da página como nome
