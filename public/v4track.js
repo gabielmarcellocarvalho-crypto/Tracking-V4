@@ -16,8 +16,14 @@
  *    (via window.ShopifyAnalytics — zero configuração)
  *  - expõe window.v4track(tipo, dados) para eventos manuais:
  *      v4track('lead',      { email:'x@y.com', telefone:'11999999999', nome:'Fulano' })
- *      v4track('compra',    { email:'x@y.com', valor:189.90, produto:'Plano Anual', transactionId:'PEDIDO123' })
+ *      v4track('checkout')  // cole na página de checkout, sem editar nada
+ *      v4track('compra')    // cole na página de pedido confirmado, sem editar nada
  *      v4track('view_item', { produto:'Nome do Produto' }) // fora do Shopify — chamar na página de produto
+ *  - em checkout/compra, tenta puxar valor/produto/e-mail sozinho do
+ *    window.dataLayer (GA4/GTM Enhanced Ecommerce, se o site já tiver isso
+ *    configurado pro próprio GA4/Meta) — se não achar, segue sem esses
+ *    campos, sem quebrar nada. Pra passar na mão em vez de depender disso:
+ *      v4track('compra', { email:'x@y.com', valor:189.90, produto:'Plano Anual', transactionId:'PEDIDO123' })
  */
 (function () {
   'use strict';
@@ -102,9 +108,60 @@
     if (partes.length >= 4) gaClientId = partes[2] + '.' + partes[3];
   }
 
+  // ── Auto-detecção de valor/produto/e-mail via dataLayer (GA4/GTM) ──────────
+  // Muitos sites já populam window.dataLayer com eventos padrão de e-commerce
+  // (purchase/begin_checkout, schema do GA4 Enhanced Ecommerce) pra alimentar
+  // o próprio GA4/GTM do cliente — lemos isso passivamente, sem exigir nada
+  // extra do site. Se não achar nada (site sem dataLayer configurado desse
+  // jeito), segue sem esses campos — best-effort, nunca quebra o disparo.
+  function autoDetectarEcommerce(tipo) {
+    var achado = {};
+    try {
+      var dl = window.dataLayer;
+      if (!dl || !dl.length) return achado;
+      var eventoAlvo = tipo === 'compra' ? 'purchase' : 'begin_checkout';
+      for (var i = dl.length - 1; i >= 0; i--) {
+        var item = dl[i];
+        if (!item || typeof item !== 'object') continue;
+
+        // GA4 Enhanced Ecommerce: { event:'purchase', ecommerce:{ value, transaction_id, items:[...] } }
+        if (item.event === eventoAlvo && item.ecommerce) {
+          var ec = item.ecommerce;
+          if (typeof ec.value === 'number' && achado.valor === undefined) achado.valor = ec.value;
+          if (ec.transaction_id && achado.transactionId === undefined) achado.transactionId = String(ec.transaction_id);
+          if (ec.items && ec.items[0] && ec.items[0].item_name && achado.produto === undefined) achado.produto = ec.items[0].item_name;
+        }
+
+        // Universal Analytics clássico: { transactionId, transactionTotal }
+        if (typeof item.transactionTotal !== 'undefined' && achado.valor === undefined) achado.valor = Number(item.transactionTotal);
+        if (item.transactionId && achado.transactionId === undefined) achado.transactionId = String(item.transactionId);
+
+        // E-mail — bem menos padronizado entre plataformas, tenta os campos mais comuns
+        var email = (item.user_data && item.user_data.email) || item.email || item.customer_email;
+        if (email && achado.email === undefined) achado.email = email;
+
+        if (achado.valor !== undefined && achado.transactionId !== undefined && achado.email !== undefined) break;
+      }
+    } catch (e) { /* dataLayer indisponível ou formato inesperado — segue sem auto-detectar */ }
+    return achado;
+  }
+
   // ── Envio ──────────────────────────────────────────────────────────────────
   function enviar(tipo, dados) {
     dados = dados || {};
+    // Checkout/compra tentam se auto-completar via dataLayer — campo passado
+    // na mão sempre tem prioridade sobre o que foi auto-detectado.
+    if (tipo === 'checkout' || tipo === 'compra') {
+      var auto = autoDetectarEcommerce(tipo);
+      dados = {
+        email: dados.email || auto.email,
+        telefone: dados.telefone,
+        nome: dados.nome,
+        valor: typeof dados.valor === 'number' ? dados.valor : auto.valor,
+        produto: dados.produto || auto.produto,
+        transactionId: dados.transactionId || auto.transactionId,
+      };
+    }
     var payload = {
       clienteId: CLIENTE,
       key: KEY,

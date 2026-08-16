@@ -11,10 +11,12 @@ interface Passo {
   cor: string
 }
 
-// Código pronto pra colar sem editar nada — v4track aceita chamar sem
-// nenhum campo (registra só o evento). Valor/e-mail/produto são opcionais
-// e ficam explicados fora do bloco de código, não dentro dele, pra nunca
-// precisar apagar um placeholder antes de colar.
+// Código pronto pra colar sem editar nada — v4track tenta se auto-completar
+// sozinho: lê o window.dataLayer (GA4/GTM Enhanced Ecommerce) se o site já
+// tiver isso configurado, e puxa valor/produto/e-mail/nº do pedido de lá
+// automaticamente. Se não achar (site sem esse dataLayer configurado), o
+// evento é registrado do mesmo jeito, só sem esses campos extras — nunca
+// quebra, é sempre um "a mais" quando disponível.
 function montarPassos(): Passo[] {
   return [
     {
@@ -22,14 +24,14 @@ function montarPassos(): Passo[] {
       onde: 'Ex: /checkout, /finalizar-compra — dispara assim que o cliente entra nessa página.',
       cor: '#8B5CF6',
       codigo: `<script>\n  v4track('checkout')\n</script>`,
-      extra: 'Quer enriquecer com o valor do carrinho? Troque por v4track(\'checkout\', { valor: SEU_VALOR_AQUI }) usando a variável de valor que a própria plataforma do site já expõe naquela página.',
+      extra: 'Tenta puxar o valor do carrinho sozinho, via window.dataLayer (se o site já tiver GA4/GTM configurado). Se preferir passar na mão: v4track(\'checkout\', { valor: 199.90 }).',
     },
     {
       titulo: '2. Compra — cole na página de pedido confirmado',
       onde: 'Ex: "Pedido realizado com sucesso" / "Obrigado pela compra" — a página que só carrega depois do pagamento aprovado.',
       cor: '#F59E0B',
       codigo: `<script>\n  v4track('compra')\n</script>`,
-      extra: 'Quer enriquecer com e-mail/valor/produto/nº do pedido? Troque por v4track(\'compra\', { email, valor, produto, transactionId }) usando as variáveis reais que a plataforma do site expõe nessa página.',
+      extra: 'Tenta puxar e-mail/valor/produto/nº do pedido sozinho, via window.dataLayer. Se preferir passar na mão: v4track(\'compra\', { email, valor, produto, transactionId }).',
     },
   ]
 }
