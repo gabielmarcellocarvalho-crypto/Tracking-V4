@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface Passo {
@@ -10,19 +10,23 @@ interface Passo {
   cor: string
 }
 
+// Os valores abaixo (189.90, e-mail, nome do produto) são só exemplo pra
+// mostrar o formato — na página real, troque pela variável dinâmica que a
+// plataforma do site já expõe pro valor/e-mail/produto daquele pedido
+// específico (cada plataforma expõe isso de um jeito diferente).
 function montarPassos(): Passo[] {
   return [
     {
       titulo: '1. Checkout — cole na página de checkout',
       onde: 'Ex: /checkout, /finalizar-compra — dispara assim que o cliente entra nessa página.',
       cor: '#8B5CF6',
-      codigo: `<script>\n  v4track('checkout', { valor: 189.90 })\n</script>`,
+      codigo: `<script>\n  v4track('checkout', {\n    valor: 189.90  // exemplo — troque pelo valor real do carrinho\n  })\n</script>`,
     },
     {
       titulo: '2. Compra — cole na página de pedido confirmado',
       onde: 'Ex: "Pedido realizado com sucesso" / "Obrigado pela compra" — a página que só carrega depois do pagamento aprovado.',
       cor: '#F59E0B',
-      codigo: `<script>\n  v4track('compra', {\n    email: 'cliente@email.com',\n    valor: 189.90,\n    produto: 'Nome do Produto',\n    transactionId: 'PEDIDO123'  // evita contar a mesma compra 2x\n  })\n</script>`,
+      codigo: `<script>\n  v4track('compra', {\n    email: 'cliente@email.com',      // exemplo — e-mail real do pedido\n    valor: 189.90,                    // exemplo — valor real do pedido\n    produto: 'Nome do Produto',       // exemplo — nome real do produto\n    transactionId: 'PEDIDO123'        // id real do pedido — evita contar 2x\n  })\n</script>`,
     },
   ]
 }
@@ -55,6 +59,13 @@ function BlocoCodigo({ codigo, cor }: { codigo: string; cor: string }) {
 
 export default function GuiaInstalacaoModal({ onClose }: { onClose: () => void }) {
   const passos = montarPassos()
+
+  // Sem isso, a página por baixo rolava junto com o modal aberto.
+  useEffect(() => {
+    const original = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = original }
+  }, [])
 
   return (
     <AnimatePresence>
