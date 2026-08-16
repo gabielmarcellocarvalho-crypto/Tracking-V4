@@ -184,8 +184,12 @@ function demoParaRegistros(canal: UTMCanal): UTMRegistro[] {
 export default function UTMsPage({ params }: { params: Promise<{ clienteId: string }> }) {
   const { clienteId } = use(params)
   const { cliente, isDemo } = useCliente(clienteId)
-  const { utms } = useUTMs(isDemo ? undefined : clienteId)
-  const { eventos } = useEventos(isDemo ? undefined : clienteId)
+  const { utms, loading: loadingUtms } = useUTMs(isDemo ? undefined : clienteId)
+  const { eventos, loading: loadingEventos } = useEventos(isDemo ? undefined : clienteId)
+  // Enquanto os dados reais ainda não chegaram do Firestore, as tabelas
+  // mostravam "nenhuma UTM"/"nenhum evento" por 1-3s — parecia bug quando só
+  // estava carregando (mesmo padrão achado ao vivo em Eventos/Jornada).
+  const carregando = !isDemo && (loadingUtms || loadingEventos)
 
   const [aba, setAba]       = useState<Aba>('meta')
   const [wizard, setWizard] = useState(false)
@@ -280,7 +284,7 @@ export default function UTMsPage({ params }: { params: Promise<{ clienteId: stri
                 <tbody>
                   {registros.length === 0 && (
                     <tr><td colSpan={7} className="px-4 py-8 text-center text-[12px]" style={{ color: 'var(--text-3)' }}>
-                      Nenhuma UTM gerada neste canal ainda — clique em “+ Gerar UTM”.
+                      {carregando ? 'Carregando…' : 'Nenhuma UTM gerada neste canal ainda — clique em “+ Gerar UTM”.'}
                     </td></tr>
                   )}
                   {registros.map((u, i) => {
@@ -335,7 +339,9 @@ export default function UTMsPage({ params }: { params: Promise<{ clienteId: stri
                     <tr><td colSpan={7} className="px-4 py-8 text-center text-[12px]" style={{ color: 'var(--text-3)' }}>
                       {isDemo
                         ? 'Cliente demo — crie um cliente real e instale o snippet para detectar UTMs.'
-                        : 'Nenhum evento com UTM recebido ainda. Instale o snippet v4track.js no site do cliente.'}
+                        : carregando
+                          ? 'Carregando…'
+                          : 'Nenhum evento com UTM recebido ainda. Instale o snippet v4track.js no site do cliente.'}
                     </td></tr>
                   )}
                   {detectadas.map((d, i) => {

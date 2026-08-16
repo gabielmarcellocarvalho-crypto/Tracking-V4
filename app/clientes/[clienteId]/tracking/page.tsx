@@ -155,13 +155,13 @@ function EventLogTable({ eventId, logs }: { eventId: string; logs: Record<string
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function TrackingPage({ params }: { params: Promise<{ clienteId: string }> }) {
   const { clienteId } = use(params)
-  const { cliente, isDemo } = useCliente(clienteId)
+  const { cliente, isDemo, loading: loadingCliente } = useCliente(clienteId)
   const { range: periodo } = useDateRange()
   // Sempre inclui hoje no que é buscado, mesmo que o período selecionado não
   // cubra hoje (ex: "Ontem") — o card "Hoje" da Saúde dos Eventos depende
   // disso pra continuar correto independente do filtro.
   const desdeEventos = Math.min(periodo.start.getTime(), new Date().setHours(0, 0, 0, 0))
-  const { eventos } = useEventos(isDemo ? undefined : clienteId, { desde: desdeEventos, limite: 20000 })
+  const { eventos, loading: loadingEventos } = useEventos(isDemo ? undefined : clienteId, { desde: desdeEventos, limite: 20000 })
   const { conexoes } = useConexoes(isDemo ? undefined : clienteId)
 
   const usarDemo = isDemo
@@ -223,16 +223,32 @@ export default function TrackingPage({ params }: { params: Promise<{ clienteId: 
     }
   }, [dados.saude, selectedEventId])
 
+  // Enquanto cliente/eventos reais ainda estão chegando do Firestore, a
+  // seção inteira mostrava "0 eventos"/tudo offline por 1-3s — parecia
+  // tracking quebrado quando só estava carregando (bug real pego ao vivo).
+  const carregando = !usarDemo && (loadingCliente || loadingEventos)
+
   return (
     <>
       <style>{`
         @keyframes ping {
           75%, 100% { transform: scale(2); opacity: 0; }
         }
+        @keyframes pulse2 { 0%,100%{opacity:.5} 50%{opacity:.9} }
       `}</style>
 
       <DashboardHeader clienteName={cliente?.nome ?? clienteId} clienteTipo={cliente?.tipo} clienteId={isDemo ? undefined : clienteId} />
 
+      {carregando ? (
+        <main style={{ flex: 1, overflowY: 'auto', padding: 24, background: 'var(--bg-base)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} style={{ height: 90, borderRadius: 12, background: 'var(--bg-c)', border: '1px solid var(--br)', animation: 'pulse2 1.4s ease-in-out infinite', animationDelay: `${i * 0.07}s` }} />
+            ))}
+          </div>
+          <div style={{ height: 240, borderRadius: 12, background: 'var(--bg-c)', border: '1px solid var(--br)', animation: 'pulse2 1.4s ease-in-out infinite' }} />
+        </main>
+      ) : (
       <main style={{ flex: 1, overflowY: 'auto', padding: 24, background: 'var(--bg-base)', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
         {/* ── Page title + health summary ── */}
@@ -436,6 +452,7 @@ export default function TrackingPage({ params }: { params: Promise<{ clienteId: 
         </Card>
 
       </main>
+      )}
     </>
   )
 }

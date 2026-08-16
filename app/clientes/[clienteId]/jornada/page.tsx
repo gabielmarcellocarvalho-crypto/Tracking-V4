@@ -182,9 +182,9 @@ function CookieBadge({ label, value }: { label: string; value?: string }) {
 // ─── Main page ─────────────────────────────────────────────────────────────
 export default function JornadaPage({ params }: { params: Promise<{ clienteId: string }> }) {
   const { clienteId } = use(params)
-  const { cliente, isDemo } = useCliente(clienteId)
-  const { identidades } = useIdentidades(isDemo ? undefined : clienteId)
-  const { eventos } = useEventos(isDemo ? undefined : clienteId)
+  const { cliente, isDemo, loading: loadingCliente } = useCliente(clienteId)
+  const { identidades, loading: loadingIdentidades } = useIdentidades(isDemo ? undefined : clienteId)
+  const { eventos, loading: loadingEventos } = useEventos(isDemo ? undefined : clienteId)
   const [busca, setBusca] = useState('')
   const [tiposAtivos, setTiposAtivos] = useState<Set<EventoTipoFiltro>>(
     () => new Set(Object.keys(EVENTO_CONFIG) as EventoTipoFiltro[]),
@@ -252,6 +252,12 @@ export default function JornadaPage({ params }: { params: Promise<{ clienteId: s
     [usuario, tiposAtivos],
   )
 
+  // Enquanto identidades/eventos reais ainda estão chegando, essa tela
+  // mostrava "nenhuma jornada" por 1-3s antes do dado real aparecer —
+  // parecia bug quando só estava carregando (mesmo padrão achado ao vivo
+  // em Eventos/Performance).
+  const carregando = !usarDemo && (loadingCliente || loadingIdentidades || loadingEventos)
+
   if (!usuario) {
     return (
       <>
@@ -259,9 +265,11 @@ export default function JornadaPage({ params }: { params: Promise<{ clienteId: s
         <main className="flex-1 overflow-y-auto p-6" style={{ background: 'var(--bg-base)' }}>
           <h2 className="text-[18px] font-bold text-[--text-1]">Jornada do Usuário</h2>
           <p className="text-[12.5px] text-[--text-3] mt-4">
-            {usuarios.length === 0
-              ? 'Nenhuma jornada registrada ainda — instale o snippet v4track.js no site do cliente para começar a capturar.'
-              : 'Nenhum usuário bate com o filtro de status selecionado — tenta marcar outro status acima.'}
+            {carregando
+              ? 'Carregando jornadas…'
+              : usuarios.length === 0
+                ? 'Nenhuma jornada registrada ainda — instale o snippet v4track.js no site do cliente para começar a capturar.'
+                : 'Nenhum usuário bate com o filtro de status selecionado — tenta marcar outro status acima.'}
           </p>
         </main>
       </>

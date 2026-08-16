@@ -30,8 +30,11 @@ export interface DashboardHeaderProps {
   clienteId?: string
 }
 
-export default function DashboardHeader({ clienteName, clienteTipo = 'inside-sales', clienteId }: DashboardHeaderProps) {
-  const tipo = tipoConfig[clienteTipo]
+export default function DashboardHeader({ clienteName, clienteTipo, clienteId }: DashboardHeaderProps) {
+  // Sem tipo ainda (cliente real carregando via Firestore) — não inventa um
+  // default, senão pisca "INSIDE SALES" pra clientes ecommerce por 1-2s até
+  // o dado real chegar (bug real que o Gabriel pegou testando ao vivo).
+  const tipo = clienteTipo ? tipoConfig[clienteTipo] : undefined
   const { range: dateRange, setRange: setDateRange } = useDateRange()
 
   // gerarAlertas só olha os últimos 7 dias (mesmo default de agregarSaudeEventos
@@ -80,9 +83,11 @@ export default function DashboardHeader({ clienteName, clienteTipo = 'inside-sal
           <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--t1)' }}>
             Dashboard — {clienteName}
           </span>
-          <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '.06em', padding: '2px 7px', borderRadius: 4, background: tipo.bg, color: tipo.color }}>
-            {tipo.label}
-          </span>
+          {tipo && (
+            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '.06em', padding: '2px 7px', borderRadius: 4, background: tipo.bg, color: tipo.color }}>
+              {tipo.label}
+            </span>
+          )}
         </div>
       </div>
 
