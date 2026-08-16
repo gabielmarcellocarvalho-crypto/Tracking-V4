@@ -388,37 +388,28 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
                 <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--t1)', margin: 0 }}>
                   Performance
                 </h2>
-                <AnimatePresence mode="wait">
-                  <motion.span
-                    key={template}
-                    initial={{ opacity: 0, scale: 0.85, y: -4 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.85, y: 4 }}
-                    transition={{ duration: 0.18 }}
-                    style={{
-                      fontSize: 10, fontWeight: 700, padding: '2px 8px',
-                      borderRadius: 20, letterSpacing: '.04em',
-                      background: meta.color + '18',
-                      color: meta.color,
-                      border: `1px solid ${meta.color}30`,
-                    }}
-                  >
-                    {meta.label}
-                  </motion.span>
-                </AnimatePresence>
-              </div>
-              <AnimatePresence mode="wait">
-                <motion.p
-                  key={template + '-desc'}
-                  initial={{ opacity: 0, x: -6 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 6 }}
-                  transition={{ duration: 0.2 }}
-                  style={{ fontSize: 11.5, color: 'var(--t3)', margin: '2px 0 0' }}
+                {/* Sem AnimatePresence/motion aqui de propósito — com mode="wait"
+                    e troca rápida de key (ex: selecionar E-commerce logo depois de
+                    Personalizado), a animação de saída às vezes nunca completava e
+                    o badge ficava travado pra sempre no primeiro valor renderizado
+                    ("Leads", o default antes do tipo do cliente carregar), mesmo
+                    com o dashboard já mostrando outro template — bug real visto
+                    ao vivo. Um span simples sempre reflete o template atual. */}
+                <span
+                  style={{
+                    fontSize: 10, fontWeight: 700, padding: '2px 8px',
+                    borderRadius: 20, letterSpacing: '.04em',
+                    background: meta.color + '18',
+                    color: meta.color,
+                    border: `1px solid ${meta.color}30`,
+                  }}
                 >
-                  {meta.badge} — dados do período selecionado
-                </motion.p>
-              </AnimatePresence>
+                  {meta.label}
+                </span>
+              </div>
+              <p style={{ fontSize: 11.5, color: 'var(--t3)', margin: '2px 0 0' }}>
+                {meta.badge} — dados do período selecionado
+              </p>
             </div>
           </div>
 

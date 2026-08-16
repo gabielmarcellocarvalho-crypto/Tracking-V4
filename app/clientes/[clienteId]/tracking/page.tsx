@@ -98,7 +98,7 @@ function HealthSummary({ saude }: { saude: EventHealth[] }) {
 }
 
 // ── Drill-down event table ────────────────────────────────────────────────────
-function EventLogTable({ eventId, logs }: { eventId: string; logs: Record<string, EventLogItem[]> }) {
+function EventLogTable({ eventId, logs, periodoLabel }: { eventId: string; logs: Record<string, EventLogItem[]>; periodoLabel: string }) {
   const rows = logs[eventId] ?? []
   const hasProduct = rows.some(r => r.produto)
   const hasValor   = rows.some(r => r.valor)
@@ -106,7 +106,7 @@ function EventLogTable({ eventId, logs }: { eventId: string; logs: Record<string
   if (rows.length === 0) {
     return (
       <div style={{ padding: '32px', textAlign: 'center', color: 'var(--t3)', fontSize: 12 }}>
-        Nenhum evento registrado nas últimas 24h
+        Nenhum evento registrado em {periodoLabel}
       </div>
     )
   }
@@ -379,7 +379,7 @@ export default function TrackingPage({ params }: { params: Promise<{ clienteId: 
               <span style={{ fontSize: 12, fontWeight: 600, color: selectedEvent.color }}>{selectedEvent.label}</span>
               <span style={{ fontSize: 11, color: 'var(--t3)' }}>·</span>
               <span style={{ fontSize: 11, color: 'var(--t3)' }}>
-                {selectedEvent.countToday.toLocaleString('pt-BR')} eventos hoje
+                {selectedEvent.countPeriodo.toLocaleString('pt-BR')} eventos · {selectedEvent.periodoLabel}
               </span>
               <span style={{ fontSize: 11, color: 'var(--t3)' }}>· Último: {selectedEvent.lastFired}</span>
               {selectedEvent.alert && (
@@ -400,7 +400,7 @@ export default function TrackingPage({ params }: { params: Promise<{ clienteId: 
               exit={{ opacity: 0 }}
               transition={{ duration: 0.18 }}
             >
-              <EventLogTable eventId={selectedEventId} logs={dados.logs} />
+              <EventLogTable eventId={selectedEventId} logs={dados.logs} periodoLabel={periodo.label} />
             </motion.div>
           </AnimatePresence>
         </div>

@@ -83,7 +83,13 @@ export default function TemplateSelect({ value, onChange, permitidos }: Props) {
         <div style={{ flex: 1, height: 20, overflow: 'hidden', position: 'relative' }}>
           <div style={{
             display: 'flex', flexDirection: 'column', gap: 4,
-            transform: `translateY(calc(${selectedIndex * -100}% - ${selectedIndex * 4}px))`,
+            // Cada linha tem 20px + 4px de gap — desloca por linha em px fixo.
+            // Um % aqui é relativo à altura TOTAL da pilha (todas as opções),
+            // não de uma linha só: com uma lista filtrada (ex: só 2 opções pra
+            // cliente e-commerce), -100% empurrava o dobro do necessário e
+            // o texto selecionado saía inteiro da área visível (ficava em
+            // branco) — bug real visto com "Personalizado" pra cliente e-commerce.
+            transform: `translateY(${selectedIndex * -24}px)`,
             transition: 'transform .3s cubic-bezier(.4,0,.2,1)',
           }}>
             {options.map((opt) => (
