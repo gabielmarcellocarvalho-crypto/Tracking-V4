@@ -192,6 +192,13 @@
         transactionId: dados.transactionId || auto.transactionId,
       };
     }
+    // view_item fora do Shopify (sem auto-detecção nativa): usa o título da
+    // página como nome do produto por padrão, mesmo fallback que o Shopify
+    // já usa — funciona em qualquer plataforma sem precisar de dataLayer,
+    // então `v4track('view_item')` puro já basta na página de produto.
+    if (tipo === 'view_item' && !dados.produto) {
+      dados = { produto: document.title };
+    }
     var payload = {
       clienteId: CLIENTE,
       key: KEY,

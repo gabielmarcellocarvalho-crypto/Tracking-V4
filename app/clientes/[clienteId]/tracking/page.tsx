@@ -14,7 +14,6 @@ import { useEventos, useConexoes } from '@/lib/data/colecoes'
 import { useDateRange } from '@/lib/date-range-context'
 import { useMetaAdsGasto } from '@/lib/data/meta-ads-metrics'
 import { useGoogleAdsGasto } from '@/lib/data/google-ads-metrics'
-import { useGA4Dados } from '@/lib/data/ga4-metrics'
 import {
   agregarSaudeEventos, agregarVolume7Dias, agregarPorOrigem, agregarPaginas, agregarLogs,
   eventoTiposDoCliente,
@@ -179,11 +178,6 @@ export default function TrackingPage({ params }: { params: Promise<{ clienteId: 
   const { gasto: metaGasto } = useMetaAdsGasto(usarDemo || ecommerceConectado ? undefined : clienteId, periodo)
   const { gasto: googleGasto } = useGoogleAdsGasto(usarDemo || ecommerceConectado ? undefined : clienteId, periodo)
 
-  // GA4 prevalece sobre o snippet pro page_view do período quando conectado
-  // (nunca soma — troca a fonte; ver agregarSaudeEventos/agregarVolume7Dias).
-  const ga4Conectado = !usarDemo && conexoes.some((c) => c.id === 'ga4' && c.status === 'configurado')
-  const { dados: ga4Dados } = useGA4Dados(ga4Conectado ? clienteId : undefined, periodo)
-
   // Dados reais agregados dos eventos do Firestore — ou demo quando vazio.
   // Saúde do tracking fica de fora do filtro de período (é sobre "está
   // disparando agora", não sobre histórico); o resto respeita o período.
@@ -200,18 +194,21 @@ export default function TrackingPage({ params }: { params: Promise<{ clienteId: 
     const inicio = new Date(periodo.start).setHours(0, 0, 0, 0)
     const fim = new Date(periodo.end).setHours(23, 59, 59, 999)
     const noPeriodo = eventos.filter((e) => e.ts >= inicio && e.ts <= fim)
+    // Eventos mostra só o que vem dos próprios snippets (v4track), sem GA4
+    // misturado — GA4 fica isolado na aba Performance (decisão do Gabriel,
+    // pra essa tela refletir exatamente o que o snippet está capturando).
     return {
-      saude: agregarSaudeEventos(eventos, periodo, cliente?.tipo, ga4Dados ? { porDia: ga4Dados.porData } : undefined),
+      saude: agregarSaudeEventos(eventos, periodo, cliente?.tipo),
       volume: agregarVolume7Dias(eventos, periodo, {
         ecommerceConectado: !!ecommerceConectado,
         metaPorDia: metaGasto?.porData,
         googlePorDia: googleGasto?.porData,
-      }, ga4Dados ? { porDia: ga4Dados.porData } : undefined),
+      }),
       porOrigem: agregarPorOrigem(noPeriodo),
       paginas: agregarPaginas(noPeriodo),
       logs: agregarLogs(noPeriodo),
     }
-  }, [usarDemo, eventos, periodo, ecommerceConectado, metaGasto, googleGasto, cliente?.tipo, ga4Dados])
+  }, [usarDemo, eventos, periodo, ecommerceConectado, metaGasto, googleGasto, cliente?.tipo])
 
   const [selectedEventId, setSelectedEventId] = useState<string>('page_view')
   const selectedEvent = dados.saude.find(e => e.id === selectedEventId)

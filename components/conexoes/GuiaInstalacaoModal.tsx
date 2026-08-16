@@ -28,14 +28,21 @@ function montarPassos(): Passo[] {
   const stub = `window.v4track = window.v4track || function(){(window.v4trackQueue = window.v4trackQueue || []).push(arguments)}`
   return [
     {
-      titulo: '1. Checkout — cole na página de checkout',
+      titulo: '1. View Item — cole na página de produto',
+      onde: 'A página de detalhe de cada produto (ex: /produto/nome-do-produto). Não precisa numa página só — cole no template que todo produto usa.',
+      cor: '#06B6D4',
+      codigo: `<script>\n  ${stub}\n  v4track('view_item')\n</script>`,
+      extra: 'Usa o título da página como nome do produto automaticamente — não precisa configurar nada. Se preferir passar na mão: v4track(\'view_item\', { produto: \'Nome do Produto\' }).',
+    },
+    {
+      titulo: '2. Checkout — cole na página de checkout',
       onde: 'Ex: /checkout, /finalizar-compra — dispara assim que o cliente entra nessa página.',
       cor: '#8B5CF6',
       codigo: `<script>\n  ${stub}\n  v4track('checkout')\n</script>`,
       extra: 'Tenta puxar o valor do carrinho sozinho, via window.dataLayer (se o site já tiver GA4/GTM configurado). Se preferir passar na mão: v4track(\'checkout\', { valor: 199.90 }).',
     },
     {
-      titulo: '2. Compra — cole na página de pedido confirmado',
+      titulo: '3. Compra — cole na página de pedido confirmado',
       onde: 'Ex: "Pedido realizado com sucesso" / "Obrigado pela compra" — a página que só carrega depois do pagamento aprovado.',
       cor: '#F59E0B',
       codigo: `<script>\n  ${stub}\n  v4track('compra')\n</script>`,
@@ -101,12 +108,12 @@ export default function GuiaInstalacaoModal({ onClose }: { onClose: () => void }
           {/* Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
             <h3 style={{ fontSize: 17, fontWeight: 700, color: 'var(--t1)', margin: 0 }}>
-              Instalar Checkout e Compra
+              Instalar View Item, Checkout e Compra
             </h3>
             <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--t3)', fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>×</button>
           </div>
           <p style={{ fontSize: 12, color: 'var(--t3)', margin: '0 0 20px', lineHeight: 1.6 }}>
-            O snippet já rastreia page_view sozinho, mas checkout e compra precisam desse código colado na página certa do site — sem isso, esses dois continuam aparecendo zerados mesmo com venda real acontecendo.
+            O snippet já rastreia page_view sozinho, mas view_item, checkout e compra precisam desse código colado na página certa do site — sem isso, esses três continuam aparecendo zerados mesmo com venda real acontecendo.
           </p>
 
           {/* Passos */}
