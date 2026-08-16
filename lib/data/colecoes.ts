@@ -5,8 +5,8 @@
 import {
   addDoc, collection, deleteDoc, doc, onSnapshot, setDoc, serverTimestamp, updateDoc,
 } from 'firebase/firestore'
-import { useEffect, useMemo, useState } from 'react'
-import { db } from '@/lib/firebase'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { auth, db } from '@/lib/firebase'
 import { useSubcolecao } from './firestore-hooks'
 import type {
   Evento, Identidade, UTMRegistro, Conversao, Integration, IntegrationPlataforma, Insight,
@@ -33,16 +33,58 @@ function useDadosIgnoradosAte(clienteId: string | undefined) {
   return corte
 }
 
-// `desde` limita a query no próprio Firestore (where ts >= desde) — sem isso,
+// `desde` limita a query no próprio servidor (where ts >= desde) — sem isso,
 // um cliente de alto volume estoura o `limite` antes de alcançar o período
 // que a tela pediu, e o filtro de data (30/90 dias etc.) fica silenciosamente
 // truncado no mesmo teto de "hoje" (bug real, achado testando Hanoi Editora).
+//
+// Busca via /api/eventos (servidor, firebase-admin) em vez de onSnapshot
+// direto do navegador — achado ao vivo (2026-08, testando com o Gabriel):
+// em algumas máquinas/redes, o canal de tempo real do Firestore no
+// navegador entra em loop de reconexão e nunca entrega o primeiro
+// snapshot, mesmo com dado real existindo (confirmado: um listener em
+// tempo real via admin SDK, fora do navegador, conecta normal na mesma
+// máquina). Uma chamada HTTP simples não sofre desse problema. Perde a
+// atualização instantânea de antes — reforçado com um poll leve.
+const POLL_MS = 30_000
+
 export function useEventos(clienteId: string | undefined, opts?: { limite?: number; desde?: number }) {
-  const { docs, loading, isDemo } = useSubcolecao<Evento>(clienteId, 'eventos', {
-    ordenarPor: 'ts', desc: true, limite: opts?.limite ?? 2000, desde: opts?.desde,
-  })
+  const [docs, setDocs] = useState<Evento[]>([])
+  const [loading, setLoading] = useState(true)
+  const limite = opts?.limite ?? 2000
+  const desde = opts?.desde
+
+  const buscar = useCallback(async (cancelRef: { cancelado: boolean }) => {
+    if (!clienteId) { setDocs([]); setLoading(false); return }
+    try {
+      const idToken = await auth.currentUser?.getIdToken()
+      if (!idToken) return
+      const qs = new URLSearchParams({ limite: String(limite) })
+      if (desde !== undefined) qs.set('desde', String(desde))
+      const res = await fetch(`/api/eventos/${clienteId}?${qs.toString()}`, {
+        headers: { Authorization: `Bearer ${idToken}` },
+      })
+      const json = await res.json()
+      if (cancelRef.cancelado) return
+      setDocs(json.ok ? (json.eventos as Evento[]) : [])
+    } catch {
+      if (!cancelRef.cancelado) setDocs([])
+    } finally {
+      if (!cancelRef.cancelado) setLoading(false)
+    }
+  }, [clienteId, limite, desde])
+
+  useEffect(() => {
+    const cancelRef = { cancelado: false }
+    setLoading(true)
+    buscar(cancelRef)
+    const intervalo = setInterval(() => buscar(cancelRef), POLL_MS)
+    return () => { cancelRef.cancelado = true; clearInterval(intervalo) }
+  }, [buscar])
+
   const corte = useDadosIgnoradosAte(clienteId)
   const eventos = useMemo(() => (corte ? docs.filter((e) => e.ts > corte) : docs), [docs, corte])
+  const isDemo = !loading && eventos.length === 0
   return { eventos, loading, isDemo }
 }
 
