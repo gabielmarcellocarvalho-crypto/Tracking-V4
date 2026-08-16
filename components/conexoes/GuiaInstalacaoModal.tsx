@@ -7,26 +7,29 @@ interface Passo {
   titulo: string
   onde: string
   codigo: string
+  extra: string
   cor: string
 }
 
-// Os valores abaixo (189.90, e-mail, nome do produto) são só exemplo pra
-// mostrar o formato — na página real, troque pela variável dinâmica que a
-// plataforma do site já expõe pro valor/e-mail/produto daquele pedido
-// específico (cada plataforma expõe isso de um jeito diferente).
+// Código pronto pra colar sem editar nada — v4track aceita chamar sem
+// nenhum campo (registra só o evento). Valor/e-mail/produto são opcionais
+// e ficam explicados fora do bloco de código, não dentro dele, pra nunca
+// precisar apagar um placeholder antes de colar.
 function montarPassos(): Passo[] {
   return [
     {
       titulo: '1. Checkout — cole na página de checkout',
       onde: 'Ex: /checkout, /finalizar-compra — dispara assim que o cliente entra nessa página.',
       cor: '#8B5CF6',
-      codigo: `<script>\n  v4track('checkout', {\n    valor: 189.90  // exemplo — troque pelo valor real do carrinho\n  })\n</script>`,
+      codigo: `<script>\n  v4track('checkout')\n</script>`,
+      extra: 'Quer enriquecer com o valor do carrinho? Troque por v4track(\'checkout\', { valor: SEU_VALOR_AQUI }) usando a variável de valor que a própria plataforma do site já expõe naquela página.',
     },
     {
       titulo: '2. Compra — cole na página de pedido confirmado',
       onde: 'Ex: "Pedido realizado com sucesso" / "Obrigado pela compra" — a página que só carrega depois do pagamento aprovado.',
       cor: '#F59E0B',
-      codigo: `<script>\n  v4track('compra', {\n    email: 'cliente@email.com',      // exemplo — e-mail real do pedido\n    valor: 189.90,                    // exemplo — valor real do pedido\n    produto: 'Nome do Produto',       // exemplo — nome real do produto\n    transactionId: 'PEDIDO123'        // id real do pedido — evita contar 2x\n  })\n</script>`,
+      codigo: `<script>\n  v4track('compra')\n</script>`,
+      extra: 'Quer enriquecer com e-mail/valor/produto/nº do pedido? Troque por v4track(\'compra\', { email, valor, produto, transactionId }) usando as variáveis reais que a plataforma do site expõe nessa página.',
     },
   ]
 }
@@ -103,6 +106,7 @@ export default function GuiaInstalacaoModal({ onClose }: { onClose: () => void }
                 <p style={{ fontSize: 13.5, fontWeight: 700, color: p.cor, margin: '0 0 3px' }}>{p.titulo}</p>
                 <p style={{ fontSize: 11.5, color: 'var(--t3)', margin: '0 0 8px', lineHeight: 1.5 }}>{p.onde}</p>
                 <BlocoCodigo codigo={p.codigo} cor={p.cor} />
+                <p style={{ fontSize: 10.5, color: 'var(--t3)', margin: '7px 0 0', lineHeight: 1.5, fontStyle: 'italic' }}>{p.extra}</p>
               </div>
             ))}
           </div>
