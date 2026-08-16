@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from 'react'
 import DashboardHeader from '@/components/tracking/DashboardHeader'
+import GuiaInstalacaoModal from '@/components/conexoes/GuiaInstalacaoModal'
 import { useCliente, definirCorteDados, definirEcommercePlataforma } from '@/lib/data/partners'
 import { useConexoes, salvarConexao } from '@/lib/data/colecoes'
 import { useMetaIntegration } from '@/lib/data/meta-integration'
@@ -634,6 +635,7 @@ export default function ConexoesPage({ params }: { params: Promise<{ clienteId: 
   const [copiado, setCopiado] = useState(false)
   const [aplicandoCorte, setAplicandoCorte] = useState(false)
   const [trocandoPlataforma, setTrocandoPlataforma] = useState(false)
+  const [guiaAberto, setGuiaAberto] = useState(false)
 
   const handleTrocarPlataforma = async (nova: EcommercePlataforma) => {
     if (nova === cliente?.ecommercePlataforma) return
@@ -721,7 +723,25 @@ export default function ConexoesPage({ params }: { params: Promise<{ clienteId: 
             <code style={{ color: '#F59E0B' }}>v4track(&apos;compra&apos;, {'{ email, valor, produto }'})</code>
             {' '}— também aceita POST direto em <code style={{ color: 'var(--t2)' }}>/api/track</code> (webhooks/n8n).
           </p>
+          <button
+            onClick={() => setGuiaAberto(true)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, marginTop: 12,
+              padding: '8px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+              background: 'var(--bg-base)', border: '1px solid var(--border)', color: 'var(--t2)',
+              cursor: 'pointer', transition: 'all .15s',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--red)'; e.currentTarget.style.color = 'var(--red)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--t2)' }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" width={13} height={13}>
+              <circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" />
+            </svg>
+            Ver guia: onde instalar Checkout e Compra
+          </button>
         </div>
+
+        {guiaAberto && <GuiaInstalacaoModal onClose={() => setGuiaAberto(false)} />}
 
         {/* Plataformas */}
         <div>
