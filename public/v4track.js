@@ -109,30 +109,60 @@
   }
 
   // ── Auto-detecção de valor/produto/e-mail via dataLayer (GA4/GTM) ──────────
-  // Muitos sites já populam window.dataLayer com eventos padrão de e-commerce
-  // (purchase/begin_checkout, schema do GA4 Enhanced Ecommerce) pra alimentar
-  // o próprio GA4/GTM do cliente — lemos isso passivamente, sem exigir nada
-  // extra do site. Se não achar nada (site sem dataLayer configurado desse
-  // jeito), segue sem esses campos — best-effort, nunca quebra o disparo.
+  // Muitos sites já populam window.dataLayer com eventos de e-commerce pra
+  // alimentar o próprio GA4/GTM do cliente — lemos isso passivamente, sem
+  // exigir nada extra do site. Cobre os 3 formatos mais comuns encontrados
+  // na prática (confirmado ao vivo no dataLayer real da Loja Integrada, que
+  // usa o formato 2 — "checkout"/ecommerce.checkout.products[], não o nome
+  // GA4 "begin_checkout"): se não achar nenhum, segue sem esses campos —
+  // best-effort, nunca quebra o disparo.
   function autoDetectarEcommerce(tipo) {
     var achado = {};
     try {
       var dl = window.dataLayer;
       if (!dl || !dl.length) return achado;
-      var eventoAlvo = tipo === 'compra' ? 'purchase' : 'begin_checkout';
+      var nomesEvento = tipo === 'compra'
+        ? ['purchase', 'compra']
+        : ['begin_checkout', 'checkout'];
+
       for (var i = dl.length - 1; i >= 0; i--) {
         var item = dl[i];
         if (!item || typeof item !== 'object') continue;
+        var ehEventoAlvo = nomesEvento.indexOf(item.event) !== -1;
 
-        // GA4 Enhanced Ecommerce: { event:'purchase', ecommerce:{ value, transaction_id, items:[...] } }
-        if (item.event === eventoAlvo && item.ecommerce) {
+        // Formato 1 — GA4 Enhanced Ecommerce: ecommerce:{ value, transaction_id, items:[{item_name}] }
+        if (ehEventoAlvo && item.ecommerce && typeof item.ecommerce.value !== 'undefined') {
           var ec = item.ecommerce;
           if (typeof ec.value === 'number' && achado.valor === undefined) achado.valor = ec.value;
           if (ec.transaction_id && achado.transactionId === undefined) achado.transactionId = String(ec.transaction_id);
           if (ec.items && ec.items[0] && ec.items[0].item_name && achado.produto === undefined) achado.produto = ec.items[0].item_name;
         }
 
-        // Universal Analytics clássico: { transactionId, transactionTotal }
+        // Formato 2 — Universal Analytics Enhanced Ecommerce (aninhado sob
+        // "checkout"/"purchase", com actionField.id/revenue + products[{name,price,quantity}]).
+        // Loja Integrada usa exatamente isso, confirmado com dataLayer real.
+        var secao = item.ecommerce && (item.ecommerce[tipo === 'compra' ? 'purchase' : 'checkout']);
+        if (secao) {
+          var af = secao.actionField || {};
+          if (af.id && achado.transactionId === undefined) achado.transactionId = String(af.id);
+          if (typeof af.revenue !== 'undefined' && achado.valor === undefined) achado.valor = Number(af.revenue);
+          if (secao.products && secao.products[0]) {
+            if (secao.products[0].name && achado.produto === undefined) achado.produto = secao.products[0].name;
+            // Sem revenue explícito (comum no passo de checkout, antes de
+            // fechar o pedido) — soma preço × quantidade dos produtos do carrinho.
+            if (achado.valor === undefined) {
+              var soma = 0, achouPreco = false;
+              for (var j = 0; j < secao.products.length; j++) {
+                var preco = Number(secao.products[j].price);
+                var qtd = Number(secao.products[j].quantity) || 1;
+                if (!isNaN(preco)) { soma += preco * qtd; achouPreco = true; }
+              }
+              if (achouPreco) achado.valor = soma;
+            }
+          }
+        }
+
+        // Formato 3 — Universal Analytics clássico (plano, sem aninhar): transactionId/transactionTotal
         if (typeof item.transactionTotal !== 'undefined' && achado.valor === undefined) achado.valor = Number(item.transactionTotal);
         if (item.transactionId && achado.transactionId === undefined) achado.transactionId = String(item.transactionId);
 
