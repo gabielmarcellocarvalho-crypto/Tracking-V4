@@ -299,6 +299,11 @@ export default function TrackingPage({ params }: { params: Promise<{ clienteId: 
                   <Line type="monotone" dataKey="compra"    name="Compra"    stroke="#EF4444" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />}
               </LineChart>
             </ResponsiveContainer>
+            {!usarDemo && !ecommerceConectado && (tiposVisiveis.has('checkout') || tiposVisiveis.has('compra')) && (
+              <p style={{ fontSize: 10.5, color: 'var(--t3)', margin: '8px 0 0', lineHeight: 1.5 }}>
+                * Checkout/Compra aproximados via mídia paga (Meta/Google Ads) — o e-commerce ainda não está conectado, então o gráfico usa o que as próprias plataformas de anúncio reportaram de conversão nesses dias. Conecte o e-commerce em Conexões pra ver o dado real do site.
+              </p>
+            )}
           </Card>
 
           {/* Por fonte */}
