@@ -51,7 +51,15 @@ function useFiltrosEventos(clienteId: string | undefined) {
 // tempo real via admin SDK, fora do navegador, conecta normal na mesma
 // máquina). Uma chamada HTTP simples não sofre desse problema. Perde a
 // atualização instantânea de antes — reforçado com um poll leve.
-const POLL_MS = 30_000
+//
+// Custo real: onSnapshot ia direto navegador→Firestore (grátis, fora do
+// Vercel); poll passa por função serverless a cada tick — com abas
+// esquecidas abertas o dia todo, isso vira consumo real de Function
+// Duration (achado ao vivo: tracking-v4 pulou pra 83% do uso da conta
+// horas depois desse fix). Mitigado com intervalo mais longo + pausa
+// quando a aba está em segundo plano (Page Visibility) — sem isso, uma
+// aba esquecida aberta soma centenas de chamadas por dia à toa.
+const POLL_MS = 90_000
 
 export function useEventos(clienteId: string | undefined, opts?: { limite?: number; desde?: number }) {
   const [docs, setDocs] = useState<Evento[]>([])
@@ -83,8 +91,19 @@ export function useEventos(clienteId: string | undefined, opts?: { limite?: numb
     const cancelRef = { cancelado: false }
     setLoading(true)
     buscar(cancelRef)
-    const intervalo = setInterval(() => buscar(cancelRef), POLL_MS)
-    return () => { cancelRef.cancelado = true; clearInterval(intervalo) }
+    // Só repete enquanto a aba está em primeiro plano — aba em segundo
+    // plano não gasta chamada nenhuma; ao voltar o foco, busca na hora
+    // (não espera o próximo tick) pra não ficar com dado velho.
+    const intervalo = setInterval(() => {
+      if (document.visibilityState === 'visible') buscar(cancelRef)
+    }, POLL_MS)
+    const aoFocar = () => { if (document.visibilityState === 'visible') buscar(cancelRef) }
+    document.addEventListener('visibilitychange', aoFocar)
+    return () => {
+      cancelRef.cancelado = true
+      clearInterval(intervalo)
+      document.removeEventListener('visibilitychange', aoFocar)
+    }
   }, [buscar])
 
   const { corte, excluidos } = useFiltrosEventos(clienteId)
