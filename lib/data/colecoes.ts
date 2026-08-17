@@ -55,11 +55,15 @@ function useFiltrosEventos(clienteId: string | undefined) {
 // Custo real: onSnapshot ia direto navegador→Firestore (grátis, fora do
 // Vercel); poll passa por função serverless a cada tick — com abas
 // esquecidas abertas o dia todo, isso vira consumo real de Function
-// Duration (achado ao vivo: tracking-v4 pulou pra 83% do uso da conta
-// horas depois desse fix). Mitigado com intervalo mais longo + pausa
-// quando a aba está em segundo plano (Page Visibility) — sem isso, uma
-// aba esquecida aberta soma centenas de chamadas por dia à toa.
-const POLL_MS = 90_000
+// Duration E Origin Transfer (cada resposta pode ter milhares de eventos
+// em JSON). Achado ao vivo: horas depois desse fix, o projeto sozinho já
+// tinha estourado o limite do plano Vercel (Fast Origin Transfer 33GB/10GB,
+// Fluid Active CPU 6h41m/4h) e o site ficou fora do ar (402 Payment
+// Required) até fazer upgrade do plano. Mitigado com intervalo bem mais
+// espaçado + pausa quando a aba está em segundo plano (Page Visibility) —
+// sem isso, uma aba esquecida aberta soma centenas de chamadas por dia à
+// toa, cada uma potencialmente MBs de JSON.
+const POLL_MS = 5 * 60_000
 
 export function useEventos(clienteId: string | undefined, opts?: { limite?: number; desde?: number }) {
   const [docs, setDocs] = useState<Evento[]>([])
