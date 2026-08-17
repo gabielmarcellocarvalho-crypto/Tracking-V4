@@ -116,11 +116,14 @@ async function montarContexto(clienteId: string): Promise<string | null> {
     buscarMidiaPagaGoogle(clienteId, inicioPeriodo, fimPeriodo),
   ])
 
-  // Mesmo corte de dados aplicado em useEventos (client) — eventos anteriores
-  // a um reset de plataforma (ex: Shopify → loja integrada) não devem
-  // contaminar a análise do agente.
+  // Mesmos filtros aplicados em useEventos (client) — eventos anteriores a um
+  // reset de plataforma (ex: Shopify → loja integrada), ou de visitantes
+  // marcados "desconsiderar" (teste do próprio time), não devem contaminar
+  // a análise do agente.
   const corte = cliente.dadosIgnoradosAte ?? 0
-  const eventos = eventosSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Evento).filter((e) => e.ts > corte)
+  const excluidos = new Set(cliente.identidadesDesconsideradas ?? [])
+  const eventos = eventosSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Evento)
+    .filter((e) => e.ts > corte && !excluidos.has(e.visitorId))
   const identidades = identidadesSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Identidade)
   const conversoes = conversoesSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Conversao)
 

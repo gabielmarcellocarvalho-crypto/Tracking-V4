@@ -5,7 +5,7 @@ import DashboardHeader from '@/components/tracking/DashboardHeader'
 import NotesPad from '@/components/jornada/NotesPad'
 
 import { usuariosJornada, type EventoJornada, type UsuarioJornada } from '@/lib/demo-data'
-import { useCliente } from '@/lib/data/partners'
+import { useCliente, alternarDesconsiderarIdentidade } from '@/lib/data/partners'
 import { useEventos, useIdentidades } from '@/lib/data/colecoes'
 import { identidadeParaUsuarioJornada } from '@/lib/data/agregacoes'
 
@@ -219,6 +219,7 @@ export default function JornadaPage({ params }: { params: Promise<{ clienteId: s
   }
 
   const usarDemo = isDemo
+  const desconsiderados = useMemo(() => new Set(cliente?.identidadesDesconsideradas ?? []), [cliente?.identidadesDesconsideradas])
 
   // Jornadas reais (identidades unificadas + eventos) ou demo
   const usuarios = useMemo<UsuarioJornada[]>(() => {
@@ -310,7 +311,7 @@ export default function JornadaPage({ params }: { params: Promise<{ clienteId: s
             >
               {filtrados.map((u) => (
                 <option key={u.id} value={u.id}>
-                  {u.emailMasked} — {STATUS_CONFIG[u.status].label}{u.valor ? ` · R$ ${u.valor.toFixed(2)}` : ''}
+                  {desconsiderados.has(u.id) ? '🚫 ' : ''}{u.email} — {STATUS_CONFIG[u.status].label}{u.valor ? ` · R$ ${u.valor.toFixed(2)}` : ''}
                 </option>
               ))}
             </select>
@@ -319,13 +320,32 @@ export default function JornadaPage({ params }: { params: Promise<{ clienteId: s
             </svg>
           </div>
 
-          <span className="px-[9px] py-[4px] rounded-full text-[11px] font-bold" style={{ background: status.bg, color: status.color }}>
-            {status.label}
+          <span
+            className="px-[9px] py-[4px] rounded-full text-[11px] font-bold"
+            style={desconsiderados.has(usuario.id)
+              ? { background: 'rgba(107,114,128,.15)', color: 'var(--text-3)' }
+              : { background: status.bg, color: status.color }}
+          >
+            {desconsiderados.has(usuario.id) ? 'Desconsiderado' : status.label}
           </span>
           {usuario.valor && (
-            <span className="text-[13px] font-semibold" style={{ color: '#10B981' }}>
+            <span className="text-[13px] font-semibold" style={{ color: desconsiderados.has(usuario.id) ? 'var(--text-3)' : '#10B981' }}>
               R$ {usuario.valor.toFixed(2)}
             </span>
+          )}
+          {!usarDemo && (
+            <button
+              onClick={() => alternarDesconsiderarIdentidade(clienteId, usuario.id, !desconsiderados.has(usuario.id))}
+              title={desconsiderados.has(usuario.id)
+                ? 'Voltar a contar esse usuário nas métricas'
+                : 'Não contar esse usuário em nenhuma métrica (ex: teste do próprio time)'}
+              className="ml-auto px-3 py-[6px] rounded-[8px] text-[11.5px] font-semibold cursor-pointer transition-all duration-150"
+              style={desconsiderados.has(usuario.id)
+                ? { background: 'rgba(16,185,129,.1)', border: '1px solid rgba(16,185,129,.3)', color: '#10B981' }
+                : { background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-3)' }}
+            >
+              {desconsiderados.has(usuario.id) ? '↺ Reconsiderar' : '🚫 Desconsiderar'}
+            </button>
           )}
         </div>
 

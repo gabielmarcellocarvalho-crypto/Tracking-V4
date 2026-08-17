@@ -36,6 +36,14 @@ export interface Partner {
    * continuam lá, só param de entrar nas contas a partir desse corte.
    */
   dadosIgnoradosAte?: number
+  /**
+   * visitorIds (Identidade.id) marcados como "desconsiderar" pelo gestor —
+   * geralmente teste do próprio time (ex: gerar um PIX de teste sem pagar).
+   * Eventos desses visitantes são excluídos de TODOS os cálculos (mesmo
+   * escopo de `dadosIgnoradosAte`), sem apagar nada do Firestore — dá pra
+   * desmarcar e voltar a contar. Alternado em Jornada do Usuário.
+   */
+  identidadesDesconsideradas?: string[]
 }
 
 // ── Evento ────────────────────────────────────────────────────────────────────

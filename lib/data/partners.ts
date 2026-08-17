@@ -7,7 +7,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import {
-  collection, doc, onSnapshot, setDoc, serverTimestamp,
+  arrayRemove, arrayUnion, collection, doc, onSnapshot, setDoc, serverTimestamp,
 } from 'firebase/firestore'
 import { db, auth } from '@/lib/firebase'
 import type { Partner, PartnerTipo, EcommercePlataforma } from '@/lib/types'
@@ -122,6 +122,21 @@ export async function definirEcommercePlataforma(clienteId: string, plataforma: 
  */
 export async function definirCorteDados(clienteId: string, timestamp: number | null) {
   await setDoc(doc(db, 'partners', clienteId), { dadosIgnoradosAte: timestamp }, { merge: true })
+}
+
+/**
+ * Marca/desmarca um visitante (Identidade.id) como "desconsiderar" — eventos
+ * dele somem de todos os cálculos (mesmo mecanismo de `definirCorteDados`,
+ * ver `identidadesDesconsideradas` em `lib/types.ts`), sem apagar nada do
+ * Firestore. Usado pra teste do próprio time (ex: gerar PIX sem pagar) que
+ * não deve poluir métrica real. Alternado em Jornada do Usuário.
+ */
+export async function alternarDesconsiderarIdentidade(clienteId: string, visitorId: string, desconsiderar: boolean) {
+  await setDoc(
+    doc(db, 'partners', clienteId),
+    { identidadesDesconsideradas: desconsiderar ? arrayUnion(visitorId) : arrayRemove(visitorId) },
+    { merge: true },
+  )
 }
 
 /**

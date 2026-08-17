@@ -16,21 +16,26 @@ import type {
 import type { GrowthPackCanal } from './agregacoes'
 
 // ── Eventos ───────────────────────────────────────────────────────────────────
-// Filtra pelo corte de dados do cliente (partners/{id}.dadosIgnoradosAte) —
+// Filtra pelo corte de dados (partners/{id}.dadosIgnoradosAte) e por
+// visitantes marcados "desconsiderar" (identidadesDesconsideradas) —
 // centralizado aqui pra nenhum consumidor (Growth Pack, Performance, Agente
-// IA, alertas) precisar lembrar de aplicar esse filtro na mão.
-function useDadosIgnoradosAte(clienteId: string | undefined) {
+// IA, alertas) precisar lembrar de aplicar esses filtros na mão.
+function useFiltrosEventos(clienteId: string | undefined) {
   const [corte, setCorte] = useState<number | null>(null)
+  const [excluidos, setExcluidos] = useState<Set<string>>(new Set())
   useEffect(() => {
-    if (!clienteId) { setCorte(null); return }
+    if (!clienteId) { setCorte(null); setExcluidos(new Set()); return }
     const unsub = onSnapshot(
       doc(db, 'partners', clienteId),
-      (snap) => setCorte(snap.data()?.dadosIgnoradosAte ?? null),
-      () => setCorte(null),
+      (snap) => {
+        setCorte(snap.data()?.dadosIgnoradosAte ?? null)
+        setExcluidos(new Set((snap.data()?.identidadesDesconsideradas as string[] | undefined) ?? []))
+      },
+      () => { setCorte(null); setExcluidos(new Set()) },
     )
     return unsub
   }, [clienteId])
-  return corte
+  return { corte, excluidos }
 }
 
 // `desde` limita a query no próprio servidor (where ts >= desde) — sem isso,
@@ -82,8 +87,11 @@ export function useEventos(clienteId: string | undefined, opts?: { limite?: numb
     return () => { cancelRef.cancelado = true; clearInterval(intervalo) }
   }, [buscar])
 
-  const corte = useDadosIgnoradosAte(clienteId)
-  const eventos = useMemo(() => (corte ? docs.filter((e) => e.ts > corte) : docs), [docs, corte])
+  const { corte, excluidos } = useFiltrosEventos(clienteId)
+  const eventos = useMemo(
+    () => docs.filter((e) => (!corte || e.ts > corte) && !excluidos.has(e.visitorId)),
+    [docs, corte, excluidos],
+  )
   const isDemo = !loading && eventos.length === 0
   return { eventos, loading, isDemo }
 }
