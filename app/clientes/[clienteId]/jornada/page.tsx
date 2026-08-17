@@ -311,7 +311,7 @@ export default function JornadaPage({ params }: { params: Promise<{ clienteId: s
             >
               {filtrados.map((u) => (
                 <option key={u.id} value={u.id}>
-                  {desconsiderados.has(u.id) ? '🚫 ' : ''}{u.email} — {STATUS_CONFIG[u.status].label}{u.valor ? ` · R$ ${u.valor.toFixed(2)}` : ''}
+                  {desconsiderados.has(u.id) ? '🚫 ' : ''}{u.email || `visitante ${u.id.slice(0, 6)}`} — {STATUS_CONFIG[u.status].label}{u.valor ? ` · R$ ${u.valor.toFixed(2)}` : ''}
                 </option>
               ))}
             </select>
