@@ -176,8 +176,27 @@
     return achado;
   }
 
+  // Compra em página de "aguardando pagamento" (ex: PIX/boleto) pode ser
+  // revisitada/recarregada várias vezes pela mesma pessoa enquanto o
+  // pagamento não confirma — sem trava, cada recarregada dispara uma
+  // "compra" nova pro mesmo pedido (achado ao vivo: 1 pedido real virou 3
+  // eventos de compra na Hanoi Editora, todos na mesma página). A URL da
+  // finalização já identifica o pedido univocamente na maioria das
+  // plataformas (ex: /checkout/19242/finalizacao), então usa isso como
+  // chave — persiste entre recarregamentos (localStorage), então não
+  // depende de manter a aba aberta.
+  function jaEnviouCompraNessaPagina() {
+    try {
+      var chave = 'v4track_compra_' + location.pathname;
+      if (localStorage.getItem(chave)) return true;
+      localStorage.setItem(chave, String(Date.now()));
+      return false;
+    } catch (e) { return false; }
+  }
+
   // ── Envio ──────────────────────────────────────────────────────────────────
   function enviar(tipo, dados) {
+    if (tipo === 'compra' && jaEnviouCompraNessaPagina()) return;
     dados = dados || {};
     // Checkout/compra tentam se auto-completar via dataLayer — campo passado
     // na mão sempre tem prioridade sobre o que foi auto-detectado.
