@@ -212,7 +212,13 @@ export function agregarVolume7Dias(
     const pageView = ga4 ? somarPeriodoMap(ga4.porDia, inicio, fim - 1) : doDia.filter((e) => e.tipo === 'page_view').length
 
     dias.push({
-      dia: agrupaPorSemana
+      // Nome de dia da semana ("Ter", "Qua"...) só é seguro pra janelas de
+      // até 7 dias -- em janelas maiores ele se repete (ex: 30 dias tem
+      // "Qua" umas 4 vezes), e o Recharts confunde os pontos duplicados
+      // no hover, mostrando o tooltip errado (achado ao vivo testando com
+      // o Gabriel: parava num pico alto e o tooltip mostrava "0" de um dia
+      // completamente diferente). dd/mm é sempre único.
+      dia: totalDias > 7
         ? `${new Date(inicio).getDate().toString().padStart(2, '0')}/${(new Date(inicio).getMonth() + 1).toString().padStart(2, '0')}`
         : DIAS_SEMANA[new Date(inicio).getDay()],
       page_view: pageView,
@@ -385,7 +391,10 @@ export function agregarPerformance(eventos: Evento[], janela: JanelaPeriodo | nu
     const doPeriodo = periodo.filter((e) => e.ts >= inicio && e.ts < fim)
     const dataInicio = new Date(inicio)
     diario.push({
-      dia: agrupaPorSemana
+      // Mesmo motivo do agregarVolume7Dias: nome de dia da semana só é
+      // único até 7 dias -- em janelas maiores, dd/mm evita o Recharts
+      // confundir pontos duplicados no hover.
+      dia: totalDias > 7
         ? `${dataInicio.getDate().toString().padStart(2, '0')}/${(dataInicio.getMonth() + 1).toString().padStart(2, '0')}`
         : DIAS_SEMANA[dataInicio.getDay()],
       // Início do bucket em YYYY-MM-DD — usado pra casar com gasto real de
