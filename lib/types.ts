@@ -267,6 +267,20 @@ export interface PlanoMidiaConfigMes {
   fatorPosImposto: number // decimal, ex: 0.8718 = deduz 12,82%
 }
 
+// ── Forecasting (Gestor de Mídia) — doc raiz em partners/{id}/forecasting_config/main ─
+// % de variação aplicado sobre o Plano de Mídia pra gerar os cenários
+// Pessimista/Otimista — Realista é o Plano de Mídia como está, sem ajuste.
+// Ex: pessimista.deltaCtr = -0.15 → CTR 15% pior que o planejado.
+export interface ForecastingCenarioDelta {
+  deltaCtr: number
+  deltaConversao: number
+}
+export interface ForecastingCenarios {
+  pessimista: ForecastingCenarioDelta
+  otimista: ForecastingCenarioDelta
+  atualizadoEm?: number
+}
+
 // ── Metas de KPI (Gestor de Mídia) — doc raiz em partners/{id}/kpi_metas/config ─
 // Um mapa por canal (geral/meta/google) → por KPI → se está sendo monitorado
 // e qual o valor aceitável. `direcao` do KPI (min/max) decide o que "abaixo

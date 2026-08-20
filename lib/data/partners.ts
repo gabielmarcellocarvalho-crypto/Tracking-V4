@@ -10,7 +10,7 @@ import {
   arrayRemove, arrayUnion, collection, doc, onSnapshot, setDoc, serverTimestamp,
 } from 'firebase/firestore'
 import { db, auth } from '@/lib/firebase'
-import type { Partner, PartnerTipo, EcommercePlataforma } from '@/lib/types'
+import type { Partner, PartnerTipo, EcommercePlataforma, ForecastingCenarios } from '@/lib/types'
 import { clientesData as clientesDemo } from '@/lib/demo-data'
 import { slugify } from '@/lib/utm/engine'
 
@@ -135,6 +135,16 @@ export async function alternarDesconsiderarIdentidade(clienteId: string, visitor
   await setDoc(
     doc(db, 'partners', clienteId),
     { identidadesDesconsideradas: desconsiderar ? arrayUnion(visitorId) : arrayRemove(visitorId) },
+    { merge: true },
+  )
+}
+
+/** Salva os % de variação dos cenários Pessimista/Otimista do Forecasting
+ * (partners/{id}/forecasting_config/main) — leitura via useDocumento. */
+export async function salvarForecastingCenarios(clienteId: string, cenarios: ForecastingCenarios) {
+  await setDoc(
+    doc(db, 'partners', clienteId, 'forecasting_config', 'main'),
+    { ...cenarios, atualizadoEm: Date.now() },
     { merge: true },
   )
 }
