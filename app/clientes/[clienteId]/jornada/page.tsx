@@ -7,7 +7,13 @@ import NotesPad from '@/components/jornada/NotesPad'
 import { usuariosJornada, type EventoJornada, type UsuarioJornada } from '@/lib/demo-data'
 import { useCliente, alternarDesconsiderarIdentidade } from '@/lib/data/partners'
 import { useEventos, useIdentidades } from '@/lib/data/colecoes'
+import { useDateRange } from '@/lib/date-range-context'
 import { identidadeParaUsuarioJornada } from '@/lib/data/agregacoes'
+
+// Eventos que contam como "engajamento de verdade" pra aparecer na lista —
+// mesma regra de antes (page_view sozinho não entra), só que agora
+// respeitando o período selecionado no topo (ver useEventos abaixo).
+const TIPOS_RELEVANTES = new Set(['view_item', 'lead', 'checkout', 'compra'])
 
 // ─── SVG icons por tipo de evento ─────────────────────────────────────────
 function IcoEye({ color }: { color: string }) {
@@ -184,7 +190,12 @@ export default function JornadaPage({ params }: { params: Promise<{ clienteId: s
   const { clienteId } = use(params)
   const { cliente, isDemo, loading: loadingCliente } = useCliente(clienteId)
   const { identidades, loading: loadingIdentidades } = useIdentidades(isDemo ? undefined : clienteId)
-  const { eventos, loading: loadingEventos } = useEventos(isDemo ? undefined : clienteId)
+  const { range: periodo } = useDateRange()
+  // Sem isso, Jornada sempre mostrava os últimos ~2000 eventos de qualquer
+  // época, ignorando o filtro de data do topo — agora bate com Eventos/
+  // Performance: "Últimos 30 dias" também limita quem/o que aparece aqui.
+  const desdeEventos = Math.min(periodo.start.getTime(), new Date().setHours(0, 0, 0, 0))
+  const { eventos, loading: loadingEventos } = useEventos(isDemo ? undefined : clienteId, { desde: desdeEventos, limite: 20000 })
   const [busca, setBusca] = useState('')
   const [tiposAtivos, setTiposAtivos] = useState<Set<EventoTipoFiltro>>(
     () => new Set(Object.keys(EVENTO_CONFIG) as EventoTipoFiltro[]),
@@ -224,12 +235,16 @@ export default function JornadaPage({ params }: { params: Promise<{ clienteId: s
   // Jornadas reais (identidades unificadas + eventos) ou demo
   const usuarios = useMemo<UsuarioJornada[]>(() => {
     if (usarDemo) return usuariosJornada
-    // Visitante que só teve page_view não polui a jornada — fica só em
-    // Tracking/Performance. Mas quem já viu pelo menos 1 view_item (e-commerce)
-    // entra mesmo sem ter virado lead ainda — é a jornada de pré-venda que a
-    // gente quer enxergar. Aditivo: nunca tira quem já aparecia antes.
+    // Só entra quem teve pelo menos 1 evento "de verdade" (view_item, lead,
+    // checkout ou compra) DENTRO do período selecionado no topo — page_view
+    // sozinho não polui a jornada (fica só em Tracking/Performance), e um
+    // status antigo de "cliente"/"lead" de fora do período não é suficiente
+    // sozinho (senão o filtro de data não teria efeito nenhum aqui).
+    const idsComEngajamentoNoPeriodo = new Set(
+      eventos.filter((e) => TIPOS_RELEVANTES.has(e.tipo)).map((e) => e.visitorId),
+    )
     return identidades
-      .filter((i) => i.status !== 'visitante' || eventos.some((e) => e.visitorId === i.id && e.tipo === 'view_item'))
+      .filter((i) => !!i.id && idsComEngajamentoNoPeriodo.has(i.id))
       .map((i) => identidadeParaUsuarioJornada(i, eventos))
   }, [usarDemo, identidades, eventos])
 
@@ -269,7 +284,7 @@ export default function JornadaPage({ params }: { params: Promise<{ clienteId: s
             {carregando
               ? 'Carregando jornadas…'
               : usuarios.length === 0
-                ? 'Nenhuma jornada registrada ainda — instale o snippet v4track.js no site do cliente para começar a capturar.'
+                ? `Nenhuma jornada em ${periodo.label.toLowerCase()} — tenta um período maior no filtro de data do topo, ou confirme que o snippet v4track.js está instalado no site do cliente.`
                 : 'Nenhum usuário bate com o filtro de status selecionado — tenta marcar outro status acima.'}
           </p>
         </main>
@@ -289,7 +304,7 @@ export default function JornadaPage({ params }: { params: Promise<{ clienteId: s
           <h2 className="text-[18px] font-bold text-[--text-1]">Jornada do Usuário</h2>
           <p className="text-[12.5px] text-[--text-3] mt-1">
             Linha do tempo completa por usuário — origem do primeiro clique até a conversão
-            {usarDemo ? <span style={{ color: '#8B5CF6' }}> · dados demo</span> : <span style={{ color: '#10B981' }}> · {usuarios.length} jornadas reais</span>}
+            {usarDemo ? <span style={{ color: '#8B5CF6' }}> · dados demo</span> : <span style={{ color: '#10B981' }}> · {usuarios.length} jornadas reais em {periodo.label.toLowerCase()}</span>}
           </p>
         </div>
 
