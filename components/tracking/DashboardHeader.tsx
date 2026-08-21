@@ -39,7 +39,12 @@ export default function DashboardHeader({ clienteName, clienteTipo, clienteId }:
 
   // gerarAlertas só olha os últimos 7 dias (mesmo default de agregarSaudeEventos
   // sem período) — bounding aqui evita puxar histórico inteiro só pro sino.
-  const { eventos } = useEventos(clienteId, { desde: Date.now() - 7 * 24 * 60 * 60 * 1000, limite: 20000 })
+  // `Date.now()` direto no corpo do componente virava um valor novo a cada
+  // render, o que (achado ao vivo, gerando 700+ chamadas/5min e estourando
+  // a cota do Firestore) fazia useEventos refazer o fetch em loop — useMemo
+  // com [] mantém o mesmo valor durante toda a vida do componente.
+  const desdeSino = useMemo(() => Date.now() - 7 * 24 * 60 * 60 * 1000, [])
+  const { eventos } = useEventos(clienteId, { desde: desdeSino, limite: 20000 })
   const { insights } = useInsights(clienteId)
   const { status: kpiStatus } = useKpiStatus(clienteId)
   const alertas = useMemo(() => gerarAlertas(eventos, clienteTipo), [eventos, clienteTipo])

@@ -65,11 +65,22 @@ function useFiltrosEventos(clienteId: string | undefined) {
 // toa, cada uma potencialmente MBs de JSON.
 const POLL_MS = 5 * 60_000
 
+// Arredonda pro bucket de 5 min mais próximo — protege contra o caller
+// passar `Date.now() - X` direto no corpo do render (ex: DashboardHeader
+// fazia isso pro "últimos 7 dias" do sino de alertas). Sem isso, `desde`
+// é um número levemente diferente a cada render, `buscar` (useCallback)
+// vira uma função nova a cada render, e o efeito refaz o fetch em loop —
+// achado ao vivo: isso sozinho gerou 700+ chamadas em 5 minutos e estourou
+// a cota de leitura do Firestore (RESOURCE_EXHAUSTED), horas depois do
+// fix anterior de polling. Arredondar aqui protege QUALQUER caller atual
+// ou futuro que cometa o mesmo erro, não só o que já foi corrigido.
+const BUCKET_MS = 5 * 60_000
+
 export function useEventos(clienteId: string | undefined, opts?: { limite?: number; desde?: number }) {
   const [docs, setDocs] = useState<Evento[]>([])
   const [loading, setLoading] = useState(true)
   const limite = opts?.limite ?? 2000
-  const desde = opts?.desde
+  const desde = opts?.desde !== undefined ? Math.floor(opts.desde / BUCKET_MS) * BUCKET_MS : undefined
 
   const buscar = useCallback(async (cancelRef: { cancelado: boolean }) => {
     if (!clienteId) { setDocs([]); setLoading(false); return }

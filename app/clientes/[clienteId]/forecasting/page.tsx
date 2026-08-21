@@ -131,12 +131,20 @@ export default function ForecastingPage({ params }: { params: Promise<{ clienteI
   const meses = useMemo(() => [...new Set(itens.map((i) => i.mes))].sort(), [itens])
   const configPorMes = useMemo(() => new Map(config.map((c) => [c.mes, c])), [config])
 
+  // `fim` fixo em "hoje 23:59" (não `new Date()` cru) — achado ao vivo: um
+  // timestamp exato muda a cada render, e como `meses` também troca de
+  // referência a cada snapshot do Plano de Mídia (mesmo sem mudança real),
+  // esse useMemo recomputava sem parar, alimentando useMetaAdsGasto/
+  // useGoogleAdsGasto com um período "novo" a cada render — mesma classe
+  // de bug que gerou o loop de 700+ chamadas/5min em useEventos (ver
+  // colecoes.ts). Fixo por dia evita isso e ainda cobre o dia corrente.
+  const primeiroMes = meses[0]
   const periodoRealizado = useMemo(() => {
-    if (meses.length === 0) return null
-    const inicio = new Date(`${meses[0]}-01T00:00:00`)
-    const fim = new Date()
+    if (!primeiroMes) return null
+    const inicio = new Date(`${primeiroMes}-01T00:00:00`)
+    const fim = new Date(); fim.setHours(23, 59, 59, 999)
     return { start: inicio, end: fim, label: 'Forecasting' }
-  }, [meses])
+  }, [primeiroMes])
 
   const { gasto: metaGasto } = useMetaAdsGasto(usarDemo || !periodoRealizado ? undefined : clienteId, periodoRealizado ?? { start: new Date(), end: new Date(), label: '' })
   const { gasto: googleGasto } = useGoogleAdsGasto(usarDemo || !periodoRealizado ? undefined : clienteId, periodoRealizado ?? { start: new Date(), end: new Date(), label: '' })
