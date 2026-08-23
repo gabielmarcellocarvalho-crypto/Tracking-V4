@@ -82,6 +82,16 @@ const MAX_LIMITE = 5000
 // protege contra alt-tab repetido gerando chamada atrás de chamada.
 const REFETCH_MIN_INTERVALO_MS = 60_000
 
+// Cache curto em memória (por aba, morre no F5) compartilhado entre TODOS os
+// useEventos da página — navegar entre Eventos→Performance→Jornada do MESMO
+// cliente, com o mesmo filtro de data, cai na mesma chave e reaproveita a
+// última busca em vez de ler o Firestore de novo. Achado com o Gabriel: 10
+// clientes × algumas idas e vindas por dia sem isso passava fácil dos 50 mil
+// de orçamento diário, mesmo sem nenhum bug de loop — é só navegação normal
+// em escala. TTL curto (2min) pra não deixar o dado velho demais.
+const CACHE_TTL_MS = 2 * 60_000
+const cacheEventos = new Map<string, { docs: Evento[]; ts: number }>()
+
 export function useEventos(clienteId: string | undefined, opts?: { limite?: number; desde?: number }) {
   const [docs, setDocs] = useState<Evento[]>([])
   const [loading, setLoading] = useState(true)
@@ -91,6 +101,13 @@ export function useEventos(clienteId: string | undefined, opts?: { limite?: numb
 
   const buscar = useCallback(async (cancelRef: { cancelado: boolean }) => {
     if (!clienteId) { setDocs([]); setLoading(false); return }
+    const chaveCache = `${clienteId}:${limite}:${desde ?? ''}`
+    const emCache = cacheEventos.get(chaveCache)
+    if (emCache && Date.now() - emCache.ts < CACHE_TTL_MS) {
+      setDocs(emCache.docs)
+      setLoading(false)
+      return
+    }
     try {
       ultimaBuscaRef.current = Date.now()
       const idToken = await auth.currentUser?.getIdToken()
@@ -102,7 +119,9 @@ export function useEventos(clienteId: string | undefined, opts?: { limite?: numb
       })
       const json = await res.json()
       if (cancelRef.cancelado) return
-      setDocs(json.ok ? (json.eventos as Evento[]) : [])
+      const eventos = json.ok ? (json.eventos as Evento[]) : []
+      setDocs(eventos)
+      if (json.ok) cacheEventos.set(chaveCache, { docs: eventos, ts: Date.now() })
     } catch {
       if (!cancelRef.cancelado) setDocs([])
     } finally {
