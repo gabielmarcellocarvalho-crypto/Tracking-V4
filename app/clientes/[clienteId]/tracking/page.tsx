@@ -160,7 +160,7 @@ export default function TrackingPage({ params }: { params: Promise<{ clienteId: 
   // cubra hoje (ex: "Ontem") — o card "Hoje" da Saúde dos Eventos depende
   // disso pra continuar correto independente do filtro.
   const desdeEventos = Math.min(periodo.start.getTime(), new Date().setHours(0, 0, 0, 0))
-  const { eventos, loading: loadingEventos } = useEventos(isDemo ? undefined : clienteId, { desde: desdeEventos, limite: 20000 })
+  const { eventos, loading: loadingEventos } = useEventos(isDemo ? undefined : clienteId, { desde: desdeEventos, limite: 5000 })
   const { conexoes } = useConexoes(isDemo ? undefined : clienteId)
 
   const usarDemo = isDemo

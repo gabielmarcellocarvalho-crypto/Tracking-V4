@@ -44,7 +44,11 @@ export default function DashboardHeader({ clienteName, clienteTipo, clienteId }:
   // a cota do Firestore) fazia useEventos refazer o fetch em loop — useMemo
   // com [] mantém o mesmo valor durante toda a vida do componente.
   const desdeSino = useMemo(() => Date.now() - 7 * 24 * 60 * 60 * 1000, [])
-  const { eventos } = useEventos(clienteId, { desde: desdeSino, limite: 20000 })
+  // O sino só computa alertas (evento parado, UTM fora do padrão) sobre os
+  // últimos 7 dias — não precisa do histórico inteiro. 500 é generoso pro
+  // volume real de 7 dias e protege o orçamento de leitura do projeto
+  // (renderiza em TODA página, então roda de novo a cada navegação).
+  const { eventos } = useEventos(clienteId, { desde: desdeSino, limite: 500 })
   const { insights } = useInsights(clienteId)
   const { status: kpiStatus } = useKpiStatus(clienteId)
   const alertas = useMemo(() => gerarAlertas(eventos, clienteTipo), [eventos, clienteTipo])

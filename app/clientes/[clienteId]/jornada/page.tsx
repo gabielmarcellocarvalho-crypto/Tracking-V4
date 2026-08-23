@@ -195,7 +195,7 @@ export default function JornadaPage({ params }: { params: Promise<{ clienteId: s
   // época, ignorando o filtro de data do topo — agora bate com Eventos/
   // Performance: "Últimos 30 dias" também limita quem/o que aparece aqui.
   const desdeEventos = Math.min(periodo.start.getTime(), new Date().setHours(0, 0, 0, 0))
-  const { eventos, loading: loadingEventos } = useEventos(isDemo ? undefined : clienteId, { desde: desdeEventos, limite: 20000 })
+  const { eventos, loading: loadingEventos } = useEventos(isDemo ? undefined : clienteId, { desde: desdeEventos, limite: 5000 })
   const [busca, setBusca] = useState('')
   const [tiposAtivos, setTiposAtivos] = useState<Set<EventoTipoFiltro>>(
     () => new Set(Object.keys(EVENTO_CONFIG) as EventoTipoFiltro[]),

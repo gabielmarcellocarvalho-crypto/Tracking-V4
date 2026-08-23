@@ -5,7 +5,7 @@
 import {
   addDoc, collection, deleteDoc, doc, onSnapshot, setDoc, serverTimestamp, updateDoc,
 } from 'firebase/firestore'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { auth, db } from '@/lib/firebase'
 import { useSubcolecao } from './firestore-hooks'
 import type {
@@ -49,21 +49,16 @@ function useFiltrosEventos(clienteId: string | undefined) {
 // navegador entra em loop de reconexão e nunca entrega o primeiro
 // snapshot, mesmo com dado real existindo (confirmado: um listener em
 // tempo real via admin SDK, fora do navegador, conecta normal na mesma
-// máquina). Uma chamada HTTP simples não sofre desse problema. Perde a
-// atualização instantânea de antes — reforçado com um poll leve.
+// máquina). Uma chamada HTTP simples não sofre desse problema.
 //
-// Custo real: onSnapshot ia direto navegador→Firestore (grátis, fora do
-// Vercel); poll passa por função serverless a cada tick — com abas
-// esquecidas abertas o dia todo, isso vira consumo real de Function
-// Duration E Origin Transfer (cada resposta pode ter milhares de eventos
-// em JSON). Achado ao vivo: horas depois desse fix, o projeto sozinho já
-// tinha estourado o limite do plano Vercel (Fast Origin Transfer 33GB/10GB,
-// Fluid Active CPU 6h41m/4h) e o site ficou fora do ar (402 Payment
-// Required) até fazer upgrade do plano. Mitigado com intervalo bem mais
-// espaçado + pausa quando a aba está em segundo plano (Page Visibility) —
-// sem isso, uma aba esquecida aberta soma centenas de chamadas por dia à
-// toa, cada uma potencialmente MBs de JSON.
-const POLL_MS = 5 * 60_000
+// SEM polling em intervalo fixo (removido em 2026-08, orçamento do
+// Firestore é 50 mil leituras/dia pro projeto INTEIRO, com vários clientes
+// conectados ao mesmo tempo). Um poll a cada 5min, por aba aberta, é o que
+// já causou dois incidentes de estouro de cota antes (onSnapshot→poll
+// primeiro, depois um bug de loop) — em vez de só espaçar mais o intervalo,
+// a decisão agora é: busca só quando precisa (ao montar/trocar de
+// cliente/filtro, e ao reabrir o foco na aba depois de ficar em segundo
+// plano). Sem timer nenhum rodando em background.
 
 // Arredonda pro bucket de 5 min mais próximo — protege contra o caller
 // passar `Date.now() - X` direto no corpo do render (ex: DashboardHeader
@@ -76,15 +71,28 @@ const POLL_MS = 5 * 60_000
 // ou futuro que cometa o mesmo erro, não só o que já foi corrigido.
 const BUCKET_MS = 5 * 60_000
 
+// Teto absoluto de documentos por chamada, não importa o que o caller peça —
+// protege o orçamento de 50 mil leituras/dia do projeto contra qualquer
+// cliente de alto volume (atual ou futuro) sozinho consumindo o dia inteiro
+// numa única página. Espelha o teto do servidor (LIMITE_MAXIMO em
+// app/api/eventos/[clienteId]/route.ts) — os dois precisam ficar em sincronia.
+const MAX_LIMITE = 5000
+
+// Refetch ao voltar o foco na aba não repete se já buscou há pouco tempo —
+// protege contra alt-tab repetido gerando chamada atrás de chamada.
+const REFETCH_MIN_INTERVALO_MS = 60_000
+
 export function useEventos(clienteId: string | undefined, opts?: { limite?: number; desde?: number }) {
   const [docs, setDocs] = useState<Evento[]>([])
   const [loading, setLoading] = useState(true)
-  const limite = opts?.limite ?? 2000
+  const limite = Math.min(opts?.limite ?? 2000, MAX_LIMITE)
   const desde = opts?.desde !== undefined ? Math.floor(opts.desde / BUCKET_MS) * BUCKET_MS : undefined
+  const ultimaBuscaRef = useRef(0)
 
   const buscar = useCallback(async (cancelRef: { cancelado: boolean }) => {
     if (!clienteId) { setDocs([]); setLoading(false); return }
     try {
+      ultimaBuscaRef.current = Date.now()
       const idToken = await auth.currentUser?.getIdToken()
       if (!idToken) return
       const qs = new URLSearchParams({ limite: String(limite) })
@@ -106,17 +114,16 @@ export function useEventos(clienteId: string | undefined, opts?: { limite?: numb
     const cancelRef = { cancelado: false }
     setLoading(true)
     buscar(cancelRef)
-    // Só repete enquanto a aba está em primeiro plano — aba em segundo
-    // plano não gasta chamada nenhuma; ao voltar o foco, busca na hora
-    // (não espera o próximo tick) pra não ficar com dado velho.
-    const intervalo = setInterval(() => {
-      if (document.visibilityState === 'visible') buscar(cancelRef)
-    }, POLL_MS)
-    const aoFocar = () => { if (document.visibilityState === 'visible') buscar(cancelRef) }
+    // Sem polling em intervalo fixo — só busca de novo quando a aba volta a
+    // ficar visível (e só se a última busca já não foi há menos de 1min).
+    const aoFocar = () => {
+      if (document.visibilityState === 'visible' && Date.now() - ultimaBuscaRef.current > REFETCH_MIN_INTERVALO_MS) {
+        buscar(cancelRef)
+      }
+    }
     document.addEventListener('visibilitychange', aoFocar)
     return () => {
       cancelRef.cancelado = true
-      clearInterval(intervalo)
       document.removeEventListener('visibilitychange', aoFocar)
     }
   }, [buscar])

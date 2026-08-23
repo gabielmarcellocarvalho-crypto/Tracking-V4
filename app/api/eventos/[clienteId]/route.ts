@@ -12,7 +12,11 @@ import { getDbAdmin } from '@/lib/firebase-admin'
 import { emailDoToken, ehMembroDoPartner } from '@/lib/server/auth-helpers'
 import type { Evento } from '@/lib/types'
 
-const LIMITE_MAXIMO = 20000
+// Orçamento do projeto inteiro é 50 mil leituras/dia (vários clientes
+// conectados ao mesmo tempo) — 20000 numa chamada só era alto demais pra
+// esse orçamento; 5000 continua generoso pro volume real observado até
+// agora e limita o estrago de qualquer cliente de alto volume futuro.
+const LIMITE_MAXIMO = 5000
 
 export async function GET(
   req: NextRequest,

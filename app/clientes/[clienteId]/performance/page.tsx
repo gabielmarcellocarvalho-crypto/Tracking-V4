@@ -134,7 +134,7 @@ export default function PerformancePage({ params }: { params: Promise<{ clienteI
   // Sem isso, cliente de alto volume estoura o limite padrão de eventos antes
   // de alcançar o período pedido e o filtro de data fica silenciosamente
   // truncado (mesmo bug achado e corrigido na tela de Eventos).
-  const { eventos } = useEventos(isDemo ? undefined : clienteId, { desde: periodo.start.getTime(), limite: 20000 })
+  const { eventos } = useEventos(isDemo ? undefined : clienteId, { desde: periodo.start.getTime(), limite: 5000 })
   const { conexoes } = useConexoes(isDemo ? undefined : clienteId)
 
   const usarDemo = isDemo
