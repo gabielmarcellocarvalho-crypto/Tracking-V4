@@ -59,6 +59,11 @@ export default function ConversoesPage({ params }: { params: Promise<{ clienteId
   const conexaoMeta   = conexoes.find((c) => c.plataforma === 'meta')?.status === 'configurado'
   const conexaoGoogle = conexoes.find((c) => c.plataforma === 'google')?.status === 'configurado'
 
+  // Google Enhanced continua sem conexão configurada — a fila não precisa
+  // mostrar linhas que nunca vão sair de "aguardando conexão"; o card de
+  // status lá em cima continua de olho nisso normalmente.
+  const conversoesFila = conexaoGoogle ? conversoes : conversoes.filter((c) => c.plataforma !== 'google-enhanced')
+
   return (
     <>
       <DashboardHeader clienteName={cliente?.nome ?? clienteId} clienteTipo={cliente?.tipo} clienteId={isDemo ? undefined : clienteId} />
@@ -168,17 +173,17 @@ export default function ConversoesPage({ params }: { params: Promise<{ clienteId
                 </tr>
               </thead>
               <tbody>
-                {conversoes.length === 0 && (
+                {conversoesFila.length === 0 && (
                   <tr>
                     <td colSpan={5} className="px-5 py-8 text-center text-[12.5px]" style={{ color: 'var(--text-3)' }}>
                       Nenhuma conversão enfileirada ainda
                     </td>
                   </tr>
                 )}
-                {conversoes.slice(0, 50).map((c, i) => {
+                {conversoesFila.slice(0, 50).map((c, i) => {
                   const cfg = STATUS_CFG[c.status]
                   return (
-                    <tr key={c.id} style={{ borderBottom: i < Math.min(conversoes.length, 50) - 1 ? '1px solid var(--border-sub)' : 'none' }}>
+                    <tr key={c.id} style={{ borderBottom: i < Math.min(conversoesFila.length, 50) - 1 ? '1px solid var(--border-sub)' : 'none' }}>
                       <td className="px-5 py-[12px] text-[13px] font-[500]" style={{ color: 'var(--text-1)' }}>
                         {c.plataforma === 'meta-capi' ? 'Meta CAPI' : 'Google Enhanced'}
                       </td>

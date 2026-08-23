@@ -27,9 +27,11 @@ export async function GET(req: NextRequest) {
   const db = getDbAdmin()
   const candidatos = new Map<string, { clienteId: string; conversaoId: string }>()
 
-  // Duas queries simples (um filtro de igualdade cada) — evita exigir um
-  // índice composto de collection group só para o cron.
-  for (const status of ['pendente', 'erro'] as const) {
+  // Três queries simples (um filtro de igualdade cada) — evita exigir um
+  // índice composto de collection group só para o cron. "aguardando-conexao"
+  // entra aqui porque senão uma conversão que nasceu antes do Meta estar
+  // conectado fica presa nesse status pra sempre — nada mais a reprocessa.
+  for (const status of ['pendente', 'erro', 'aguardando-conexao'] as const) {
     const snap = await db
       .collectionGroup('conversoes')
       .where('status', '==', status)
