@@ -81,7 +81,11 @@ export function useGoogleAdsGasto(clienteId: string | undefined, periodo: DateRa
 
     buscar()
     return () => { cancelado = true }
-  }, [clienteId, periodo.start, periodo.end, versao])
+    // periodo.start/end é objeto Date -- usar o objeto direto no dependency
+    // array já causou loop infinito antes (mesmo bug corrigido em
+    // useGA4Dados, ver comentário lá). .getTime() vira número primitivo estável.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clienteId, periodo.start.getTime(), periodo.end.getTime(), versao])
 
   const refetch = useCallback(() => setVersao((v) => v + 1), [])
 
