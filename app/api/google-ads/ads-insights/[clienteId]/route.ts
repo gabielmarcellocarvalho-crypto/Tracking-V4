@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getDbAdmin } from '@/lib/firebase-admin'
 import { emailDoToken, ehMembroDoPartner } from '@/lib/server/auth-helpers'
 import { buscarGastoGoogleAds, GoogleAdsInsightsError } from '@/lib/integrations/google-ads-insights'
+import { resolverCredenciaisMcc } from '@/lib/integrations/google-mcc'
 
 export async function GET(
   req: NextRequest,
@@ -38,19 +39,14 @@ export async function GET(
     return NextResponse.json({ ok: false, configurado: false, erro: 'Google Ads (Métricas) não conectado para este cliente' }, { status: 200 })
   }
 
-  const mccId = process.env.GADS_MCC_ID
-  const developerToken = process.env.GADS_DEVELOPER_TOKEN
-  const clientId = process.env.GADS_OAUTH_CLIENT_ID
-  const clientSecret = process.env.GADS_OAUTH_CLIENT_SECRET
-  const refreshToken = process.env.GADS_REFRESH_TOKEN
-
-  if (!mccId || !developerToken || !clientId || !clientSecret || !refreshToken) {
+  const cred = resolverCredenciaisMcc(campos.mcc)
+  if (!cred) {
     return NextResponse.json({ ok: false, configurado: true, erro: 'credenciais da MCC não configuradas no servidor' }, { status: 200 })
   }
 
   try {
     const gastoPorDia = await buscarGastoGoogleAds(
-      customerId, mccId, developerToken, clientId, clientSecret, refreshToken,
+      customerId, cred.mccId, cred.developerToken, cred.clientId, cred.clientSecret, cred.refreshToken,
       new Date(start), new Date(end),
     )
     return NextResponse.json({ ok: true, configurado: true, gastoPorDia })

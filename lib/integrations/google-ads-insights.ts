@@ -37,7 +37,7 @@ interface CredenciaisGoogle {
   refreshToken: string
 }
 
-async function obterAccessToken(clientId: string, clientSecret: string, refreshToken: string): Promise<string> {
+export async function obterAccessToken(clientId: string, clientSecret: string, refreshToken: string): Promise<string> {
   const res = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

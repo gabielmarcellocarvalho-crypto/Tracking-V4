@@ -25,6 +25,8 @@ interface CampoDef {
   textarea?: boolean
   /** Mostra um botão "Gerar" que preenche o campo com um token aleatório — pra segredos que a V4 define, não a plataforma externa. */
   gerar?: boolean
+  /** Vira um <select> em vez de input de texto — ex: escolher qual MCC compartilhada usar. */
+  opcoes?: { value: string; label: string }[]
 }
 
 interface LogoDef {
@@ -132,30 +134,31 @@ const PLATAFORMAS: {
     id: 'google',
     nome: 'Google Ads',
     cor: '#4285F4',
-    desc: 'Enhanced Conversions — sobe conversões com gclid/wbraid + dados hasheados para recuperar atribuição perdida.',
+    desc: 'Enhanced Conversions — sobe conversões com gclid/wbraid + dados hasheados para recuperar atribuição perdida. Credenciais compartilhadas por MCC, igual ao Meta — só o Customer ID e o Conversion Action ID são por cliente.',
     campos: [
+      { id: 'mcc', label: 'MCC', placeholder: '', opcoes: [{ value: '1', label: 'Unidade Carvalho & Co' }, { value: '2', label: 'Carvalho & Co' }] },
       { id: 'customerId', label: 'Customer ID', placeholder: 'Ex: 1234567890 (sem hífens)' },
-      { id: 'developerToken', label: 'Developer Token', placeholder: 'Token aprovado no Centro de API', secreto: true },
-      { id: 'conversionActionId', label: 'Conversion Action ID (opcional)', placeholder: 'Ex: 987654321' },
+      { id: 'conversionActionId', label: 'Conversion Action ID', placeholder: 'Ex: 987654321' },
     ],
     passos: [
-      'Google Ads → Ferramentas → Configuração → Centro de API → Developer Token',
-      'Anote o Customer ID da conta (canto superior direito)',
-      'O envio exige OAuth (etapa posterior) — os payloads ficam prontos na fila',
+      'Escolha a MCC onde a conta do cliente está — credenciais já compartilhadas pelo servidor',
+      'Customer ID fica no canto superior direito do Google Ads, sem hífens',
+      'Conversion Action ID: Google Ads → Objetivos → Conversões → clique na ação → ID na URL',
     ],
   },
   {
     id: 'google-ads',
     nome: 'Google Ads (Métricas)',
     cor: '#34A853',
-    desc: 'Puxa gasto, campanhas e resultados direto da conta via Google Ads API — diferente do card acima (que só envia conversão pro Google). A maioria dos clientes está dentro da nossa MCC — nesse caso só o Customer ID já basta, as credenciais são compartilhadas automaticamente pelo servidor.',
+    desc: 'Puxa gasto, campanhas e resultados direto da conta via Google Ads API — diferente do card acima (que só envia conversão pro Google). A maioria dos clientes está dentro de uma das nossas MCCs — nesse caso só o Customer ID e a MCC já bastam, as credenciais são compartilhadas automaticamente pelo servidor.',
     campos: [
+      { id: 'mcc', label: 'MCC', placeholder: '', opcoes: [{ value: '1', label: 'Unidade Carvalho & Co' }, { value: '2', label: 'Carvalho & Co' }] },
       { id: 'customerId', label: 'Customer ID', placeholder: 'Ex: 1234567890 (sem hífens)' },
     ],
     passos: [
-      'Se a conta do cliente já está na nossa MCC: só cole o Customer ID acima e salve — as credenciais são compartilhadas automaticamente.',
+      'Escolha a MCC onde a conta do cliente está, cole o Customer ID acima e salve — as credenciais são compartilhadas automaticamente.',
       'Customer ID fica no canto superior direito do Google Ads, sem hífens',
-      'Conta fora da nossa MCC precisa de um vínculo próprio via convite de gerente — combine com quem administra antes de tentar conectar',
+      'Conta fora das nossas MCCs precisa de um vínculo próprio via convite de gerente — combine com quem administra antes de tentar conectar',
     ],
   },
   {
@@ -353,18 +356,20 @@ function MetaBmStatusBadge() {
 }
 
 function GoogleAdsMccStatusBadge() {
-  const [status, setStatus] = useState<'carregando' | 'configurado' | 'ausente'>('carregando')
+  const [mccs, setMccs] = useState<{ id: string; label: string; configurado: boolean }[] | null>(null)
 
   useEffect(() => {
     fetch('/api/google-ads/mcc-status')
       .then((r) => r.json())
-      .then((d) => setStatus(d.configurado ? 'configurado' : 'ausente'))
-      .catch(() => setStatus('ausente'))
+      .then((d) => setMccs(d.mccs ?? []))
+      .catch(() => setMccs([]))
   }, [])
 
-  if (status === 'carregando') return null
+  if (mccs === null) return null
 
-  const configurado = status === 'configurado'
+  const todasConfiguradas = mccs.length > 0 && mccs.every((m) => m.configurado)
+  const nenhumaConfigurada = mccs.every((m) => !m.configurado)
+  const configurado = todasConfiguradas
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 8,
@@ -374,9 +379,9 @@ function GoogleAdsMccStatusBadge() {
     }}>
       <span style={{ width: 7, height: 7, borderRadius: '50%', background: configurado ? '#10B981' : '#F59E0B', flexShrink: 0 }} />
       <span style={{ fontSize: 12, color: 'var(--t2)' }}>
-        {configurado
-          ? 'Credenciais compartilhadas da MCC configuradas no servidor — só o Customer ID já basta.'
-          : 'Credenciais da MCC ainda não configuradas no servidor — essa conexão não funciona por enquanto.'}
+        {nenhumaConfigurada
+          ? 'Nenhuma MCC configurada no servidor — essa conexão não funciona por enquanto.'
+          : `Credenciais compartilhadas: ${mccs.filter((m) => m.configurado).map((m) => m.label).join(', ')} pronta${mccs.filter((m) => m.configurado).length > 1 ? 's' : ''}${!todasConfiguradas ? ` — falta ${mccs.filter((m) => !m.configurado).map((m) => m.label).join(', ')}` : ''}.`}
       </span>
     </div>
   )
@@ -468,7 +473,14 @@ function CardConexao({ plataforma, clienteId, camposSalvos, statusSalvo, isDemo 
   const handleSalvar = async () => {
     setSalvando(true)
     try {
-      await salvarConexao(clienteId, plataforma.id, valores)
+      // Campo <select> (ex: qual MCC) mostra a 1ª opção selecionada por
+      // padrão mesmo sem o usuário tocar — sem isso, salvar sem interagir
+      // gravaria o campo vazio mesmo com uma opção visivelmente marcada.
+      const comPadroes = { ...valores }
+      for (const c of plataforma.campos) {
+        if (c.opcoes && !comPadroes[c.id]) comPadroes[c.id] = c.opcoes[0]?.value ?? ''
+      }
+      await salvarConexao(clienteId, plataforma.id, comPadroes)
       setSalvo(true)
       setTimeout(() => setSalvo(false), 1500)
     } finally {
@@ -538,16 +550,24 @@ function CardConexao({ plataforma, clienteId, camposSalvos, statusSalvo, isDemo 
         <div style={{ padding: '0 18px 18px', borderTop: '1px solid var(--br-s)' }}>
           {plataforma.id === 'meta' && <div style={{ marginTop: 14 }}><MetaConnectionStatus /></div>}
           {plataforma.id === 'meta-ads' && <div style={{ marginTop: 14 }}><MetaBmStatusBadge /></div>}
-          {plataforma.id === 'google-ads' && <div style={{ marginTop: 14 }}><GoogleAdsMccStatusBadge /></div>}
+          {(plataforma.id === 'google-ads' || plataforma.id === 'google') && <div style={{ marginTop: 14 }}><GoogleAdsMccStatusBadge /></div>}
           {plataforma.id === 'shopify' && <div style={{ marginTop: 14 }}><ShopifyWebhookInfo clienteId={clienteId} /></div>}
           {plataforma.id === 'loja-integrada' && <div style={{ marginTop: 14 }}><LojaIntegradaWebhookInfo clienteId={clienteId} token={valores.webhookToken} /></div>}
-          <div style={{ display: 'flex', gap: 20, marginTop: ['meta', 'meta-ads', 'google-ads', 'shopify', 'loja-integrada'].includes(plataforma.id) ? 0 : 14, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 20, marginTop: ['meta', 'meta-ads', 'google', 'google-ads', 'shopify', 'loja-integrada'].includes(plataforma.id) ? 0 : 14, flexWrap: 'wrap' }}>
             {/* Campos */}
             <div style={{ flex: 1, minWidth: 260, display: 'flex', flexDirection: 'column', gap: 10 }}>
               {plataforma.campos.map((c) => (
                 <div key={c.id}>
                   <label style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--t2)', display: 'block', marginBottom: 4 }}>{c.label}</label>
-                  {c.textarea ? (
+                  {c.opcoes ? (
+                    <select
+                      value={valores[c.id] ?? c.opcoes[0]?.value ?? ''}
+                      onChange={(e) => setValores((v) => ({ ...v, [c.id]: e.target.value }))}
+                      style={inputStyle}
+                    >
+                      {c.opcoes.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  ) : c.textarea ? (
                     <textarea
                       value={valores[c.id] ?? ''}
                       onChange={(e) => setValores((v) => ({ ...v, [c.id]: e.target.value }))}
