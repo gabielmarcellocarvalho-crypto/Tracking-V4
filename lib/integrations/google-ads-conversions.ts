@@ -6,7 +6,8 @@
 import { obterAccessToken } from './google-ads-insights'
 import type { CredenciaisMcc } from './google-mcc'
 
-const API_VERSION = 'v21'
+// Ver nota em google-ads-insights.ts — v17 a v21 descontinuadas, só v22 ativa (2026-08-25).
+const API_VERSION = 'v22'
 
 export interface EnvioResultadoGoogle {
   ok: boolean

@@ -3,10 +3,11 @@
 // usando as credenciais compartilhadas da MCC (OAuth refresh token + developer
 // token + login-customer-id). Nunca importar em código client.
 
-// v17 foi descontinuada pelo Google — confirmado por teste direto contra a
-// API em 2026-08: v20 responde com erro de versão, v21 funciona. Ajustar
-// aqui quando o Google sunset essa também (checar em developers.google.com).
-const API_VERSION = 'v21'
+// v17 a v21 foram descontinuadas pelo Google — confirmado por teste direto
+// contra a API em 2026-08-25 (achado ao vivo: v17-v21 todas devolvem 404,
+// só v22 responde 200). Ajustar aqui de novo quando o Google sunset essa
+// também (checar em developers.google.com/google-ads/api/docs/release-notes).
+const API_VERSION = 'v22'
 
 export interface GastoDiarioGoogle {
   data: string // YYYY-MM-DD
