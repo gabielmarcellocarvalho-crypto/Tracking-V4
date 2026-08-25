@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { auth } from '@/lib/firebase'
+import { SQUADS } from '@/lib/squads'
 import type { Partner, MemberRole } from '@/lib/types'
 
 interface ResultadoCriacao {
@@ -27,6 +28,8 @@ export default function NovoUsuarioModal({ clientes, onClose }: {
   const [nome, setNome]         = useState('')
   const [senha, setSenha]       = useState('')
   const [role, setRole]         = useState<MemberRole>('viewer')
+  const [modo, setModo]         = useState<'squad' | 'clientes'>('squad')
+  const [squad, setSquad]       = useState(SQUADS[0]?.id ?? '')
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro]         = useState('')
@@ -43,7 +46,8 @@ export default function NovoUsuarioModal({ clientes, onClose }: {
 
   const handleCriar = async () => {
     if (!email.trim() || !email.includes('@')) { setErro('Informe um e-mail válido'); return }
-    if (selecionados.size === 0) { setErro('Selecione pelo menos um cliente'); return }
+    if (modo === 'squad' && !squad) { setErro('Selecione um squad'); return }
+    if (modo === 'clientes' && selecionados.size === 0) { setErro('Selecione pelo menos um cliente'); return }
     if (senha && senha.length < 6) { setErro('A senha precisa ter pelo menos 6 caracteres'); return }
 
     setSalvando(true)
@@ -58,7 +62,7 @@ export default function NovoUsuarioModal({ clientes, onClose }: {
         body: JSON.stringify({
           email: email.trim(),
           nome: nome.trim() || undefined,
-          clienteIds: Array.from(selecionados),
+          ...(modo === 'squad' ? { squad } : { clienteIds: Array.from(selecionados) }),
           role,
           senha: senha || undefined,
         }),
@@ -141,42 +145,67 @@ export default function NovoUsuarioModal({ clientes, onClose }: {
                 ))}
               </div>
 
-              <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--t2)', display: 'block', margin: '14px 0 6px' }}>
-                Clientes que vai acessar ({selecionados.size} selecionado{selecionados.size !== 1 ? 's' : ''})
-              </label>
-              <div style={{
-                maxHeight: 180, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6,
-                border: '1px solid var(--border)', borderRadius: 8, padding: 8, background: 'var(--bg-base)',
-              }}>
-                {clientes.length === 0 && (
-                  <p style={{ fontSize: 11.5, color: 'var(--t3)', padding: 6 }}>Nenhum cliente cadastrado ainda.</p>
-                )}
-                {clientes.map((c) => {
-                  const ativo = selecionados.has(c.id)
-                  return (
-                    <button
-                      key={c.id}
-                      onClick={() => toggleCliente(c.id)}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 6,
-                        cursor: 'pointer', textAlign: 'left', width: '100%',
-                        background: ativo ? 'rgba(200,16,46,.1)' : 'transparent',
-                        border: `1px solid ${ativo ? 'rgba(200,16,46,.35)' : 'transparent'}`,
-                      }}
-                    >
-                      <span style={{
-                        width: 16, height: 16, borderRadius: 4, flexShrink: 0,
-                        border: `1.5px solid ${ativo ? 'var(--red)' : 'var(--border)'}`,
-                        background: ativo ? 'var(--red)' : 'transparent',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}>
-                        {ativo && <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" width={10} height={10}><polyline points="20 6 9 17 4 12" /></svg>}
-                      </span>
-                      <span style={{ fontSize: 12.5, color: 'var(--t1)' }}>{c.nome}</span>
-                    </button>
-                  )
-                })}
+              <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--t2)', display: 'block', margin: '14px 0 6px' }}>Acesso</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
+                {([
+                  { id: 'squad' as const, label: 'Por squad', desc: 'Vê todo cliente do squad, inclusive futuros' },
+                  { id: 'clientes' as const, label: 'Clientes específicos', desc: 'Escolhe cliente por cliente' },
+                ]).map((m) => (
+                  <button key={m.id} onClick={() => setModo(m.id)} style={{
+                    padding: '10px 8px', borderRadius: 8, cursor: 'pointer', textAlign: 'left',
+                    background: modo === m.id ? 'rgba(200,16,46,.1)' : 'var(--bg-base)',
+                    border: `1px solid ${modo === m.id ? 'rgba(200,16,46,.4)' : 'var(--border)'}`,
+                  }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: modo === m.id ? 'var(--red)' : 'var(--t1)' }}>{m.label}</div>
+                    <div style={{ fontSize: 9.5, color: 'var(--t3)', marginTop: 2 }}>{m.desc}</div>
+                  </button>
+                ))}
               </div>
+
+              {modo === 'squad' ? (
+                <select value={squad} onChange={(e) => setSquad(e.target.value)} style={inputStyle}>
+                  {SQUADS.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
+                </select>
+              ) : (
+                <>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--t2)', display: 'block', marginBottom: 6 }}>
+                    Clientes que vai acessar ({selecionados.size} selecionado{selecionados.size !== 1 ? 's' : ''})
+                  </label>
+                  <div style={{
+                    maxHeight: 180, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6,
+                    border: '1px solid var(--border)', borderRadius: 8, padding: 8, background: 'var(--bg-base)',
+                  }}>
+                    {clientes.length === 0 && (
+                      <p style={{ fontSize: 11.5, color: 'var(--t3)', padding: 6 }}>Nenhum cliente cadastrado ainda.</p>
+                    )}
+                    {clientes.map((c) => {
+                      const ativo = selecionados.has(c.id)
+                      return (
+                        <button
+                          key={c.id}
+                          onClick={() => toggleCliente(c.id)}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 6,
+                            cursor: 'pointer', textAlign: 'left', width: '100%',
+                            background: ativo ? 'rgba(200,16,46,.1)' : 'transparent',
+                            border: `1px solid ${ativo ? 'rgba(200,16,46,.35)' : 'transparent'}`,
+                          }}
+                        >
+                          <span style={{
+                            width: 16, height: 16, borderRadius: 4, flexShrink: 0,
+                            border: `1.5px solid ${ativo ? 'var(--red)' : 'var(--border)'}`,
+                            background: ativo ? 'var(--red)' : 'transparent',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>
+                            {ativo && <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" width={10} height={10}><polyline points="20 6 9 17 4 12" /></svg>}
+                          </span>
+                          <span style={{ fontSize: 12.5, color: 'var(--t1)' }}>{c.nome}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
 
               {erro && <p style={{ fontSize: 12, color: '#EF4444', marginTop: 12 }}>{erro}</p>}
 

@@ -42,12 +42,35 @@ service cloud.firestore {
     function membro(partnerId) {
       return get(/databases/$(database)/documents/partners/$(partnerId)/members/$(emailLogado()))
     }
-    function ehMembro(partnerId) {
+    function ehMembroDireto(partnerId) {
       return request.auth != null &&
         exists(/databases/$(database)/documents/partners/$(partnerId)/members/$(emailLogado()))
     }
+    // Squad dono desse partner (Partner.squad) — null se não tiver squad.
+    // partners/{id} tem "allow read: if true" (linha abaixo), então esse get()
+    // nunca falha por permissão, só por doc inexistente (partnerId inválido).
+    function squadDoPartner(partnerId) {
+      return exists(/databases/$(database)/documents/partners/$(partnerId))
+        ? get(/databases/$(database)/documents/partners/$(partnerId)).data.get('squad', null)
+        : null
+    }
+    function squadMembro(squadId) {
+      return get(/databases/$(database)/documents/squads/$(squadId)/members/$(emailLogado()))
+    }
+    // Acesso via squad: quem tem acesso ao squad de um cliente vê o cliente
+    // automaticamente, mesmo que nunca tenha sido adicionado em members/
+    // diretamente — inclusive clientes criados DEPOIS de entrar no squad.
+    function ehMembroSquad(partnerId) {
+      let squad = squadDoPartner(partnerId);
+      return request.auth != null && squad != null &&
+        exists(/databases/$(database)/documents/squads/$(squad)/members/$(emailLogado()))
+    }
+    function ehMembro(partnerId) {
+      return ehMembroDireto(partnerId) || ehMembroSquad(partnerId)
+    }
     function ehMembroAdmin(partnerId) {
-      return ehMembro(partnerId) && membro(partnerId).data.role == 'admin'
+      return (ehMembroDireto(partnerId) && membro(partnerId).data.role == 'admin') ||
+        (ehMembroSquad(partnerId) && squadMembro(squadDoPartner(partnerId)).data.role == 'admin')
     }
     function temAcesso(partnerId) {
       return ehSuperAdmin() || ehMembro(partnerId)
@@ -100,6 +123,15 @@ service cloud.firestore {
         allow read: if temAcesso(partnerId);
         allow write: if temAcessoAdmin(partnerId);
       }
+    }
+
+    // ─── SQUADS (times da V4 — ver lib/squads.ts) ─────────────────────────────
+    // Dá acesso a um squad = acesso automático a todo cliente com esse squad
+    // (ver squadDoPartner/ehMembroSquad acima). Toda escrita real acontece via
+    // /api/usuarios com firebase-admin (ignora estas regras) — só superadmin
+    // gerencia squad direto pelo client SDK.
+    match /squads/{squadId}/members/{memberEmail} {
+      allow read, write: if ehSuperAdmin();
     }
 
     // Doc único e global — lista de e-mails com bypass de superadmin.

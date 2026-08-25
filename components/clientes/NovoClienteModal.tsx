@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { criarCliente } from '@/lib/data/partners'
+import { SQUADS } from '@/lib/squads'
 import type { Partner, PartnerTipo, EcommercePlataforma } from '@/lib/types'
 
 const TIPOS: { id: PartnerTipo; label: string; desc: string; color: string }[] = [
@@ -26,6 +27,7 @@ export default function NovoClienteModal({ onClose, onCriado }: {
   const [segmento, setSegmento] = useState('')
   const [tipo, setTipo]         = useState<PartnerTipo>('ecommerce')
   const [ecommercePlataforma, setEcommercePlataforma] = useState<EcommercePlataforma>('shopify')
+  const [squad, setSquad]       = useState('')
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro]         = useState('')
   const [criado, setCriado]     = useState<Partner | null>(null)
@@ -39,6 +41,7 @@ export default function NovoClienteModal({ onClose, onCriado }: {
       const c = await criarCliente({
         nome, segmento: segmento || 'Geral', tipo,
         ...(tipo === 'ecommerce' ? { ecommercePlataforma } : {}),
+        ...(squad ? { squad } : {}),
       })
       setCriado(c)
       onCriado?.(c)
@@ -86,6 +89,15 @@ export default function NovoClienteModal({ onClose, onCriado }: {
 
               <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--t2)', display: 'block', margin: '14px 0 6px' }}>Segmento</label>
               <input value={segmento} onChange={(e) => setSegmento(e.target.value)} placeholder="Ex: E-commerce, Saúde, Imobiliário..." style={inputStyle} />
+
+              <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--t2)', display: 'block', margin: '14px 0 6px' }}>Squad</label>
+              <select value={squad} onChange={(e) => setSquad(e.target.value)} style={{ ...inputStyle, fontFamily: 'inherit' }}>
+                <option value="">Sem squad</option>
+                {SQUADS.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
+              </select>
+              <p style={{ fontSize: 10.5, color: 'var(--t3)', margin: '6px 0 0' }}>
+                Quem tem acesso a esse squad (aba Clientes → Novo usuário) vê esse cliente automaticamente.
+              </p>
 
               <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--t2)', display: 'block', margin: '14px 0 6px' }}>Tipo de operação</label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>

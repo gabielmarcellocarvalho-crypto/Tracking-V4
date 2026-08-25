@@ -75,6 +75,7 @@ export async function criarCliente(input: {
   segmento: string
   tipo: PartnerTipo
   ecommercePlataforma?: EcommercePlataforma
+  squad?: string
 }): Promise<Partner> {
   const id = slugify(input.nome)
   const donoEmail = auth.currentUser?.email?.toLowerCase()
@@ -86,6 +87,7 @@ export async function criarCliente(input: {
     status: 'ativo',
     trackingKey: gerarTrackingKey(),
     ...(input.tipo === 'ecommerce' && input.ecommercePlataforma ? { ecommercePlataforma: input.ecommercePlataforma } : {}),
+    ...(input.squad ? { squad: input.squad } : {}),
     // Dono do token Meta usado no envio CAPI deste cliente — o gestor que o criou.
     ...(donoEmail ? { donoEmail } : {}),
     criadoEm: Date.now(),

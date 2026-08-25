@@ -26,6 +26,8 @@ export interface Partner {
   donoEmail?: string
   /** true = cliente de demonstração (dados mock, não existe no Firestore) */
   demo?: boolean
+  /** Squad da V4 dono desse cliente (id de lib/squads.ts) — quem tem acesso ao squad vê o cliente automaticamente. */
+  squad?: string
   criadoEm?: number
   eventos?: number
   /**

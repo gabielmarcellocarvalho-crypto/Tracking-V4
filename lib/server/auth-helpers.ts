@@ -34,15 +34,29 @@ export async function ehAdminGeral(email: string): Promise<boolean> {
   return emails.includes(email)
 }
 
-export async function ehAdminDoPartner(email: string, partnerId: string): Promise<boolean> {
-  if (await ehSuperAdmin(email)) return true
-  const snap = await getDbAdmin().collection('partners').doc(partnerId).collection('members').doc(email).get()
-  return snap.exists && snap.data()?.role === 'admin'
+/** Role do e-mail no squad dono desse partner, ou null se o partner não tem squad ou o e-mail não está nele. */
+async function roleNoSquadDoPartner(email: string, partnerId: string): Promise<string | null> {
+  const db = getDbAdmin()
+  const partnerSnap = await db.collection('partners').doc(partnerId).get()
+  const squad = partnerSnap.data()?.squad as string | undefined
+  if (!squad) return null
+  const squadSnap = await db.collection('squads').doc(squad).collection('members').doc(email).get()
+  return squadSnap.exists ? ((squadSnap.data()?.role as string | undefined) ?? null) : null
 }
 
-/** Admin OU viewer desse partner — libera rotas só-leitura (ex: métricas de Ads). */
+export async function ehAdminDoPartner(email: string, partnerId: string): Promise<boolean> {
+  if (await ehSuperAdmin(email)) return true
+  const db = getDbAdmin()
+  const snap = await db.collection('partners').doc(partnerId).collection('members').doc(email).get()
+  if (snap.exists && snap.data()?.role === 'admin') return true
+  return (await roleNoSquadDoPartner(email, partnerId)) === 'admin'
+}
+
+/** Admin OU viewer desse partner (direto ou via squad) — libera rotas só-leitura (ex: métricas de Ads). */
 export async function ehMembroDoPartner(email: string, partnerId: string): Promise<boolean> {
   if (await ehSuperAdmin(email)) return true
-  const snap = await getDbAdmin().collection('partners').doc(partnerId).collection('members').doc(email).get()
-  return snap.exists
+  const db = getDbAdmin()
+  const snap = await db.collection('partners').doc(partnerId).collection('members').doc(email).get()
+  if (snap.exists) return true
+  return (await roleNoSquadDoPartner(email, partnerId)) !== null
 }
