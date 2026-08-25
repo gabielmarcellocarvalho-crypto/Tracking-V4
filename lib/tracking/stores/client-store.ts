@@ -4,7 +4,7 @@
 
 import {
   addDoc, collection, doc, getDocs, query, where, limit,
-  setDoc, deleteDoc,
+  setDoc, deleteDoc, increment,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import type { Identidade, Evento, Conversao } from '@/lib/types'
@@ -41,6 +41,15 @@ export function createClientIngestStore(clienteId: string): IngestStore {
       const limpo = JSON.parse(JSON.stringify(conversao))
       const ref = await addDoc(collection(db, 'partners', clienteId, 'conversoes'), limpo)
       return ref.id
+    },
+    async incrementarStats(evento: Evento) {
+      const dia = new Date(evento.ts).toISOString().slice(0, 10)
+      const incremento: Record<string, unknown> = { [evento.tipo]: increment(1) }
+      if (evento.tipo === 'compra' && evento.valor) incremento.receita = increment(evento.valor)
+      await Promise.all([
+        setDoc(doc(db, 'partners', clienteId, 'stats', dia), incremento, { merge: true }),
+        setDoc(doc(db, 'partners', clienteId, 'stats', 'ultimo'), { [evento.tipo]: evento.ts }, { merge: true }),
+      ])
     },
   }
 }

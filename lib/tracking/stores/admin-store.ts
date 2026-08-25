@@ -5,6 +5,7 @@
 // account, ignorando firestore.rules.
 
 import { getDbAdmin } from '@/lib/firebase-admin'
+import { FieldValue } from 'firebase-admin/firestore'
 import type { Identidade, Evento, Conversao } from '@/lib/types'
 import type { IngestStore } from '@/lib/tracking/store-types'
 
@@ -41,6 +42,15 @@ export function createAdminIngestStore(clienteId: string): IngestStore {
       const limpo = JSON.parse(JSON.stringify(conversao))
       const ref = await clienteRef.collection('conversoes').add(limpo)
       return ref.id
+    },
+    async incrementarStats(evento: Evento) {
+      const dia = new Date(evento.ts).toISOString().slice(0, 10)
+      const incremento: Record<string, FirebaseFirestore.FieldValue> = { [evento.tipo]: FieldValue.increment(1) }
+      if (evento.tipo === 'compra' && evento.valor) incremento.receita = FieldValue.increment(evento.valor)
+      await Promise.all([
+        clienteRef.collection('stats').doc(dia).set(incremento, { merge: true }),
+        clienteRef.collection('stats').doc('ultimo').set({ [evento.tipo]: evento.ts }, { merge: true }),
+      ])
     },
   }
 }

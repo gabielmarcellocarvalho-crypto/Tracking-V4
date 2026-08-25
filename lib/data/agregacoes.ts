@@ -2,7 +2,7 @@
 // Transformam eventos/identidades brutos do Firestore nos formatos que as telas
 // já consomem (mesmos shapes dos dados demo).
 
-import type { Evento, EventoTipo, Identidade, Origem, PartnerTipo } from '@/lib/types'
+import type { Evento, EventoTipo, Identidade, Origem, PartnerTipo, EventStatsDia, EventStatsUltimo } from '@/lib/types'
 import type { EventHealth, EventLogItem, PageHeatEntry } from '@/lib/demo-data-tracking'
 import type { UsuarioJornada, EventoJornada } from '@/lib/demo-data'
 
@@ -158,6 +158,55 @@ export function agregarSaudeEventos(
   })
 }
 
+// ── Saúde dos eventos, a partir do contador agregado (partners/{id}/stats) ────
+// Mesmo resultado de agregarSaudeEventos, mas lendo o resumo pré-calculado em
+// vez de escanear eventos crus — não precisa do array inteiro de eventos do
+// período pra só somar contagem. "Evento parado" fica mais preciso aqui (usa
+// stats/ultimo, sempre atual) do que reconstruir de uma amostra limitada de
+// eventos crus, que pode não conter o tipo mais raro (ex: compra).
+export function agregarSaudeEventosDeStats(
+  porDia: Map<string, EventStatsDia>,
+  ultimo: EventStatsUltimo | null,
+  periodo?: { label: string },
+  tipoCliente?: PartnerTipo,
+): EventHealth[] {
+  const agora = Date.now()
+  const hojeStr = toYMD(new Date())
+  const periodoLabel = periodo ? labelPeriodoCurto(periodo.label) : '7 dias'
+
+  return eventoTiposDoCliente(tipoCliente).map((tipo) => {
+    const ultimoTs = (ultimo?.[tipo as keyof EventStatsUltimo] as number | undefined) ?? 0
+    const minAtras = ultimoTs ? Math.floor((agora - ultimoTs) / 60000) : Infinity
+
+    const limiteWarn = tipo === 'page_view' ? 60 : tipo === 'lead' ? 360 : 720
+    const status: EventHealth['status'] =
+      minAtras === Infinity || minAtras > 1440 ? 'offline'
+      : minAtras > limiteWarn ? 'warning'
+      : 'online'
+
+    const alert =
+      status === 'offline' ? (ultimoTs ? 'Evento parado há mais de 24h — verificar integração' : 'Nenhum evento recebido ainda')
+      : status === 'warning' ? 'Intervalo longo — verificar disparo no site'
+      : undefined
+
+    let countPeriodo = 0
+    for (const stats of porDia.values()) countPeriodo += (stats[tipo as keyof EventStatsDia] as number | undefined) ?? 0
+    const countToday = (porDia.get(hojeStr)?.[tipo as keyof EventStatsDia] as number | undefined) ?? 0
+
+    return {
+      id: tipo,
+      ...EVENTO_META[tipo],
+      status,
+      lastFired: ultimoTs ? tempoRelativo(ultimoTs) : '—',
+      lastFiredAgo: minAtras === Infinity ? 99999 : minAtras,
+      countToday,
+      countPeriodo,
+      periodoLabel,
+      alert,
+    }
+  })
+}
+
 // ── Volume por dia (últimos 7 dias) ──────────────────────────────────────────
 const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
@@ -226,6 +275,64 @@ export function agregarVolume7Dias(
       checkout,
       compra,
       view_item: doDia.filter((e) => e.tipo === 'view_item').length,
+    })
+  }
+  return dias
+}
+
+// Mesmo resultado de agregarVolume7Dias (mesma regra de fallback pra mídia
+// paga e agrupamento por semana em janelas longas), lendo o contador
+// agregado em vez de escanear eventos crus por dia.
+export function agregarVolume7DiasDeStats(
+  porDia: Map<string, EventStatsDia>,
+  janela: JanelaPeriodo | number = 7,
+  fallback?: FallbackMidiaPaga,
+  ga4?: { porDia: Map<string, number> },
+) {
+  const range: JanelaPeriodo = typeof janela === 'number'
+    ? { start: new Date(Date.now() - janela * DIA_MS), end: new Date() }
+    : janela
+
+  const corte = new Date(range.start).setHours(0, 0, 0, 0)
+  const ateFim = new Date(range.end).setHours(23, 59, 59, 999)
+  const totalDias = Math.max(1, Math.round((ateFim - corte) / DIA_MS) + 1)
+  const agrupaPorSemana = totalDias > MAX_PONTOS_SERIE
+  const passoMs = agrupaPorSemana ? 7 * DIA_MS : DIA_MS
+  const usaFallback = fallback && !fallback.ecommerceConectado
+
+  const dias: { dia: string; page_view: number; lead: number; checkout: number; compra: number; view_item: number }[] = []
+  for (let inicio = corte; inicio <= ateFim; inicio += passoMs) {
+    const fim = Math.min(inicio + passoMs, ateFim + 1)
+    let checkout = 0, compra = 0, lead = 0, pageView = 0, viewItem = 0
+    for (let d = inicio; d < fim; d += DIA_MS) {
+      const stats = porDia.get(toYMD(new Date(d)))
+      checkout += stats?.checkout ?? 0
+      compra += stats?.compra ?? 0
+      lead += stats?.lead ?? 0
+      viewItem += stats?.view_item ?? 0
+      pageView += stats?.page_view ?? 0
+    }
+
+    if (usaFallback) {
+      for (let d = inicio; d < fim; d += DIA_MS) {
+        const key = toYMD(new Date(d))
+        checkout += (fallback!.metaPorDia?.get(key)?.checkout ?? 0) + (fallback!.googlePorDia?.get(key)?.checkout ?? 0)
+        compra   += (fallback!.metaPorDia?.get(key)?.purchase ?? 0) + (fallback!.googlePorDia?.get(key)?.purchase ?? 0)
+      }
+    }
+
+    // GA4 prevalece sobre o snippet pro page_view, mesma regra de agregarVolume7Dias.
+    if (ga4) pageView = somarPeriodoMap(ga4.porDia, inicio, fim - 1)
+
+    dias.push({
+      dia: totalDias > 7
+        ? `${new Date(inicio).getDate().toString().padStart(2, '0')}/${(new Date(inicio).getMonth() + 1).toString().padStart(2, '0')}`
+        : DIAS_SEMANA[new Date(inicio).getDay()],
+      page_view: pageView,
+      lead,
+      checkout,
+      compra,
+      view_item: viewItem,
     })
   }
   return dias

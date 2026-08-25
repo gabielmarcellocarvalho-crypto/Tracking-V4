@@ -10,12 +10,12 @@ import {
 import DashboardHeader from '@/components/tracking/DashboardHeader'
 import EventHealthCard from '@/components/tracking/EventHealthCard'
 import { useCliente } from '@/lib/data/partners'
-import { useEventos, useConexoes } from '@/lib/data/colecoes'
+import { useEventos, useEventStats, useConexoes } from '@/lib/data/colecoes'
 import { useDateRange } from '@/lib/date-range-context'
 import { useMetaAdsGasto } from '@/lib/data/meta-ads-metrics'
 import { useGoogleAdsGasto } from '@/lib/data/google-ads-metrics'
 import {
-  agregarSaudeEventos, agregarVolume7Dias, agregarPorOrigem, agregarPaginas, agregarLogs,
+  agregarSaudeEventosDeStats, agregarVolume7DiasDeStats, agregarPorOrigem, agregarPaginas, agregarLogs,
   eventoTiposDoCliente,
 } from '@/lib/data/agregacoes'
 import {
@@ -161,6 +161,18 @@ export default function TrackingPage({ params }: { params: Promise<{ clienteId: 
   // disso pra continuar correto independente do filtro.
   const desdeEventos = Math.min(periodo.start.getTime(), new Date().setHours(0, 0, 0, 0))
   const { eventos, loading: loadingEventos } = useEventos(isDemo ? undefined : clienteId, { desde: desdeEventos, limite: 5000 })
+  // Saúde dos Eventos e Volume por dia vêm do contador agregado (partners/{id}/stats)
+  // em vez de recontar os eventos crus acima — até 30-90 leituras (1 por dia
+  // do período) em vez de até 5.000. Origem/Páginas/Log continuam em `eventos`
+  // (precisam de campo por evento que o resumo não guarda). Expande o início
+  // pra sempre incluir hoje, mesma razão de `desdeEventos` acima (o card
+  // "Hoje" precisa disso mesmo quando o filtro é ex. "Ontem"). Passar um
+  // objeto Date novo aqui é seguro -- useEventStats já deriva string (YYYY-MM-DD)
+  // antes de usar no dependency array, não o objeto Date em si.
+  const { porDia: statsPorDia, ultimo: statsUltimo } = useEventStats(
+    isDemo ? undefined : clienteId,
+    isDemo ? undefined : { start: new Date(desdeEventos), end: periodo.end },
+  )
   const { conexoes } = useConexoes(isDemo ? undefined : clienteId)
 
   const usarDemo = isDemo
@@ -198,8 +210,8 @@ export default function TrackingPage({ params }: { params: Promise<{ clienteId: 
     // misturado — GA4 fica isolado na aba Performance (decisão do Gabriel,
     // pra essa tela refletir exatamente o que o snippet está capturando).
     return {
-      saude: agregarSaudeEventos(eventos, periodo, cliente?.tipo),
-      volume: agregarVolume7Dias(eventos, periodo, {
+      saude: agregarSaudeEventosDeStats(statsPorDia, statsUltimo, periodo, cliente?.tipo),
+      volume: agregarVolume7DiasDeStats(statsPorDia, periodo, {
         ecommerceConectado: !!ecommerceConectado,
         metaPorDia: metaGasto?.porData,
         googlePorDia: googleGasto?.porData,
@@ -208,7 +220,7 @@ export default function TrackingPage({ params }: { params: Promise<{ clienteId: 
       paginas: agregarPaginas(noPeriodo),
       logs: agregarLogs(noPeriodo),
     }
-  }, [usarDemo, eventos, periodo, ecommerceConectado, metaGasto, googleGasto, cliente?.tipo])
+  }, [usarDemo, eventos, periodo, statsPorDia, statsUltimo, ecommerceConectado, metaGasto, googleGasto, cliente?.tipo])
 
   const [selectedEventId, setSelectedEventId] = useState<string>('page_view')
   const selectedEvent = dados.saude.find(e => e.id === selectedEventId)

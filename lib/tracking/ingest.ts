@@ -24,6 +24,15 @@ export async function ingerirEvento(
   evento.visitorId = await resolverIdentidade(store.identity, evento)
   const eventoId = await store.gravarEvento(evento)
 
+  // Contador agregado (partners/{id}/stats) — best-effort: nunca deve derrubar
+  // a ingestão do evento em si, que é o caminho crítico. Alimenta os cards de
+  // resumo (Saúde dos Eventos, Volume por dia) sem precisar reler eventos/.
+  try {
+    await store.incrementarStats(evento)
+  } catch (err) {
+    console.error('[ingest] falha ao incrementar stats agregado:', err)
+  }
+
   const conversoes = montarConversoes(evento, eventoId)
   for (const conv of conversoes) {
     const conversaoId = await store.gravarConversao(conv)

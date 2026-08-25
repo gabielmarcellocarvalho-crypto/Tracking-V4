@@ -134,6 +134,32 @@ export interface Evento {
   visitorId: string
 }
 
+// ── Contador agregado (partners/{id}/stats) ───────────────────────────────────
+// Mantido incrementalmente na ingestão (ver lib/tracking/ingest.ts) pra telas
+// de resumo (Saúde dos Eventos, Volume por dia) não precisarem reler os
+// documentos crus de eventos/ toda vez que alguém abre a página — só o
+// drill-down/Jornada do Usuário continuam lendo eventos/ diretamente.
+/** partners/{id}/stats/{YYYY-MM-DD} — contagem do dia, por tipo de evento */
+export interface EventStatsDia {
+  page_view?: number
+  lead?: number
+  checkout?: number
+  compra?: number
+  view_item?: number
+  custom?: number
+  /** soma de Evento.valor dos eventos tipo "compra" nesse dia */
+  receita?: number
+}
+/** partners/{id}/stats/ultimo — timestamp (epoch ms) do último evento de cada tipo, sempre atual */
+export interface EventStatsUltimo {
+  page_view?: number
+  lead?: number
+  checkout?: number
+  compra?: number
+  view_item?: number
+  custom?: number
+}
+
 // ── Identidade (perfil unificado / jornada) ───────────────────────────────────
 export type IdentidadeStatus = 'visitante' | 'lead' | 'checkout' | 'cliente'
 

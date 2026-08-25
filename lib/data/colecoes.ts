@@ -3,7 +3,8 @@
 // ─── HOOKS POR SUBCOLEÇÃO + escritas ─────────────────────────────────────────
 
 import {
-  addDoc, collection, deleteDoc, doc, onSnapshot, setDoc, serverTimestamp, updateDoc,
+  addDoc, collection, deleteDoc, doc, documentId, getDoc, getDocs, onSnapshot, query,
+  setDoc, serverTimestamp, updateDoc, where,
 } from 'firebase/firestore'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { auth, db } from '@/lib/firebase'
@@ -11,7 +12,7 @@ import { useSubcolecao } from './firestore-hooks'
 import type {
   Evento, Identidade, UTMRegistro, Conversao, Integration, IntegrationPlataforma, Insight,
   PlanoMidiaItem, PlanoMidiaConfigMes, KpiMetasDoc, KpiMetaConfig, KpiStatusDoc, KpiViolacao,
-  GoogleAdsCampanha,
+  GoogleAdsCampanha, EventStatsDia, EventStatsUltimo,
 } from '@/lib/types'
 import type { GrowthPackCanal } from './agregacoes'
 
@@ -154,6 +155,58 @@ export function useEventos(clienteId: string | undefined, opts?: { limite?: numb
   )
   const isDemo = !loading && eventos.length === 0
   return { eventos, loading, isDemo }
+}
+
+// ── Contador agregado (partners/{id}/stats) ────────────────────────────────────
+// Lê os resumos diários pré-calculados na ingestão (ver lib/tracking/ingest.ts)
+// em vez de reler os documentos crus de eventos/ — até 90 leituras (1 por dia
+// do período) contra até 5.000 (1 por evento). Usado pelos cards de resumo
+// (Saúde dos Eventos, Volume por dia); drill-down/Jornada continuam em
+// useEventos, que tem o dado por evento que o resumo não guarda.
+const statsCache = new Map<string, { porDia: Map<string, EventStatsDia>; ts: number }>()
+const STATS_CACHE_TTL_MS = 2 * 60_000
+
+export function useEventStats(clienteId: string | undefined, periodo?: { start: Date; end: Date }) {
+  const [porDia, setPorDia] = useState<Map<string, EventStatsDia>>(new Map())
+  const [ultimo, setUltimo] = useState<EventStatsUltimo | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  const inicioStr = periodo ? periodo.start.toISOString().slice(0, 10) : undefined
+  const fimStr = periodo ? periodo.end.toISOString().slice(0, 10) : undefined
+
+  useEffect(() => {
+    if (!clienteId || !inicioStr || !fimStr) { setPorDia(new Map()); setUltimo(null); setLoading(false); return }
+    let cancelado = false
+    setLoading(true)
+
+    const chave = `${clienteId}:${inicioStr}:${fimStr}`
+    const emCache = statsCache.get(chave)
+
+    const buscarUltimo = getDoc(doc(db, 'partners', clienteId, 'stats', 'ultimo'))
+      .then((snap) => { if (!cancelado) setUltimo(snap.exists() ? (snap.data() as EventStatsUltimo) : null) })
+      .catch(() => { if (!cancelado) setUltimo(null) })
+
+    const buscarDias = emCache && Date.now() - emCache.ts < STATS_CACHE_TTL_MS
+      ? Promise.resolve(emCache.porDia)
+      : getDocs(query(
+          collection(db, 'partners', clienteId, 'stats'),
+          where(documentId(), '>=', inicioStr),
+          where(documentId(), '<=', fimStr),
+        )).then((snap) => {
+          const mapa = new Map<string, EventStatsDia>()
+          snap.docs.forEach((d) => mapa.set(d.id, d.data() as EventStatsDia))
+          statsCache.set(chave, { porDia: mapa, ts: Date.now() })
+          return mapa
+        }).catch(() => new Map<string, EventStatsDia>())
+
+    Promise.all([buscarDias, buscarUltimo]).then(([mapa]) => {
+      if (!cancelado) { setPorDia(mapa); setLoading(false) }
+    })
+
+    return () => { cancelado = true }
+  }, [clienteId, inicioStr, fimStr])
+
+  return { porDia, ultimo, loading }
 }
 
 // ── Identidades (jornadas) ────────────────────────────────────────────────────

@@ -18,4 +18,6 @@ export interface IngestStore {
   gravarEvento(evento: Evento): Promise<string>
   /** Grava uma conversão enfileirada e retorna o id do doc criado. */
   gravarConversao(conversao: Omit<Conversao, 'id'>): Promise<string>
+  /** Incrementa partners/{id}/stats/{dia} e stats/ultimo — ver EventStatsDia/EventStatsUltimo em lib/types.ts. */
+  incrementarStats(evento: Evento): Promise<void>
 }

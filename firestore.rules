@@ -88,6 +88,14 @@ service cloud.firestore {
         allow update, delete: if temAcessoAdmin(partnerId);
       }
 
+      match /stats/{statsId} {
+        allow read: if temAcesso(partnerId);
+        // create/update: incremento na ingestão via /api/track (sem sessão),
+        // mesmo motivo/risco de eventos/conversoes acima.
+        allow create, update: if true;
+        allow delete: if temAcessoAdmin(partnerId);
+      }
+
       match /{subcolecao}/{docId} {
         allow read: if temAcesso(partnerId);
         allow write: if temAcessoAdmin(partnerId);
