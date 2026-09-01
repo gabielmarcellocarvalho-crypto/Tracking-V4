@@ -44,17 +44,25 @@ async function roleNoSquadDoPartner(email: string, partnerId: string): Promise<s
   return squadSnap.exists ? ((squadSnap.data()?.role as string | undefined) ?? null) : null
 }
 
+/** Role do e-mail no "acesso geral" (config/acesso_geral/members/{email}) — vê TODOS os squads/clientes, sem precisar estar em cada squad. Null se não tiver. */
+async function roleAcessoGeral(email: string): Promise<string | null> {
+  const snap = await getDbAdmin().collection('config').doc('acesso_geral').collection('members').doc(email).get()
+  return snap.exists ? ((snap.data()?.role as string | undefined) ?? null) : null
+}
+
 export async function ehAdminDoPartner(email: string, partnerId: string): Promise<boolean> {
   if (await ehSuperAdmin(email)) return true
+  if ((await roleAcessoGeral(email)) === 'admin') return true
   const db = getDbAdmin()
   const snap = await db.collection('partners').doc(partnerId).collection('members').doc(email).get()
   if (snap.exists && snap.data()?.role === 'admin') return true
   return (await roleNoSquadDoPartner(email, partnerId)) === 'admin'
 }
 
-/** Admin OU viewer desse partner (direto ou via squad) — libera rotas só-leitura (ex: métricas de Ads). */
+/** Admin OU viewer desse partner (direto, via squad, ou via acesso geral) — libera rotas só-leitura (ex: métricas de Ads). */
 export async function ehMembroDoPartner(email: string, partnerId: string): Promise<boolean> {
   if (await ehSuperAdmin(email)) return true
+  if ((await roleAcessoGeral(email)) !== null) return true
   const db = getDbAdmin()
   const snap = await db.collection('partners').doc(partnerId).collection('members').doc(email).get()
   if (snap.exists) return true

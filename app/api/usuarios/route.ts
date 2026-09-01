@@ -26,6 +26,8 @@ interface CriarUsuarioBody {
   clienteIds?: string[]
   /** Squad (lib/squads.ts) — alternativa a clienteIds: concede acesso a TODO cliente desse squad, inclusive futuros. */
   squad?: string
+  /** Acesso geral — alternativa a squad/clienteIds: concede acesso a TODO cliente, de qualquer squad, inclusive futuros. */
+  geral?: boolean
   role?: MemberRole
   senha?: string
 }
@@ -49,14 +51,15 @@ export async function POST(req: NextRequest) {
   const email = body.email?.trim().toLowerCase()
   const clienteIds = body.clienteIds ?? []
   const squad = body.squad?.trim()
+  const geral = !!body.geral
   const role = body.role
   const senha = body.senha
 
   if (!email || !email.includes('@')) {
     return NextResponse.json({ ok: false, erro: 'e-mail inválido' }, { status: 400 })
   }
-  if (clienteIds.length === 0 && !squad) {
-    return NextResponse.json({ ok: false, erro: 'selecione um squad ou pelo menos um cliente' }, { status: 400 })
+  if (clienteIds.length === 0 && !squad && !geral) {
+    return NextResponse.json({ ok: false, erro: 'selecione geral, um squad ou pelo menos um cliente' }, { status: 400 })
   }
   if (role !== 'admin' && role !== 'viewer') {
     return NextResponse.json({ ok: false, erro: 'nível de acesso inválido' }, { status: 400 })
@@ -93,6 +96,16 @@ export async function POST(req: NextRequest) {
   const addedAt = Date.now()
 
   let clientesConcedidos = clienteIds.length
+  if (geral) {
+    // Acesso geral = acesso automático a TODO cliente, de qualquer squad,
+    // inclusive futuros — sem escopo, checagem em roleAcessoGeral() (server)
+    // e ehAcessoGeral() (firestore.rules).
+    await db.collection('config').doc('acesso_geral').collection('members').doc(email).set({
+      email, role, addedAt, addedBy: chamadorEmail,
+    })
+    const totalSnap = await db.collection('partners').get()
+    clientesConcedidos = totalSnap.size
+  }
   if (squad) {
     // Acesso ao squad = acesso automático a todo cliente com esse squad, sem
     // precisar listar cada um (nem os que ainda não existem) — grava só 1

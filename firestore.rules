@@ -65,12 +65,23 @@ service cloud.firestore {
       return request.auth != null && squad != null &&
         exists(/databases/$(database)/documents/squads/$(squad)/members/$(emailLogado()))
     }
+    // Acesso geral (config/acesso_geral/members/{email}) — vê TODOS os squads
+    // e clientes sem precisar estar em cada squad individualmente. Diferente
+    // de superadmin: não é dono da plataforma, é só um cargo com visão total.
+    function acessoGeralMembro() {
+      return get(/databases/$(database)/documents/config/acesso_geral/members/$(emailLogado()))
+    }
+    function ehAcessoGeral() {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/config/acesso_geral/members/$(emailLogado()))
+    }
     function ehMembro(partnerId) {
-      return ehMembroDireto(partnerId) || ehMembroSquad(partnerId)
+      return ehMembroDireto(partnerId) || ehMembroSquad(partnerId) || ehAcessoGeral()
     }
     function ehMembroAdmin(partnerId) {
       return (ehMembroDireto(partnerId) && membro(partnerId).data.role == 'admin') ||
-        (ehMembroSquad(partnerId) && squadMembro(squadDoPartner(partnerId)).data.role == 'admin')
+        (ehMembroSquad(partnerId) && squadMembro(squadDoPartner(partnerId)).data.role == 'admin') ||
+        (ehAcessoGeral() && acessoGeralMembro().data.role == 'admin')
     }
     function temAcesso(partnerId) {
       return ehSuperAdmin() || ehMembro(partnerId)
@@ -131,6 +142,14 @@ service cloud.firestore {
     // /api/usuarios com firebase-admin (ignora estas regras) — só superadmin
     // gerencia squad direto pelo client SDK.
     match /squads/{squadId}/members/{memberEmail} {
+      allow read, write: if ehSuperAdmin();
+    }
+
+    // ─── ACESSO GERAL (cargo que vê todos os squads/clientes) ────────────────
+    // Mesmo padrão de squads acima, mas sem escopo — quem está aqui enxerga
+    // TODO partner, de qualquer squad. Escrita real via /api/usuarios
+    // (firebase-admin) — só superadmin gerencia direto pelo client SDK.
+    match /config/acesso_geral/members/{memberEmail} {
       allow read, write: if ehSuperAdmin();
     }
 

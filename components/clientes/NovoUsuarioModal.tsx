@@ -28,7 +28,7 @@ export default function NovoUsuarioModal({ clientes, onClose }: {
   const [nome, setNome]         = useState('')
   const [senha, setSenha]       = useState('')
   const [role, setRole]         = useState<MemberRole>('viewer')
-  const [modo, setModo]         = useState<'squad' | 'clientes'>('squad')
+  const [modo, setModo]         = useState<'geral' | 'squad' | 'clientes'>('squad')
   const [squad, setSquad]       = useState(SQUADS[0]?.id ?? '')
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [salvando, setSalvando] = useState(false)
@@ -62,7 +62,7 @@ export default function NovoUsuarioModal({ clientes, onClose }: {
         body: JSON.stringify({
           email: email.trim(),
           nome: nome.trim() || undefined,
-          ...(modo === 'squad' ? { squad } : { clienteIds: Array.from(selecionados) }),
+          ...(modo === 'geral' ? { geral: true } : modo === 'squad' ? { squad } : { clienteIds: Array.from(selecionados) }),
           role,
           senha: senha || undefined,
         }),
@@ -146,8 +146,9 @@ export default function NovoUsuarioModal({ clientes, onClose }: {
               </div>
 
               <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--t2)', display: 'block', margin: '14px 0 6px' }}>Acesso</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 10 }}>
                 {([
+                  { id: 'geral' as const, label: 'Geral', desc: 'Vê todos os squads e clientes, inclusive futuros' },
                   { id: 'squad' as const, label: 'Por squad', desc: 'Vê todo cliente do squad, inclusive futuros' },
                   { id: 'clientes' as const, label: 'Clientes específicos', desc: 'Escolhe cliente por cliente' },
                 ]).map((m) => (
@@ -162,7 +163,11 @@ export default function NovoUsuarioModal({ clientes, onClose }: {
                 ))}
               </div>
 
-              {modo === 'squad' ? (
+              {modo === 'geral' ? (
+                <p style={{ fontSize: 11, color: 'var(--t3)', margin: 0 }}>
+                  Sem seleção adicional — esse e-mail vai enxergar todos os clientes de todos os squads, agora e no futuro.
+                </p>
+              ) : modo === 'squad' ? (
                 <select value={squad} onChange={(e) => setSquad(e.target.value)} style={inputStyle}>
                   {SQUADS.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
                 </select>
